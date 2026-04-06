@@ -1,8 +1,8 @@
-Technical Track of Computer Tools for Linguistic Research (2024/2025)
+Technical Track of Computer Tools for Linguistic Research (2025/2026)
 =====================================================================
 
 As a part of a compulsory course `Computer Tools for Linguistic
-Research <https://nnov.hse.ru/ba/ling/courses/902203327.html>`__ in `National
+Research <https://nnov.hse.ru/ba/ling/courses/1128051801.html>`__ in `National
 Research University Higher School of Economics <https://www.hse.ru/>`__.
 
 This technical track is aimed at building basic skills for retrieving
@@ -11,6 +11,7 @@ research. The idea is to automatically obtain a dataset that has a
 certain structure and appropriate content, perform morphological
 analysis using various natural language processing (NLP) libraries.
 Dataset requirements :ref:`dataset-label`.
+
 
 Instructors:
 ------------
@@ -24,16 +25,15 @@ Instructors:
    track lecturer
 -  `Uraev Dmitry Yurievich <https://www.hse.ru/org/persons/208529395>`__ -
    technical track practice lecturer
--  `Kashchikhin Andrei Nikolaevich <https://github.com/WhiteJaeger>`__ -
-   technical track expert
--  `Zharikov Egor Igorevich <https://t.me/godb0i>`__ - technical track senior
-   assistant
--  `Nurtdinova Sofia Alekseevna <https://t.me/sunrielly>`__ - technical track
-   assistant
--  `Podpryatova Anna Sergeevna <https://t.me/anpruch>`__ - technical
-   track assistant
--  `Khomutova Ekaterina Sergeevna <https://t.me/ekaterina_hom>`__ -
+
+
+-  `Zharikov Egor Igorevich <https://t.me/godb0i>`__ - technical track assistant
+-  `Nurtdinova Sofia Alekseevna <https://t.me/sunrielly>`__ - technical track assistant
+-  `Podpryatova Anna Sergeevna <https://t.me/anpruch>`__ - technical track assistant
+-  `Klimov Andrey Petrovich <https://t.me/hollow_shelves_quiet_hell>`__ -
    technical track assistant
+-  `Evgrafova Anna Sergeevna <https://t.me/evgraff_19>`__ - technical track assistant
+
 
 Project Timeline
 ----------------
@@ -43,7 +43,7 @@ Project Timeline
    1. Short summary: Your code can automatically parse a media website
       you are going to choose, save texts and its metadata in a proper
       format.
-   2. Deadline: **May, 2**.
+   2. Deadline: **May, 11**.
    3. Format: each student works in their own PR.
    4. Dataset volume: 5-7 articles.
    5. Design document: :ref:`scraper-label`.
@@ -53,69 +53,23 @@ Project Timeline
    1. Short summary: Your code can automatically process raw texts from
       previous step, make point-of-speech tagging and basic
       morphological analysis.
-   2. Deadline: **May, 23**.
+   2. Deadline: **TBD**.
    3. Format: each student works in their own PR.
    4. Dataset volume: 5-7 articles.
    5. Design document: :ref:`pipeline-label`.
+
 
 Lectures history
 ----------------
 
 +------------+---------------------+--------------------------------------------------------------+
 | Date       | Lecture topic       | Important links                                              |
-+============+================================================+===================================+
-| 04.04.2025 | Lecture:            | Lab no. 5 description                                        |
-|            | Introduction to     |                                                              |
-|            | technical track.    |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 04.04.2025 | Seminar: Local      | N/A                                                          |
++============+=====================+==============================================================+
+| 06.04.2024 | Seminar: Local      | N/A                                                          |
 |            | setup. Choose       |                                                              |
 |            | website.            |                                                              |
 +------------+---------------------+--------------------------------------------------------------+
-| 11.04.2025 | Lecture: 3rd party  | N/A                                                          |
-|            | libraries. Browser  |                                                              |
-|            | headers.            |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 11.04.2025 | Seminar:            | `Листинг <./seminars/seminar_04_08_2025/try_requests.py>`__. |
-|            | ``requests``:   .   |                                                              |
-|            | install, API.       |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 18.04.2025 | Lecture: HTML       | N/A                                                          |
-|            | structure. ``bs4``  |                                                              |
-|            | library.            |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 18.04.2025 | Seminar:            | `Листинг <./seminars/seminar_04_17_2025/try_bs.py>`__.       |
-|            | ``bs4``:   .        |                                                              |
-|            | install, API.       |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 25.04.2025 | Lecture: Filesystem | N/A                                                          |
-|            | with ``pathlib``.   |                                                              |
-|            | Dates.              |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 25.04.2025 | Seminar:            | `Листинг <./seminars/seminar_04_25_2025/try_paths.py>`__.    |
-|            | filesystem with     | `Листинг <./seminars/seminar_04_25_2025/try_json.py>`__.     |
-|            | ``pathlib``, dates. | `Листинг <./seminars/seminar_04_25_2025/try_dates.py>`__.    |
-+------------+---------------------+--------------------------------------------------------------+
-| 02.05.2025 | Distant Lab 5       | N/A                                                          |
-|            | acceptance for      |                                                              |
-|            | defense.            |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 09.05.2025 | Holidays.           | N/A                                                          |
-+------------+---------------------+--------------------------------------------------------------+
-| 16.05.2025 | Lecture: text       | `Листинг <./seminars/seminar_05_16_2025/try_udpipe.py>`__.   |
-|            | analysis with       | `Листинг <./seminars/seminar_05_16_2025/try_stanza.py>`__.   |
-|            | ``udpipe``,         | `Листинг <./seminars/seminar_05_16_2025/try_networkx.py>`__. |
-|            | ``stanza``.         |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 16.05.2025 | Seminar:  Lab 5     | N/A                                                          |
-|            | handover.           |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 23.05.2025 | Seminar:  Lab 6     | N/A                                                          |
-|            | handover.           |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
-| 30.05.2025 | Extra handover day  | N/A                                                          |
-|            | (with penalties).   |                                                              |
-+------------+---------------------+--------------------------------------------------------------+
+
 
 You can find a more complete summary from lectures in :ref:`ctlr-lectures-label`.
 
@@ -158,13 +112,13 @@ Technical solution
 
 Software solution is built on top of three components:
 
-1. `scraper.py <https://github.com/fipl-hse/2024-2-level-ctlr/blob/main/lab_5_scraper/scraper.py>`__
+1. `scraper.py <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/lab_5_scraper/scraper.py>`__
    - a module for finding articles from the given media, extracting text and dumping it to
    the file system. Students need to implement it.
-2. `pipeline.py <https://github.com/fipl-hse/2023-2-level-ctlr/blob/main/lab_6_pipeline/pipeline.py>`__
+2. `pipeline.py <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/lab_6_pipeline/pipeline.py>`__
    - a module for processing text: point-of-speech tagging and basic
    morphological analysis. Students need to implement it.
-3. `article.py <https://github.com/fipl-hse/2024-2-level-ctlr/blob/main/core_utils/article/article.py>`__
+3. `article.py <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/core_utils/article/article.py>`__
    - a module for article abstraction to encapsulate low-level manipulations with the article.
 
 Handing over your work
@@ -207,17 +161,16 @@ are satisfied:**
 Resources
 ---------
 
-1. `Academic performance
-   <https://docs.google.com/spreadsheets/d/19-TM-fWjZyjSk46TXgnP78cRAJGd3U4jRHw4VtOWYy4/edit?gid=0#gid=0>`__
-2. `Media websites list
-   <https://docs.google.com/spreadsheets/d/1xScC58eEQBe6PmLuEOSCb09KJC6TpeKd/edit?gid=672060649#gid=672060649>`__
-3. `Documentation website <https://fipl-hse.github.io/>`__
-4. `Python programming course from previous semester
-   <https://github.com/fipl-hse/2024-2-level-labs>`__
-5. `Scraping tutorials (Russian) <https://youtu.be/7hn1_t2ZtJQ>`__
-6. `Scraping tutorials (English)
+1. `Academic performance <https://docs.google.com/spreadsheets/d/1wCyGfGEXwjnB0p8WMbSCMJlmpxeQfG07QMGDnfiYFhI/>`__
+2. `Media websites list <https://docs.google.com/spreadsheets/d/1rKtvIpzmUFmXL5NVUEVfsmuLc4AWhzmOOQ0xPgBulsI/edit?gid=0#gid=0>`__
+3. `Python programming course from previous semester
+   <https://github.com/fipl-hse/2025-2-level-labs>`__
+4. `Scraping tutorials (Russian) <https://youtu.be/7hn1_t2ZtJQ>`__
+5. `Scraping tutorials (English)
    <https://www.youtube.com/playlist?list=PL1jK3K11NINiOn4DdIDVdyQpcU3kaNxl0>`__
-7. :ref:`starting-guide-en-label`
-8. :ref:`ctlr-tests-label`
-9. :ref:`run-in-terminal-label`
-10. :ref:`ctlr-faq-label`
+6. `Starting guide <https://fipl-hse.github.io/docs/useful_docs/ctlr_docs/starting_guide_en.html>`__
+7. `How to run tests <https://fipl-hse.github.io/docs/useful_docs/ctlr_docs/tests.html>`__
+8. `How to run .py files in terminal
+   <https://fipl-hse.github.io/docs/useful_docs/ctlr_docs/run_in_terminal.html>`__
+9. `How to update fork <https://fipl-hse.github.io/docs/useful_docs/ctlr_docs/fork_update.html>`__
+10. `FAQ for CTLR <https://fipl-hse.github.io/docs/useful_docs/ctlr_docs/faq.html>`__

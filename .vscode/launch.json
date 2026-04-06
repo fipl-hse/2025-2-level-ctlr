@@ -14,6 +14,65 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
+        },
+        {
+            "name": "[SEMINAR 1] Try requests",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/seminars/seminar_04_06_2026/try_requests.py",
+            "cwd": "${workspaceFolder}/seminars/seminar_04_06_2026",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "[LAB 6] Pipeline",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/lab_6_pipeline/pipeline.py",
+            "cwd": "${workspaceFolder}/lab_6_pipeline",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "[PROJECT] Create CoNNL",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/final_project/main.py",
+            "cwd": "${workspaceFolder}/final_project",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "[PROJECT] Check Auto Annotated CoNLL",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/admin_utils/final_project/checker.py",
+            "args": [
+                "final_project/dist/auto_annotated.conllu"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "[PROJECT] Check Final CoNLL",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/admin_utils/final_project/checker.py",
+            "args": [
+                "final_project/dist/final.conllu"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         }
     ]
 }

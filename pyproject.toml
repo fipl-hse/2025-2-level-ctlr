@@ -42,7 +42,7 @@ ignore = ['D004']
 ignore-path = [
     'venv*',
     'build/',
-    'config/website/test_sphinx_project/_build/',
+    'admin_utils/website/test_sphinx_project/_build/',
     'dist/',
 ]
 
@@ -87,20 +87,11 @@ remove_redundant_aliases = true
 group_by_package = true
 force_alphabetical_sort_within_sections = true
 src_paths = [
-    "reference_lab_classification",
-    "reference_lab_summarization",
-    "reference_lab_nmt",
-    "reference_lab_nli",
-    "reference_lab_generation",
-    "reference_lab_open_qa",
     "admin_utils",
     "core_utils",
-    "config",
     "lab_5_scraper",
     "lab_6_pipeline",
     "final_project",
-    "lab_7_llm",
-    "lab_8_llm"
 ]
 
 [tool.mypy]
@@ -172,30 +163,6 @@ disable_error_code  = [
 ]
 
 [[tool.mypy.overrides]]
-module = ['config.lab_settings', ]
-disable_error_code = [
-    'assignment'
-]
-
-[[tool.mypy.overrides]]
-module = ['seminars.seminar_01_16_2024.try_iter_data', ]
-disable_error_code = [
-    'arg-type'
-]
-
-[[tool.mypy.overrides]]
-module = [
-    'core_utils.llm.llm_pipeline',
-    'lab_7_llm.service',
-    'lab_7_llm.main',
-    'lab_8_llm.service',
-    'lab_8_llm.main',
-]
-disable_error_code = [
-    'no-any-unimported'
-]
-
-[[tool.mypy.overrides]]
 module = [
     'core_utils.article.article',
 ]
@@ -205,12 +172,8 @@ disable_error_code = [
 
 [[tool.mypy.overrides]]
 module = [
-    'config.get_datasets_analytics',
-    'config.get_inference_analytics',
-    'config.get_references',
     'admin_utils.website_validation.utils',
     'admin_utils.website_validation.website_validator',
-    'seminars.seminar_02_06_2024.try_fastapi',
 ]
 disable_error_code = [
     'no-any-unimported',
@@ -239,7 +202,6 @@ disable_error_code = [
 module = [
     'lab_5_scraper.*',
     'lab_6_pipeline.*',
-    'config.*',
 ]
 disable_error_code  = [
     'var-annotated',
@@ -247,13 +209,6 @@ disable_error_code  = [
     'operator',
     'import',
     'no-any-unimported'
-]
-
-[[tool.mypy.overrides]]
-module = ['*.nmt_demo.*', ]
-disable_error_code = [
-    'no-any-unimported',
-    'no-any-return'
 ]
 
 [tool.logging]

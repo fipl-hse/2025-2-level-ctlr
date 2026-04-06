@@ -31,4 +31,3 @@
     ../docs/public/ud_format.rst
     ../docs/public/UD_intro.rst
     ../docs/public/graphs_intro.rst
-    ../docs/public/final_project.rst

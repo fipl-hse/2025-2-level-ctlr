@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 project = "Лабораторный Практикум и Курс Лекций"
-copyright = "2023, Демидовский А.В. и другие"
+copyright = "2026, Демидовский А.В. и другие"
 author = "Демидовский А.В. и другие"
 
 extensions = [
