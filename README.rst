@@ -25,9 +25,9 @@ Instructors:
    track lecturer
 -  `Uraev Dmitry Yurievich <https://www.hse.ru/org/persons/208529395>`__ -
    technical track practice lecturer
+-  `Zharikov Egor Igorevich <https://t.me/godb0i>`__ - technical track expert
 
 
--  `Zharikov Egor Igorevich <https://t.me/godb0i>`__ - technical track assistant
 -  `Nurtdinova Sofia Alekseevna <https://t.me/sunrielly>`__ - technical track assistant
 -  `Podpryatova Anna Sergeevna <https://t.me/anpruch>`__ - technical track assistant
 -  `Klimov Andrey Petrovich <https://t.me/hollow_shelves_quiet_hell>`__ -
@@ -45,7 +45,7 @@ Project Timeline
       format.
    2. Deadline: **May, 11**.
    3. Format: each student works in their own PR.
-   4. Dataset volume: 5-7 articles.
+   4. Dataset volume: 100 articles.
    5. Design document: :ref:`scraper-label`.
 
 2. **Pipeline**:
@@ -55,7 +55,7 @@ Project Timeline
       morphological analysis.
    2. Deadline: **TBD**.
    3. Format: each student works in their own PR.
-   4. Dataset volume: 5-7 articles.
+   4. Dataset volume: 100 articles.
    5. Design document: :ref:`pipeline-label`.
 
 
@@ -65,9 +65,10 @@ Lectures history
 +------------+---------------------+--------------------------------------------------------------+
 | Date       | Lecture topic       | Important links                                              |
 +============+=====================+==============================================================+
-| 06.04.2024 | Seminar: Local      | N/A                                                          |
-|            | setup. Choose       |                                                              |
-|            | website.            |                                                              |
+| 06.04.2024 | Lecture:            | Lab no. 5 description                                        |
+|            | Introduction to     |                                                              |
+|            | technical track.    |                                                              |
+|            | 3rd party libraries.|                                                              |
 +------------+---------------------+--------------------------------------------------------------+
 
 
