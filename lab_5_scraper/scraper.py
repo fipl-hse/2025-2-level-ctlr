@@ -63,6 +63,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
+        
 
     def get_encoding(self) -> str:
         """
