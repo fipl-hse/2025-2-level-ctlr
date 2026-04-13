@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup, Tag
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
 
-
+#for first commit. delete, shoulf have two empty lines between class and import
 class Config:
     """
     Class for unpacking and validating configurations.
