@@ -192,6 +192,7 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
