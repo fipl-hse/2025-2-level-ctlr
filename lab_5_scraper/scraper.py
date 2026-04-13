@@ -23,6 +23,7 @@ class Config:
         """
         Initialize an instance of the Config class.
 
+        
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
