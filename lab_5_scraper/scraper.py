@@ -105,6 +105,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         url (str): Site url
         config (Config): Configuration
 
+        
     Returns:
         requests.models.Response: A response from a request
     """
