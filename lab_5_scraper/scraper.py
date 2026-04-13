@@ -72,6 +72,9 @@ class Config:
             str: Encoding
         """
 
+
+        
+
     def get_timeout(self) -> int:
         """
         Retrieve number of seconds to wait for response.
