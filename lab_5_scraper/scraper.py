@@ -8,10 +8,26 @@ import json
 import pathlib
 
 import requests
+import regex as re
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
+
+class IncorrectSeedURLError(Exception):
+    pass
+class NumberOfArticlesOutOfRangeError(Exception):
+    pass
+class IncorrectNumberOfArticlesError(Exception):
+    pass
+class IncorrectHeadersError(Exception):
+    pass
+class IncorrectEncodingError(Exception):
+    pass
+class IncorrectTimeoutError(Exception):
+    pass
+class IncorrectVerifyError(Exception):
+    pass
 
 
 class Config:
@@ -26,6 +42,9 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
+        self._path_to_config = path_to_config
+        self._extract_config_content()
+        self._validate_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -34,11 +53,37 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
+        with open(self._path_to_config) as config_data:
+            self._config = ConfigDTO(**json.load(config_data))
+        return self._config
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
+        config = self._config
+
+        if not all(re.match("https?://(www.)?", url) for url in config.seed_urls):
+            raise IncorrectSeedURLError
+
+        if not 1 <= config.total_articles <= 150:
+            raise NumberOfArticlesOutOfRangeError
+
+        if not isinstance(config.total_articles, int) and config.total_articles < 0:
+            raise IncorrectNumberOfArticlesError
+
+        if not isinstance(config.headers, dict):
+            raise IncorrectHeadersError
+
+        if not isinstance(config.encoding, str):
+            raise IncorrectEncodingError
+
+        if not isinstance(config.timeout, int) and 0 <= config.timeout < 60:
+            raise IncorrectTimeoutError
+
+        if not isinstance(config.should_verify_certificate, bool):
+            raise IncorrectVerifyError
+
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -47,6 +92,7 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
+        return self._config.seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -55,6 +101,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
+        return self._config.total_articles
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -63,6 +110,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
+        return self._config.headers
 
     def get_encoding(self) -> str:
         """
@@ -71,6 +119,7 @@ class Config:
         Returns:
             str: Encoding
         """
+        return self._config.encoding
 
     def get_timeout(self) -> int:
         """
@@ -79,6 +128,7 @@ class Config:
         Returns:
             int: Number of seconds to wait for response
         """
+        return self._config.timeout
 
     def get_verify_certificate(self) -> bool:
         """
@@ -87,6 +137,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
+        return self._config.should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
@@ -95,6 +146,7 @@ class Config:
         Returns:
             bool: Whether to use headless mode or not
         """
+        return self._config.headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
@@ -219,6 +271,10 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
+    path = pathlib.Path(r"https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/")
+
+    config = Config(pathlib.Path(r"C:\Users\artem\hse\2025-2-level-ctlr\lab_5_scraper\scraper_config.json"))
+    print(config._extract_config_content())
 
 
 if __name__ == "__main__":

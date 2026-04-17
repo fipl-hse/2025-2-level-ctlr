@@ -1,8 +1,8 @@
 {
-    "seed_urls": [],
+    "seed_urls": ["https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/"],
     "headers": {},
     "total_articles_to_find_and_parse": 0,
-    "encoding": "",
+    "encoding": "utf-8",
     "timeout": 0,
     "should_verify_certificate": true,
     "headless_mode": true
