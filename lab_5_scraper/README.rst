@@ -238,10 +238,12 @@ The method should open configuration file, create and fill the
 :py:class:`core_utils.config_dto.ConfigDTO` instance with
 all configuration parameters filled.
 
-.. note:: This method should be called during
-          :py:class:`lab_5_scraper.scraper.Config` class instance
-          initialization step to fill fields with configuration parameters
-          information.
+.. note:: This method returns a :py:class:`core_utils.config_dto.ConfigDTO`
+          instance. It can be called both from
+          :py:meth:`lab_5_scraper.scraper.Config._validate_config_content`
+          (for validation purposes) and from
+          :py:meth:`lab_5_scraper.scraper.Config`
+          (to store validated values in instance attributes).
 
 Stage 1.4. Validate configuration data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -276,12 +278,17 @@ configuration. When config is invalid:
 When all validation criteria are passed there is no exception thrown and
 program continues its execution.
 
-.. note:: This method should be called during
-          :py:class:`lab_5_scraper.scraper.Config`
-          class instance initialization step before
-          :py:meth:`lab_5_scraper.scraper.Config._extract_config_content` method
-          call to check config fields and make sure they are appropriate and
-          can be used inside the program.
+.. note::
+   :py:meth:`lab_5_scraper.scraper.Config._validate_config_content` method
+   is called during :py:class:`lab_5_scraper.scraper.Config` class instance
+   initialization. Inside this method, you should call
+   :py:meth:`lab_5_scraper.scraper.Config._extract_config_content` to load
+   configuration data into a :py:class:`core_utils.config_dto.ConfigDTO` instance,
+   and then validate the DTO fields against the required criteria.
+
+   This ensures that config is checked before its values are stored in the
+   :py:class:`lab_5_scraper.scraper.Config` instance attributes, but the DTO
+   is still available for validation within the same method.
 
 Stage 1.5. Provide getting methods for configuration parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

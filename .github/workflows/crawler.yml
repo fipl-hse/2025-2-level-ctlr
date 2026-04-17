@@ -54,9 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [install-dependencies]
-    env:
-      PR_NAME: ${{ github.event.pull_request.title }}
-      PR_AUTHOR: ${{ github.actor }}
 
     steps:
       - uses: actions/checkout@v6
@@ -136,9 +133,6 @@ jobs:
   checking-crawler-config:
     name: Crawler checks config
     needs: [install-dependencies]
-    env:
-      PR_NAME: ${{ github.event.pull_request.title }}
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
 
@@ -150,14 +144,11 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_5_scraper --pytest-label stage_2_1_crawler_config_check
+          fiplconfig.run_tests --lab-path lab_5_scraper --pytest-label stage_2_1_crawler_config_check
 
   checking-crawler:
     name: Crawler checks
     needs: [install-dependencies]
-    env:
-      PR_NAME: ${{ github.event.pull_request.title }}
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 4
 
@@ -169,14 +160,11 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_5_scraper --pytest-label stage_2_2_crawler_check
+          fiplconfig.run_tests --lab-path lab_5_scraper --pytest-label stage_2_2_crawler_check
 
   checking-parser:
     name: Parser checks
     needs: [install-dependencies]
-    env:
-      PR_NAME: ${{ github.event.pull_request.title }}
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -188,14 +176,11 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_5_scraper --pytest-label stage_2_3_HTML_parser_check
+          fiplconfig.run_tests --lab-path lab_5_scraper --pytest-label stage_2_3_HTML_parser_check
 
   collecting-articles-from-internet:
     name: Download articles
     needs: [install-dependencies]
-    env:
-      PR_NAME: ${{ github.event.pull_request.title }}
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -217,7 +202,7 @@ jobs:
           python lab_5_scraper/scraper.py
           ls -la tmp/articles
 
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_5_scraper --pytest-label stage_2_4_dataset_volume_check
+          fiplconfig.run_tests --lab-path lab_5_scraper --pytest-label stage_2_4_dataset_volume_check
       - name: Archive raw dataset
         uses: actions/upload-artifact@v6
         with:
@@ -229,9 +214,6 @@ jobs:
   checking-articles-dataset:
     name: Validate dataset
     needs: [collecting-articles-from-internet]
-    env:
-      PR_NAME: ${{ github.event.pull_request.title }}
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -249,7 +231,7 @@ jobs:
           source venv/bin/activate
           export PYTHONPATH=$(pwd):$PYTHONPATH
           python admin_utils/unpack_archived_dataset.py lab_5_scraper
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_5_scraper --pytest-label stage_2_5_dataset_validation
+          fiplconfig.run_tests --lab-path lab_5_scraper --pytest-label stage_2_5_dataset_validation
 
   milestone-1-crawler-is-working:
     name: Crawler is accepted!
@@ -275,8 +257,6 @@ jobs:
   checking-raw-dataset-before-running-pipeline:
     name: Pipe verifies dataset
     needs: [milestone-2-pipeline]
-    env:
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -293,13 +273,11 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_6_pipeline --pytest-label stage_3_1_dataset_sanity_checks
+          fiplconfig.run_tests --lab-path lab_6_pipeline --pytest-label stage_3_1_dataset_sanity_checks
 
   checking-corpus-manager-creates-instances-correctly:
     name: CorpusManager detects articles
     needs: [milestone-2-pipeline]
-    env:
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
@@ -317,13 +295,11 @@ jobs:
           source venv/bin/activate
           export PYTHONPATH=$(pwd):$PYTHONPATH
           python admin_utils/unpack_archived_dataset.py lab_6_pipeline
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_6_pipeline --pytest-label stage_3_2_corpus_manager_checks
+          fiplconfig.run_tests --lab-path lab_6_pipeline --pytest-label stage_3_2_corpus_manager_checks
 
   checking-student-processing-works-for-admin-dataset:
     name: Pipe processed admin data
     needs: [milestone-2-pipeline]
-    env:
-      PR_AUTHOR: ${{ github.actor }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -341,7 +317,7 @@ jobs:
           source venv/bin/activate
           export PYTHONPATH=$(pwd):$PYTHONPATH
           python admin_utils/unpack_archived_dataset.py lab_6_pipeline
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_6_pipeline --pytest-label stage_3_3_admin_data_processing
+          fiplconfig.run_tests --lab-path lab_6_pipeline --pytest-label stage_3_3_admin_data_processing
 
   run-student-processing:
     name: Pipe processed student data
@@ -411,7 +387,7 @@ jobs:
           source venv/bin/activate
           export PYTHONPATH=$(pwd):$PYTHONPATH
           python admin_utils/unpack_archived_dataset.py lab_6_pipeline
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_6_pipeline --pytest-label stage_3_4_student_dataset_validation
+          fiplconfig.run_tests --lab-path lab_6_pipeline --pytest-label stage_3_4_student_dataset_validation
 
   running-pos-pipeline-tests:
     name: POSFrequencyPipeline tests
@@ -444,7 +420,7 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_6_pipeline --pytest-label stage_4_pos_frequency_pipeline_checks
+          fiplconfig.run_tests --lab-path lab_6_pipeline --pytest-label stage_4_pos_frequency_pipeline_checks
       - name: Archive processed dataset
         continue-on-error: true
         uses: actions/upload-artifact@v6
@@ -479,7 +455,7 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          fiplconfig.run_tests --pr-name "$PR_NAME" --pr-author "$PR_AUTHOR" --lab-path lab_6_pipeline --pytest-label stage_5_pattern_search_pipeline_checks
+          fiplconfig.run_tests --lab-path lab_6_pipeline --pytest-label stage_5_pattern_search_pipeline_checks
       - name: Archive processed dataset
         continue-on-error: true
         uses: actions/upload-artifact@v6

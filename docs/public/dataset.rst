@@ -15,7 +15,7 @@ Structure
 
 .. code:: text
 
-   +-- 2025-2-level-ctlr
+   +-- 202X-2-level-ctlr
        +-- tmp
            +-- articles
                +-- articles
