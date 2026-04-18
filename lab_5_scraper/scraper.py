@@ -66,7 +66,7 @@ class Config:
         if not all(re.match("https?://(www.)?", url) for url in config.seed_urls):
             raise IncorrectSeedURLError
 
-        if not 1 <= config.total_articles <= 150:
+        if not (1 <= config.total_articles <= 150):
             raise NumberOfArticlesOutOfRangeError
 
         if not isinstance(config.total_articles, int) and config.total_articles < 0:
@@ -177,6 +177,7 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
+        self._config = config
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -288,6 +289,13 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
+    if isinstance(base_path, str):
+        base_path = pathlib.Path(base_path)
+
+    if pathlib.Path.exists(base_path):
+        base_path.rmdir()
+
+    base_path.mkdir()
 
 
 def main() -> None:
@@ -295,9 +303,10 @@ def main() -> None:
     Entrypoint for scraper module.
     """
     path = pathlib.Path(r"https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/")
-
+    assets_path = r"C:\Users\artem\hse\2025-2-level-ctlr\lab_5_scraper\assets"
     config = Config(pathlib.Path(r"C:\Users\artem\hse\2025-2-level-ctlr\lab_5_scraper\scraper_config.json"))
     print(config._extract_config_content())
+    prepare_environment(assets_path)
 
 
 if __name__ == "__main__":
