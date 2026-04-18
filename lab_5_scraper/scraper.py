@@ -70,6 +70,7 @@ class Config:
 
         Returns:
             str: Encoding
+            str. Encoding
         """
 
     def get_timeout(self) -> int:
