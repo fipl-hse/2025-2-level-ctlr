@@ -97,6 +97,7 @@ class Config:
         """
 
 
+
 def make_request(url: str, config: Config) -> requests.models.Response:
     """
     Deliver a response from a request with given configuration.
