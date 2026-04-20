@@ -178,6 +178,7 @@ class Crawler:
             config (Config): Configuration
         """
         self._config = config
+        self.urls = config.get_seed_urls()
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -194,6 +195,8 @@ class Crawler:
         """
         Find articles.
         """
+        for url in self.urls:
+
 
     def get_search_urls(self) -> list:
         """
@@ -202,6 +205,7 @@ class Crawler:
         Returns:
             list: seed_urls param
         """
+        
 
 
 # 10
@@ -245,6 +249,9 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        self.full_url = full_url
+        self.article_id = article_id
+        self._config = config
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
