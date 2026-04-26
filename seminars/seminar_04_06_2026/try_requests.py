@@ -39,6 +39,7 @@ if __name__ == "__main__":
         print("Timeout: Server didn't respond in 3s")
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
+        
 
     # Step 5. Response handling
     if response.ok:
