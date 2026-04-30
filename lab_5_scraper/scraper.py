@@ -26,7 +26,8 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
-    print("Ok")
+        self.path_to_config = path_to_config
+        
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -35,6 +36,7 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
+
 
     def _validate_config_content(self) -> None:
         """
