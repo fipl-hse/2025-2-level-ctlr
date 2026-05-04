@@ -12,8 +12,37 @@ from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import CRAWLER_CONFIG_PATH
 
-#for first commit. delete, shoulf have two empty lines between class and import
+
+class IncorrectSeedURLError(Exception):
+    'Seed URL does not match standard pattern "https?://(www.)?"'
+
+
+class NumberOfArticlesOutOfRangeError(Exception):
+    "Total number of articles is out of range from 1 to 150"
+
+
+class IncorrectNumberOfArticlesError(Exception):
+    "Total number of articles to parse is not integer or less than 0"
+
+
+class IncorrectHeadersError(Exception):
+    "Headers are not in a form of dictionary"
+
+
+class IncorrectEncodingError(Exception):
+    "Encoding must be specified as a string"
+
+
+class IncorrectTimeoutError(Exception):
+    "Timeout value must be a positive integer less than 60"
+
+
+class IncorrectVerifyError(Exception):
+    "verify certificate and headless mode values must either be ``True`` or ``False``"
+
+
 class Config:
     """
     Class for unpacking and validating configurations.
@@ -26,6 +55,7 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
+        self.path_to_config = path_to_config
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -34,11 +64,24 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
+        with open(self.path_to_config) as file:
+            config_data = json.load(file)
+        seed_urls = config_data["seed_urls"]
+        total_articles_to_find_and_parse = config_data["total_articles_to_find_and_parse"]
+        headers = config_data["headers"]
+        encoding = config_data["encoding"]
+        timeout = config_data["timeout"]
+        should_verify_certificate = config_data["should_verify_certificate"]
+        headless_mode = config_data["headless_mode"]
+        config_dto = ConfigDTO(seed_urls, total_articles_to_find_and_parse, headers, encoding, timeout, should_verify_certificate, headless_mode)
+        return config_dto
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
+        # if __________:
+        #     raise IncorrectSeedURLError()
 
     def get_seed_urls(self) -> list[str]:
         """
