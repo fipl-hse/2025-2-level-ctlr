@@ -1,12 +1,12 @@
 {
-    "seed_urls": ["https://www.ermolova.ru/theatre/news/", "https://www.ermolova.ru/theatre/news/index/2/", "https://www.ermolova.ru/theatre/news/index/3/"],
+    "seed_urls": ["https://www.ermolova.ru/theatre/news/", "https://www.ermolova.ru/theatre/news/index/2/", "https://www.ermolova.ru/theatre/news/index/3/", "https://www.ermolova.ru/theatre/news/index/4/", "https://www.ermolova.ru/theatre/news/index/5/", "https://www.ermolova.ru/theatre/news/index/6/", "https://www.ermolova.ru/theatre/news/index/7/", "https://www.ermolova.ru/theatre/news/index/8/", "https://www.ermolova.ru/theatre/news/index/9/", "https://www.ermolova.ru/theatre/news/index/10/"],
     "headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "Accept-Language": "ru,en;q=0.9",
         "Cookie": "_ym_uid=1775856068681112852;_ym_d=1775856068; tmr_lvid=5b23175692db09db511e11876f2b42bf; tmr_lvidTS=1775856068127; _ga=GA1.2.1126163064.1775856114; tildauid=1777274793755.211997; PHPSESSID=c2b6ca0c692f0564cd2f17cceb91b8be; _ym_isad=2; _gid=GA1.2.365979987.1777969707; domain_sid=rDml4Mr12RBuFMCDDP2x2%3A1777969707873; _ym_visorc=w; _gat=1; _ga_G1HBF3GXV7=GS2.2.s1777984801$o14$g1$t1777987138$j60$l0$h0; tmr_detect=0%7C1777987143147"
     },
-    "total_articles_to_find_and_parse": 10,
+    "total_articles_to_find_and_parse": 100,
     "encoding": "windows-1251",
     "timeout": 10,
     "should_verify_certificate": true,

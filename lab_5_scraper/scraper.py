@@ -251,15 +251,11 @@ class Crawler:
         if not link:
             return ''
         href = link.get('href')
-        if not href:
-            return ''
-        if '/theatre/blog/view/' not in href:
+        if not isinstance(href, str) or '/theatre/blog/view/' not in href:
             return ''
         if href.startswith('/'):
-            full_url = 'https://www.ermolova.ru' + href
-        else:
-            full_url = href
-        return full_url
+            return 'https://www.ermolova.ru' + href
+        return href
 
     def find_articles(self) -> None:
         """
