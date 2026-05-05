@@ -209,8 +209,8 @@ class Crawler:
             try:
                 response = make_request(seed_url, self.config)
                 soup = BeautifulSoup(response.text, 'lxml')
-                article_links = soup.find_all('h2', class_='entry-title')
-                for link in article_links:
+                links = soup.find_all('h2', class_='entry-title')
+                for link in links:
                     if len(self.article_urls) >= self.num_articles:
                         break
                     url = self._extract_url(link)
@@ -311,11 +311,11 @@ class HTMLParser:
             title = article_soup.find('title')
             if title:
                 self.article.title = title.get_text().strip()
-        date_tag = article_soup.find('time', class_='entry-date')
-        if not date_tag:
-            date_tag = article_soup.find('time')
-        if date_tag and date_tag.get('datetime'):
-            date_str = date_tag.get('datetime')
+        date = article_soup.find('time', class_='entry-date')
+        if not date:
+            date = article_soup.find('time')
+        if date and date.get('datetime'):
+            date_str = date.get('datetime')
             self.article.date = self.unify_date_format(date_str)
         else:
             date_pattern = re.compile(r'\d{2,4}[-/]\d{1,2}[-/]\d{1,2}')
@@ -323,9 +323,9 @@ class HTMLParser:
             date_match = date_pattern.search(text)
             if date_match:
                 self.article.date = self.unify_date_format(date_match.group())
-        author_tag = article_soup.find('span', class_='author')
-        if author_tag:
-            author_name = author_tag.get_text().strip()
+        author = article_soup.find('span', class_='author')
+        if author:
+            author_name = author.get_text().strip()
             if author_name:
                 self.article.author = [author_name]
 
