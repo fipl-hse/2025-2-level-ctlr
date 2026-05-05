@@ -4,15 +4,20 @@ Crawler implementation.
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
-import re
 import json
 import pathlib
+import re
+import shutil
+from random import randint
+from time import sleep
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
@@ -70,15 +75,14 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
-        self.config = self._extract_config_content()
-        self._seed_urls = self.config.seed_urls
-        self._num_articles = self.config.total_articles
-        self._headers = self.config.headers
-        self._encoding = self.config.encoding
-        self._timeout = self.config.timeout
-        self._verify_certificate = self.config.should_verify_certificate
-        self._headless_mode = self.config.headless_mode
         self._validate_config_content()
+        self._seed_urls = self._config.seed_urls
+        self._num_articles = self._config.total_articles
+        self._headers = self._config.headers
+        self._encoding = self._config.encoding
+        self._timeout = self._config.timeout
+        self._should_verify_certificate = self._config.should_verify_certificate
+        self._headless_mode = self._config.headless_mode
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -98,10 +102,36 @@ class Config:
         Ensure configuration parameters are not corrupt.
         """
         config_dto = self._extract_config_content()
-        # if not all(
-        #     not 
-        # ):
-           # raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
+        if not isinstance(config_dto.seed_urls, list):
+            raise IncorrectSeedURLError('Seed URLs must be a list')
+        pattern = r'^https?://(www\.)?'
+        for url in config_dto.seed_urls:
+            if not re.match(pattern, url):
+                raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
+        if (
+            not isinstance(config_dto.total_articles, int)
+            or isinstance(config_dto.total_articles, bool)
+            or config_dto.total_articles < 0
+        ):
+            raise (IncorrectNumberOfArticlesError('Number of articles is either not integer'
+            'or less than 0'))
+        if config_dto.total_articles > 150:
+            raise NumberOfArticlesOutOfRangeError('Number if articles is out of range')
+        if not isinstance(config_dto.headers, dict):
+            raise IncorrectHeadersError('Headers are not in a form of dictionary')
+        if not isinstance(config_dto.encoding, str):
+            raise IncorrectEncodingError('Encoding is not in a form of string')
+        if (
+            not isinstance(config_dto.timeout, int)
+            or config_dto.timeout >= 60
+            or config_dto.timeout < 0
+        ):
+            raise IncorrectTimeoutError('Timeout must be a positive integer and less than 60')
+        if not isinstance(config_dto.should_verify_certificate, bool):
+            raise IncorrectVerifyError('Verify certificate value must be boolean')
+        if not isinstance(config_dto.headless_mode, bool):
+            raise IncorrectVerifyError('Headless mode value must be boolean')
+        self._config = config_dto
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -155,7 +185,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
-        return self._verify_certificate
+        return self._should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
@@ -178,6 +208,15 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    sleep(randint(1, 5))
+    return response
 
 
 class Crawler:
@@ -195,6 +234,8 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
+        self.config = config
+        self.urls = []
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -206,11 +247,39 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
+        link = article_bs.find('a', href=True)
+        if not link:
+            return ''
+        href = link.get('href')
+        if not href:
+            return ''
+        if '/theatre/blog/view/' not in href:
+            return ''
+        if href.startswith('/'):
+            full_url = 'https://www.ermolova.ru' + href
+        else:
+            full_url = href
+        return full_url
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
+        target_count = self.config.get_num_articles()
+        seed_urls = self.get_search_urls()
+        for seed_url in seed_urls:
+            if len(self.urls) >= target_count:
+                break
+            response = make_request(seed_url, self.config)
+            if not response.ok:
+                continue
+            soup = BeautifulSoup(response.text, 'lxml')
+            for news_block in soup.find_all('div', class_='news-post'):
+                if len(self.urls) >= target_count:
+                    return
+                url = self._extract_url(news_block)
+                if url and url not in self.urls:
+                    self.urls.append(url)
 
     def get_search_urls(self) -> list:
         """
@@ -219,30 +288,31 @@ class Crawler:
         Returns:
             list: seed_urls param
         """
+        return self.config.get_seed_urls()
 
 
 # 10
 
 
-class CrawlerRecursive(Crawler):
-    """
-    Recursive implementation.
+# class CrawlerRecursive(Crawler):
+#     """
+#     Recursive implementation.
 
-    Get one URL of the title page and find requested number of articles recursively.
-    """
+#     Get one URL of the title page and find requested number of articles recursively.
+#     """
 
-    def __init__(self, config: Config) -> None:
-        """
-        Initialize an instance of the CrawlerRecursive class.
+#     def __init__(self, config: Config) -> None:
+#         """
+#         Initialize an instance of the CrawlerRecursive class.
 
-        Args:
-            config (Config): Configuration
-        """
+#         Args:
+#             config (Config): Configuration
+#         """
 
-    def find_articles(self) -> None:
-        """
-        Find number of article urls requested.
-        """
+#     def find_articles(self) -> None:
+#         """
+#         Find number of article urls requested.
+#         """
 
 
 # 4, 6, 8, 10
@@ -262,6 +332,10 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        self.full_url = full_url
+        self.article_id = article_id
+        self.config = config
+        self.article = Article(full_url, article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -270,6 +344,12 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        content_div = article_soup.find('div', class_='blog-content')
+        if not content_div:
+            return
+        paragraphs = content_div.find_all('p')
+        text = '\n'.join(p.get_text(strip=True) for p in paragraphs)
+        self.article.text = text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -278,6 +358,14 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title_tag = article_soup.find('h4', class_='head')
+        if title_tag:
+            self.article.title = title_tag.get_text(strip=True)
+        date_tag = article_soup.find('p', class_='caption')
+        if date_tag:
+            data_text = date_tag.get_text(strip=True)
+            self.article.date = self.unify_date_format(data_text)
+        self.article.author = ['NOT FOUND']
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -289,6 +377,8 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        day, month, year = map(int, date_str.split('.'))
+        return datetime.datetime(year, month, day)
 
     def parse(self) -> Article | bool:
         """
@@ -297,6 +387,13 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
+        response = make_request(self.full_url, self.config)
+        if not response.ok:
+            return self.article
+        soup = BeautifulSoup(response.text, 'lxml')
+        self._fill_article_with_text(soup)
+        self._fill_article_with_meta_information(soup)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -306,6 +403,10 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
+    base_path = pathlib.Path(base_path)
+    if base_path.exists():
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
@@ -315,4 +416,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
+    prepare_environment(ASSETS_PATH)
+    crawler = Crawler(config=configuration)
+    crawler.find_articles()
+    for i, fullurl in enumerate(crawler.urls):
+        parser = HTMLParser(full_url=fullurl, article_id=i+1, config=configuration)
+        article = parser.parse()
+        if isinstance(article, Article):
+            to_raw(article)
+            to_meta(article)
