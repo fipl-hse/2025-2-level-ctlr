@@ -8,7 +8,7 @@
     },
     "total_articles_to_find_and_parse": 100,
     "encoding": "windows-1251",
-    "timeout": 10,
+    "timeout": 60,
     "should_verify_certificate": true,
     "headless_mode": true
 }
