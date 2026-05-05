@@ -1,23 +1,24 @@
 """
 Crawler implementation.
 """
-import sys
-from pathlib import Path
-
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
 import json
-import pathlib
+import re
+import shutil
+import sys
+from pathlib import Path
 
 import requests
-import regex as re
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 class IncorrectSeedURLError(Exception):
     """Raised when seed URL does not match standard pattern."""
@@ -241,6 +242,25 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate(),
+    )
+    response.encoding = config.get_encoding()
+    return response
+
+def prepare_environment(base_path: Path) -> None:
+    """
+    Create ASSETS_PATH folder if no created and remove existing folder.
+
+    Args:
+        base_path (Path): Path where articles stores
+    """
+    if base_path.exists():
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True, exist_ok=True)
 
 
 class Crawler:
@@ -258,6 +278,8 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
+        self.config = config
+        self.urls: list[str] = []
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -269,11 +291,51 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
+        urls = []
+
+        match = re.match(r'(https?://[^/]+)', seed_url)
+        if not match:
+            return urls
+        base_url = match.group(1)
+    
+        for link in article_bs.find_all('a', href=True):
+            href = link.get('href', '')
+        
+            if '.shtml' in href or 'text_' in href:
+                if href.startswith('/'):
+                    full_url = base_url + href
+                    urls.append(full_url)
+                elif href.startswith('http'):
+                    urls.append(href)
+    
+        return list(set(urls))
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
+        seed_urls = self.config.get_seed_urls()
+        required_count = self.config.get_num_articles()
+
+        for seed_url in seed_urls:
+            if len(self.urls) >= required_count:
+                break
+            try:
+                response = make_request(seed_url, self.config)
+                if response.status_code != 200:
+                    continue
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                article_urls = self._extract_url(soup, seed_url)
+
+                for url in article_urls:
+                    if len(self.urls) >= required_count:
+                        break
+                    if url not in self.urls:
+                        self.urls.append(url)
+
+            except requests.RequestException:
+                continue
 
     def get_search_urls(self) -> list:
         """
@@ -282,6 +344,7 @@ class Crawler:
         Returns:
             list: seed_urls param
         """
+        return self.config.get_seed_urls()
 
 
 # 10
