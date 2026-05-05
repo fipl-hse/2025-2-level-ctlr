@@ -7,7 +7,7 @@ import datetime
 import json
 import pathlib
 import re
-from typing import List
+import shutil
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -92,13 +92,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
-        default_headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        }
-        if self.config_content.headers:
-            return {**default_headers, **self.config_content.headers}
-        return default_headers
+        return self.config_content.headers if self.config_content.headers else {}
 
     def get_encoding(self) -> str:
         """
@@ -148,17 +142,14 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=config.get_timeout(),
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = config.get_encoding()
-        return response
-    except requests.exceptions.RequestException:
-        raise
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    return response
 
 
 class Crawler:
@@ -179,7 +170,7 @@ class Crawler:
         self.config = config
         self.seed_urls = config.get_seed_urls()
         self.num_articles = config.get_num_articles()
-        self.article_urls: List[str] = []
+        self.article_urls = []
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -205,19 +196,22 @@ class Crawler:
         """
         for seed_url in self.seed_urls:
             if len(self.article_urls) >= self.num_articles:
-                break  
+                break
             try:
                 response = make_request(seed_url, self.config)
-                soup = BeautifulSoup(response.text, 'lxml')
-                article_links = soup.find_all('h2', class_='entry-title')
-                for link in article_links:
-                    if len(self.article_urls) >= self.num_articles:
-                        break
-                    url = self._extract_url(link)
-                    if url and url not in self.article_urls:
-                        self.article_urls.append(url)     
-            except Exception as e:
+            except requests.exceptions.RequestException:
                 continue
+            try:
+                soup = BeautifulSoup(response.text, 'lxml')
+            except Exception:
+                continue
+            article_links = soup.find_all('h2', class_='entry-title')
+            for link in article_links:
+                if len(self.article_urls) >= self.num_articles:
+                    break
+                url = self._extract_url(link)
+                if url and url not in self.article_urls:
+                    self.article_urls.append(url)
 
     def get_search_urls(self) -> list:
         """
@@ -245,11 +239,38 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
+        self.visited_pages = []
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
+        for seed_url in self.seed_urls:
+            if len(self.article_urls) >= self.num_articles:
+                break
+            if seed_url in self.visited_pages:
+                continue
+            self.visited_pages.append(seed_url)
+            try:
+                response = make_request(seed_url, self.config)
+            except requests.exceptions.RequestException:
+                continue
+            try:
+                soup = BeautifulSoup(response.text, 'lxml')
+            except Exception:
+                continue
+            for link in soup.find_all('a', href=True):
+                if len(self.article_urls) >= self.num_articles:
+                    break
+                href = link.get('href')
+                if href and href.startswith('/page/') or '/page' in href:
+                    if href.startswith('/'):
+                        full_url = f"https://sufler.su{href}"
+                    else:
+                        full_url = href
+                    if full_url not in self.article_urls:
+                        self.article_urls.append(full_url)
 
 
 # 4, 6, 8, 10
@@ -283,8 +304,8 @@ class HTMLParser:
         """
         content_div = article_soup.find('div', class_='entry-content')
         if content_div:
-            for unwanted in content_div.find_all(['script', 'style', 'aside', 'div', 'iframe']):
-                unwanted.decompose()
+            for tag in content_div.find_all(['script', 'style', 'aside', 'iframe']):
+                tag.decompose()
             paragraphs = content_div.find_all('p')
             text_parts = []
             for p in paragraphs:
@@ -304,30 +325,13 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = article_soup.find('h1', class_='entry-title')
+        title_tag = article_soup.find('h1')
         if title_tag:
             self.article.title = title_tag.get_text().strip()
         else:
             title_tag = article_soup.find('title')
             if title_tag:
                 self.article.title = title_tag.get_text().strip()
-        date_tag = article_soup.find('time', class_='entry-date')
-        if not date_tag:
-            date_tag = article_soup.find('time')
-        if date_tag and date_tag.get('datetime'):
-            date_str = date_tag.get('datetime')
-            self.article.date = self.unify_date_format(date_str)
-        else:
-            date_pattern = re.compile(r'\d{2,4}[-/]\d{1,2}[-/]\d{1,2}')
-            text = article_soup.get_text()
-            date_match = date_pattern.search(text)
-            if date_match:
-                self.article.date = self.unify_date_format(date_match.group())
-        author_tag = article_soup.find('span', class_='author')
-        if author_tag:
-            author_name = author_tag.get_text().strip()
-            if author_name:
-                self.article.author = [author_name]
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -339,23 +343,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        date_formats = [
-            '%Y-%m-%d',
-            '%Y/%m/%d',
-            '%d.%m.%Y',
-            '%Y-%m-%d %H:%M:%S',
-            '%d-%m-%Y',
-            '%Y.%m.%d'
-        ]
-        if ' ' in date_str:
-            date_formats.insert(0, '%Y-%m-%d %H:%M:%S')
-            date_formats.insert(0, '%d.%m.%Y %H:%M')
-        for fmt in date_formats:
-            try:
-                return datetime.datetime.strptime(date_str.strip(), fmt)
-            except ValueError:
-                continue
-        # return datetime.datetime.now()
+        return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
@@ -366,12 +354,15 @@ class HTMLParser:
         """
         try:
             response = make_request(self.full_url, self.config)
-            soup = BeautifulSoup(response.text, 'lxml')
-            self._fill_article_with_meta_information(soup)
-            self._fill_article_with_text(soup)
-            return self.article
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             return False
+        try:
+            soup = BeautifulSoup(response.text, 'lxml')
+        except Exception:
+            return False
+        self._fill_article_with_meta_information(soup)
+        self._fill_article_with_text(soup)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -381,21 +372,50 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
+    base_path = pathlib.Path(base_path)
     if base_path.exists():
-        import shutil
-        for item in base_path.iterdir():
-            if item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
-    else:
-        base_path.mkdir(parents=True, exist_ok=True)
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
     """
     Entrypoint for scraper module.
     """
+    config_path = pathlib.Path("config.json")
+    if not config_path.exists():
+        return
+    config = Config(config_path)
+    print(f"seed URLs: {config.get_seed_urls()}")
+    print(f"total articles: {config.get_num_articles()}")
+    print(f"encoding: {config.get_encoding()}")
+    print(f"timeout: {config.get_timeout()}s")
+    if config.get_num_articles() <= 0:
+        return
+    crawler = CrawlerRecursive(config)
+    crawler.find_articles()
+    from core_utils.constants import ASSETS_PATH
+    prepare_environment(ASSETS_PATH)
+    articles_data = []
+    total_to_parse = min(len(crawler.article_urls), config.get_num_articles())
+    for i, url in enumerate(crawler.article_urls[:total_to_parse], 1):
+        parser = HTMLParser(url, i, config)
+        article = parser.parse()
+        if article and article.text:
+            with open(article.get_raw_text_path(), "w", encoding="utf-8") as f:
+                f.write(article.text)
+            with open(article.get_meta_file_path(), "w", encoding="utf-8") as f:
+                json.dump(article.get_meta(), f, ensure_ascii=False, indent=2)
+            articles_data.append(article.get_meta())
+    print(f"\nparsed {len(articles_data)} articles")
+    log_path = ASSETS_PATH / "scraping_log.json"
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "total_found": len(crawler.article_urls),
+            "total_parsed": len(articles_data),
+            "articles": articles_data
+        }, f, ensure_ascii=False, indent=2)
+
 
 if __name__ == "__main__":
     main()
