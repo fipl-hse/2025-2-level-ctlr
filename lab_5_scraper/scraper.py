@@ -19,25 +19,39 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    pass
+    """
+    Exception raised when seed URL does not match the standard URL pattern.
+    """
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    pass
+    """
+    Exception raised when the total number of articles exceeds the allowed range.
+    """
 
 class IncorrectNumberOfArticlesError(Exception):
-    pass
+    """
+    Exception raised when the total number of articles is not a positive integer.
+    """
 
 class IncorrectHeadersError(Exception):
-    pass
+    """
+    Exception raised when headers are not provided as a dictionary.
+    """
 
 class IncorrectEncodingError(Exception):
-    pass
+    """
+    Exception raised when encoding is not specified as a string.
+    """
 
 class IncorrectTimeoutError(Exception):
-    pass
+    """
+    Exception raised when timeout is not a positive integer between 0 and 60.
+    """
 
 class IncorrectVerifyError(Exception):
-    pass
+    """
+    Exception raised when verify_certificate or headless_mode is not a boolean value.
+    """
 
 
 class Config:
@@ -116,7 +130,7 @@ class Config:
 
         if not isinstance(dto.should_verify_certificate, bool):
             raise IncorrectVerifyError("should_verify_certificate должен быть bool")
-        
+
         if not isinstance(dto.headless_mode, bool):
             raise IncorrectVerifyError("headless_mode должен быть bool")
 
@@ -146,7 +160,7 @@ class Config:
             dict[str, str]: Headers
         """
         return self._headers
-        
+
 
     def get_encoding(self) -> str:
         """
@@ -234,7 +248,7 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        href = article_bs.get("href", "")
+        href = str(article_bs.get("href", ""))
         if href.startswith("http"):
             return href
         return "https://mxat.ru" + href
@@ -296,6 +310,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
 
     def find_articles(self) -> None:
         """
@@ -380,7 +395,7 @@ class HTMLParser:
                 self.article.date = datetime.datetime(1970, 1, 1)
         else:
             self.article.date = datetime.datetime(1970, 1, 1)
-            
+
             self.article.topics = []
 
 
