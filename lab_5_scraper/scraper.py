@@ -3,12 +3,15 @@ Crawler implementation.
 """
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import datetime
 import json
 import re
 import shutil
-import sys
-from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -18,7 +21,6 @@ from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 class IncorrectSeedURLError(Exception):
     """Raised when seed URL does not match standard pattern."""
@@ -251,17 +253,6 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     response.encoding = config.get_encoding()
     return response
 
-def prepare_environment(base_path: Path) -> None:
-    """
-    Create ASSETS_PATH folder if no created and remove existing folder.
-
-    Args:
-        base_path (Path): Path where articles stores
-    """
-    if base_path.exists():
-        shutil.rmtree(base_path)
-    base_path.mkdir(parents=True, exist_ok=True)
-
 
 class Crawler:
     """
@@ -281,7 +272,7 @@ class Crawler:
         self.config = config
         self.urls: list[str] = []
 
-    def _extract_url(self, article_bs: Tag) -> str:
+    def _extract_url(self, article_bs: Tag, seed_url: str) -> list[str]:
         """
         Find and retrieve url from HTML.
 
@@ -292,22 +283,20 @@ class Crawler:
             str: Url from HTML
         """
         urls = []
-
-        match = re.match(r'(https?://[^/]+)', seed_url)
-        if not match:
+        base_match = re.match(r'(https?://[^/]+)', seed_url)
+        if not base_match:
             return urls
-        base_url = match.group(1)
-    
+        base_url = base_match.group(1)
+
         for link in article_bs.find_all('a', href=True):
             href = link.get('href', '')
-        
             if '.shtml' in href or 'text_' in href:
                 if href.startswith('/'):
                     full_url = base_url + href
                     urls.append(full_url)
                 elif href.startswith('http'):
                     urls.append(href)
-    
+
         return list(set(urls))
 
     def find_articles(self) -> None:
@@ -437,6 +426,40 @@ class HTMLParser:
                 self.article.author = [author_link.get_text(strip=True)]
             else:
                 self.article.author = ["NOT FOUND"]
+        date_str = None
+
+        date_tag = article_soup.find('time')
+        if date_tag:
+            date_str = date_tag.get('datetime') or date_tag.get_text(strip=True)
+        if not date_str:
+            meta_date = article_soup.find('meta', {'name': 'article:published_time'})
+            if meta_date:
+                date_str = meta_date.get('content')
+        if not date_str:
+            date_pattern = re.compile(r'\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}[/.-]\d{1,2}[/.-]\d{1,2}')
+            text = article_soup.get_text()
+            match = date_pattern.search(text)
+            if match:
+                date_str = match.group(0)
+
+        if date_str:
+            self.article.date = self.unify_date_format(date_str)
+
+        topics = []
+        keywords_tag = article_soup.find('meta', {'name': 'keywords'})
+        if keywords_tag and keywords_tag.get('content'):
+            topics = [k.strip() for k in keywords_tag['content'].split(',')]
+
+        if not topics:
+            genre_keywords = ['проза', 'поэзия', 'рассказ', 'роман', 'повесть', 'стихотворение']
+            text_lower = article_soup.get_text().lower()
+            for genre in genre_keywords:
+                if genre in text_lower:
+                    topics.append(genre)
+
+        self.article.topics = topics
+        
+        
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -448,6 +471,36 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        months_ru = {
+            'января': 'January', 'февраля': 'February', 'марта': 'March',
+            'апреля': 'April', 'мая': 'May', 'июня': 'June',
+            'июля': 'July', 'августа': 'August', 'сентября': 'September',
+            'октября': 'October', 'ноября': 'November', 'декабря': 'December'
+        }
+        
+        for ru, en in months_ru.items():
+            if ru in date_str:
+                date_str = date_str.replace(ru, en)
+                break
+        
+        formats = [
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S',
+            '%d.%m.%Y',
+            '%d/%m/%Y',
+            '%Y-%m-%d',
+            '%d %B %Y, %H:%M',
+            '%d %B %Y',
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except (ValueError, TypeError):
+                continue
+        
+        return datetime.now()
+
 
 
     def parse(self) -> Article | bool:
@@ -476,6 +529,9 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
+    if base_path.exists():
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
