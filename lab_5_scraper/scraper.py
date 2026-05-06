@@ -90,7 +90,9 @@ class Config:
                 raise IncorrectSeedURLError()
         if not isinstance(conf.total_articles, int):
             raise IncorrectNumberOfArticlesError()
-        if conf.total_articles < 1 or conf.total_articles > 150:
+        if conf.total_articles < 1:
+            raise IncorrectNumberOfArticlesError()
+        if conf.total_articles > 150:
             raise NumberOfArticlesOutOfRangeError()
         if not isinstance(conf.headers, dict):
             raise IncorrectHeadersError()
