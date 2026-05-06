@@ -218,11 +218,32 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
+        href = article_bs.get("href")
+        if not href:
+            return ""
+        if href.startswith(('http://', 'https://')):
+            return href
+        base = self.config.get_seed_urls()[0].rstrip("/")
+        return base + href
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
+        for url in self.config.get_seed_urls():
+            try:
+                response = make_request(url, self.config)
+                soup = BeautifulSoup(response.text, "html.parser")
+                seed = self.config.get_seed_urls()[0]
+                for tag in soup.find_all("a"):
+                    link = self._extract_url(tag)
+                    if link and link not in self.urls:
+                        if seed in link:
+                            self.urls.append(link)
+                    if len(self.urls) >= self.config.get_num_articles():
+                        return
+            except Exception:
+                continue
 
     def get_search_urls(self) -> list:
         """
@@ -231,6 +252,7 @@ class Crawler:
         Returns:
             list: seed_urls param
         """
+        return self.config.get_seed_urls()
 
 
 # 10
