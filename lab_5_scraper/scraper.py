@@ -6,12 +6,16 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
+import re
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
+from core_utils.article.io import to_raw
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class Config:
@@ -27,8 +31,8 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
-        self.config_data = self._load_config()
-        self.dto = self._create_dto()
+        self.dto = self._extract_config_content()
+        self._validate_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -45,7 +49,11 @@ class Config:
             headers=config_data.get('headers', {}),
             timeout=config_data.get('timeout', 5),
             retries=config_data.get('retries', 3),
-            delay=config_data.get('delay', 1)
+            delay=config_data.get('delay', 1),
+            total_articles_to_parse=config_data.get('total_articles_to_parse', 10),
+            encoding=config_data.get('encoding', 'utf-8'),
+            verify=config_data.get('should_verify_certificate', True),
+            headless=config_data.get('headless_mode', False)
         )
 
         return config_dto
@@ -55,15 +63,13 @@ class Config:
         """
         Ensure configuration parameters are not corrupt.
         """
-        config_dto = self._extract_config_content()
-
-        self._validate_seed_urls(config_dto.seed_urls)
-        self._validate_articles_count(config_dto.total_articles_to_parse)
-        self._validate_headers(config_dto.headers)
-        self._validate_encoding(config_dto.encoding)
-        self._validate_timeout(config_dto.timeout)
-        self._validate_verify(config_dto.verify)
-        self._validate_headless(config_dto.headless)
+        self._validate_seed_urls(self.dto.seed_urls)
+        self._validate_articles_count(self.dto.total_articles_to_parse)
+        self._validate_headers(self.dto.headers)
+        self._validate_encoding(self.dto.encoding)
+        self._validate_timeout(self.dto.timeout)
+        self._validate_verify(self.dto.verify)
+        self._validate_headless(self.dto.headless)
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -72,6 +78,8 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
+        """Validate seed URLs pattern."""
+        return self.dto.seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -80,6 +88,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
+        return self.dto.total_articles_to_parse
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -88,6 +97,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
+        return self.dto.headers
 
     def get_encoding(self) -> str:
         """
@@ -96,6 +106,7 @@ class Config:
         Returns:
             str: Encoding
         """
+        return self.dto.encoding
 
     def get_timeout(self) -> int:
         """
@@ -104,6 +115,7 @@ class Config:
         Returns:
             int: Number of seconds to wait for response
         """
+        return self.dto.timeout
 
     def get_verify_certificate(self) -> bool:
         """
@@ -112,6 +124,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
+        return self.dto.verify
 
     def get_headless_mode(self) -> bool:
         """
@@ -120,6 +133,7 @@ class Config:
         Returns:
             bool: Whether to use headless mode or not
         """
+        return self.dto.headless
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
