@@ -18,6 +18,42 @@ from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
+class IncorrectSeedURLError(Exception):
+    """
+    Exception raised when a seed URL does not follow the expected pattern (must start with http:// or https://, optionally with www.).
+    """
+
+class NumberOfArticlesOutOfRangeError(Exception):
+    """
+    Exception raised when the total number of articles is outside the permitted range (1–150).
+    """
+
+class IncorrectNumberOfArticlesError(Exception):
+    """
+    Exception raised when the total number of articles is not a positive integer (must be greater than zero).
+    """
+
+class IncorrectHeadersError(Exception):
+    """
+    Exception raised when headers are not supplied in the form of a dictionary.
+    """
+
+class IncorrectEncodingError(Exception):
+    """
+    Exception raised when encoding is not provided as a string.
+    """
+
+class IncorrectTimeoutError(Exception):
+    """
+    Exception raised when timeout is not an integer between 1 and 59 inclusive.
+    """
+
+class IncorrectVerifyError(Exception):
+    """
+    Exception raised when either verify_certificate or headless_mode is not a boolean (True/False).
+    """
+
+
 class Config:
     """
     Class for unpacking and validating configurations.
@@ -33,6 +69,14 @@ class Config:
         self.path_to_config = path_to_config
         self.dto = self._extract_config_content()
         self._validate_config_content()
+
+        self._seed_urls = self.dto.seed_urls
+        self._num_articles = self.dto.total_articles_to_parse
+        self._headers = self.dto.headers
+        self._encoding = self.dto.encoding
+        self._timeout = self.dto.timeout
+        self._should_verify_certificate = self.dto.verify
+        self._headless_mode = self.dto.headless
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -70,6 +114,58 @@ class Config:
         self._validate_timeout(self.dto.timeout)
         self._validate_verify(self.dto.verify)
         self._validate_headless(self.dto.headless)
+
+    def _validate_seed_urls(self, seed_urls: list) -> None:
+        """Validate seed URLs pattern."""
+        if not isinstance(seed_urls, list):
+            raise IncorrectSeedURLError("Seed URLs must be a list")
+        
+        pattern = r'^https?://(www\.)?'
+        for url in seed_urls:
+            if not isinstance(url, str) or not re.match(pattern, url):
+                raise IncorrectSeedURLError(f"Invalid seed URL: {url}")
+
+    def _validate_articles_count(self, count: int) -> None:
+        """Validate total number of articles."""
+        if not isinstance(count, int) or count < 0:
+            raise IncorrectNumberOfArticlesError(
+                f"Number of articles must be a non-negative integer, got: {count}"
+            )
+        if count < 1 or count > 150:
+            raise NumberOfArticlesOutOfRangeError(
+                f"Number of articles must be between 1 and 150, got: {count}"
+            )
+
+    def _validate_headers(self, headers: dict) -> None:
+        """Validate headers format."""
+        if not isinstance(headers, dict):
+            raise IncorrectHeadersError(
+                f"Headers must be a dictionary, got: {type(headers)}"
+            )
+
+    def _validate_encoding(self, encoding: str) -> None:
+        """Validate encoding format."""
+        if not isinstance(encoding, str):
+            raise IncorrectEncodingError(
+                f"Encoding must be a string, got: {type(encoding)}"
+            )
+
+    def _validate_timeout(self, timeout: int) -> None:
+        """Validate timeout value."""
+        if not isinstance(timeout, int) or timeout <= 0 or timeout >= 60:
+            raise IncorrectTimeoutError(
+                f"Timeout must be a positive integer less than 60, got: {timeout}"
+            )
+
+    def _validate_verify(self, verify: bool) -> None:
+        """Validate verify certificate mode."""
+        if verify not in (True, False):
+            raise IncorrectVerifyError(f"Verify must be True or False, got: {verify}")
+
+    def _validate_headless(self, headless: bool) -> None:
+        """Validate headless mode value."""
+        if headless not in (True, False):
+            raise IncorrectVerifyError(f"Headless mode must be True or False, got: {headless}")
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -147,6 +243,18 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
+    try:
+        response = requests.get(
+            url,
+            headers=config.get_headers(),
+            timeout=config.get_timeout(),
+            verify=config.get_verify_certificate()
+        )
+        response.encoding = config.get_encoding()
+        return response
+    except requests.RequestException:
+        return None
+
 
 
 class Crawler:
@@ -164,6 +272,8 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
+        self.config = config
+        self._urls: list[str] = []
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
