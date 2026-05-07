@@ -123,10 +123,16 @@ class Config:
 
     def _validate_articles_count(self, count: int) -> None:
         """Validate total number of articles."""
-        if not isinstance(count, int) or count < 0:
+        if not isinstance(count, int):
+            raise IncorrectNumberOfArticlesError(
+                f"Number of articles must be an integer, got: {type(count).__name__}"
+            )
+
+        if count < 0:
             raise IncorrectNumberOfArticlesError(
                 f"Number of articles must be a non-negative integer, got: {count}"
             )
+
         if count < 1 or count > 150:
             raise NumberOfArticlesOutOfRangeError(
                 f"Number of articles must be between 1 and 150, got: {count}"
