@@ -75,7 +75,7 @@ class Config:
         self._headers = self.dto.headers
         self._encoding = self.dto.encoding
         self._timeout = self.dto.timeout
-        self._should_verify_certificate = self.dto.verify
+        self._should_verify_certificate = self.dto.should_verify_certificate
         self._headless_mode = self.dto.headless
 
     def _extract_config_content(self) -> ConfigDTO:
@@ -94,7 +94,7 @@ class Config:
             timeout=config_data.get('timeout', 5),
             total_articles_to_find_and_parse=config_data.get('total_articles_to_find_and_parse', 10),
             encoding=config_data.get('encoding', 'utf-8'),
-            verify=config_data.get('should_verify_certificate', True),
+            should_verify_certificate=config_data.get('should_verify_certificate', True),
             headless=config_data.get('headless_mode', False)
     )
 
@@ -110,7 +110,7 @@ class Config:
         self._validate_headers(self.dto.headers)
         self._validate_encoding(self.dto.encoding)
         self._validate_timeout(self.dto.timeout)
-        self._validate_verify(self.dto.verify)
+        self._validate_verify(self.dto.should_verify_certificate)
         self._validate_headless(self.dto.headless)
 
     def _validate_seed_urls(self, seed_urls: list) -> None:
@@ -218,7 +218,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
-        return self.dto.verify
+        return self._should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
