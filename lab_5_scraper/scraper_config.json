@@ -1,5 +1,16 @@
 {
-    "seed_urls": ["https://www.ermolova.ru/theatre/news/", "https://www.ermolova.ru/theatre/news/index/2/", "https://www.ermolova.ru/theatre/news/index/3/", "https://www.ermolova.ru/theatre/news/index/4/", "https://www.ermolova.ru/theatre/news/index/5/", "https://www.ermolova.ru/theatre/news/index/6/", "https://www.ermolova.ru/theatre/news/index/7/", "https://www.ermolova.ru/theatre/news/index/8/", "https://www.ermolova.ru/theatre/news/index/9/", "https://www.ermolova.ru/theatre/news/index/10/"],
+    "seed_urls": [
+        "https://www.ermolova.ru/theatre/news/",
+        "https://www.ermolova.ru/theatre/news/index/2/",
+        "https://www.ermolova.ru/theatre/news/index/3/",
+        "https://www.ermolova.ru/theatre/news/index/4/",
+        "https://www.ermolova.ru/theatre/news/index/5/",
+        "https://www.ermolova.ru/theatre/news/index/6/",
+        "https://www.ermolova.ru/theatre/news/index/7/",
+        "https://www.ermolova.ru/theatre/news/index/8/",
+        "https://www.ermolova.ru/theatre/news/index/9/",
+        "https://www.ermolova.ru/theatre/news/index/10/"
+    ],
     "headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",

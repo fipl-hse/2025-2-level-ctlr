@@ -10,6 +10,7 @@ import re
 import shutil
 from random import randint
 from time import sleep
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -92,10 +93,7 @@ class Config:
             ConfigDTO: Config values
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            if not isinstance(data, dict):
-                raise TypeError('Inapproprite type of config_file')
-            return ConfigDTO(**data)
+            return ConfigDTO(**json.load(f))
 
     def _validate_config_content(self) -> None:
         """
@@ -215,7 +213,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         verify=config.get_verify_certificate()
     )
     response.encoding = config.get_encoding()
-    #sleep(randint(1, 3)) #commented to make a green PR as the maximum execution time is 4m0s
+    sleep(randint(0, 1)) #commented to make a green PR as the maximum execution time is 4m0s
     return response
 
 
@@ -254,7 +252,7 @@ class Crawler:
         if not isinstance(href, str) or '/theatre/blog/view/' not in href:
             return ''
         if href.startswith('/'):
-            return 'https://www.ermolova.ru' + href
+            return urljoin('https://www.ermolova.ru', href)
         return href
 
     def find_articles(self) -> None:
@@ -290,25 +288,27 @@ class Crawler:
 # 10
 
 
-# class CrawlerRecursive(Crawler):
-#     """
-#     Recursive implementation.
+class CrawlerRecursive(Crawler):
+    """
+    Recursive implementation.
 
-#     Get one URL of the title page and find requested number of articles recursively.
-#     """
+    Get one URL of the title page and find requested number of articles recursively.
+    """
 
-#     def __init__(self, config: Config) -> None:
-#         """
-#         Initialize an instance of the CrawlerRecursive class.
+    def __init__(self, config: Config) -> None:
+        """
+        Initialize an instance of the CrawlerRecursive class.
 
-#         Args:
-#             config (Config): Configuration
-#         """
+        Args:
+            config (Config): Configuration
+        """
+        super().__init__(config)
 
-#     def find_articles(self) -> None:
-#         """
-#         Find number of article urls requested.
-#         """
+    def find_articles(self) -> None:
+        """
+        Find number of article urls requested.
+        """
+        pass
 
 
 # 4, 6, 8, 10
@@ -344,7 +344,11 @@ class HTMLParser:
         if not content_div:
             return
         paragraphs = content_div.find_all('p')
-        text = '\n'.join(p.get_text(strip=True) for p in paragraphs)
+        text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+        text = '\n'.join(text_parts)
+        lines = text.split('\n')
+        if lines and re.match(r'\d{2}\.\d{2}\.\d{4}', lines[0]):
+            text = '\n'.join(lines[1:])
         self.article.text = text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
@@ -402,7 +406,7 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     base_path = pathlib.Path(base_path)
     if base_path.exists():
         shutil.rmtree(base_path)
-    base_path.mkdir(parents=True, exist_ok=True)
+    base_path.mkdir(parents=True)
 
 
 def main() -> None:
