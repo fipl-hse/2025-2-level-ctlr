@@ -87,18 +87,16 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as file:
             config_data = json.load(file)
-
+            
         config_dto = ConfigDTO(
             seed_urls=config_data.get('seed_urls', []),
             headers=config_data.get('headers', {}),
             timeout=config_data.get('timeout', 5),
-            retries=config_data.get('retries', 3),
-            delay=config_data.get('delay', 1),
             total_articles_to_parse=config_data.get('total_articles_to_parse', 10),
             encoding=config_data.get('encoding', 'utf-8'),
             verify=config_data.get('should_verify_certificate', True),
             headless=config_data.get('headless_mode', False)
-        )
+    )
 
         return config_dto
 
