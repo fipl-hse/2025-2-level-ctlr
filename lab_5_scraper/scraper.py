@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw, to_meta
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
@@ -119,7 +119,7 @@ class Config:
         """Validate seed URLs pattern."""
         if not isinstance(seed_urls, list):
             raise IncorrectSeedURLError("Seed URLs must be a list")
-        
+
         pattern = r'^https?://(www\.)?'
         for url in seed_urls:
             if not isinstance(url, str) or not re.match(pattern, url):
@@ -385,12 +385,12 @@ class HTMLParser:
             raw_text = paragraph.get_text(strip=True)
             if raw_text and len(raw_text) > 50:
                 text_parts.append(raw_text)
-        
+
         if not text_parts:
             body = article_soup.find('body')
             if body:
                 text_parts.append(body.get_text(strip=True))
-        
+
         self.article.text = '\n\n'.join(text_parts)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
