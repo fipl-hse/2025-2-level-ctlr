@@ -71,7 +71,7 @@ class Config:
         self._validate_config_content()
 
         self._seed_urls = self.dto.seed_urls
-        self._num_articles = self.dto.total_articles_to_parse
+        self._num_articles = self.dto.total_articles_to_find_and_parse
         self._headers = self.dto.headers
         self._encoding = self.dto.encoding
         self._timeout = self.dto.timeout
@@ -92,7 +92,7 @@ class Config:
             seed_urls=config_data.get('seed_urls', []),
             headers=config_data.get('headers', {}),
             timeout=config_data.get('timeout', 5),
-            total_articles_to_parse=config_data.get('total_articles_to_parse', 10),
+            total_articles_to_find_and_parse=config_data.get('total_articles_to_find_and_parse', 10),
             encoding=config_data.get('encoding', 'utf-8'),
             verify=config_data.get('should_verify_certificate', True),
             headless=config_data.get('headless_mode', False)
@@ -106,7 +106,7 @@ class Config:
         Ensure configuration parameters are not corrupt.
         """
         self._validate_seed_urls(self.dto.seed_urls)
-        self._validate_articles_count(self.dto.total_articles_to_parse)
+        self._validate_articles_count(self.dto.total_articles_to_find_and_parse)
         self._validate_headers(self.dto.headers)
         self._validate_encoding(self.dto.encoding)
         self._validate_timeout(self.dto.timeout)
@@ -182,7 +182,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
-        return self.dto.total_articles_to_parse
+        return self._num_articles
 
     def get_headers(self) -> dict[str, str]:
         """
