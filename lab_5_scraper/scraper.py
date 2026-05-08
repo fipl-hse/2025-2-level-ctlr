@@ -206,21 +206,15 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=config.get_timeout(),
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = config.get_encoding()
-        sleep(randint(0, 1))
-        return response
-    except (Exception):
-        response = requests.Response()
-        response.status_code = 404
-        return response
-
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    sleep(randint(0, 1))
+    return response
 
 class Crawler:
     """
@@ -272,7 +266,7 @@ class Crawler:
                 url = self._extract_url(link)
                 full_url = urljoin(seed_url, url)
                 if (full_url not in self.urls and "isaeva.ru" in full_url and
-                    full_url.endswith('.html')): 
+                    full_url.endswith('.html')):
                     self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
