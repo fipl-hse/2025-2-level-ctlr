@@ -362,7 +362,8 @@ class HTMLParser:
             if author_link:
                 author_tag = author_link.find('span', itemprop='name') or author_link
         self.article.author = [author_tag.get_text(strip=True)] if author_tag else ["NOT FOUND"]
-        date_tag = article_soup.find('div', class_='date') or article_soup.find('span', class_='date')
+        date_tag = (article_soup.find('div', class_='date') or
+            article_soup.find('span', class_='date'))
         if date_tag:
             self.article.date = self.unify_date_format(date_tag.get_text(strip=True))
         else:
@@ -382,7 +383,9 @@ class HTMLParser:
                         date_found = True
                         break
             if not date_found:
-                self.article.date = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                self.article.date = datetime.datetime.now().replace(
+                        hour=0, minute=0, second=0, microsecond=0
+                    )
         topics = []
         topic_tags = (article_soup.find_all('a', class_='topic') or
               article_soup.find_all('div', class_='category'))
