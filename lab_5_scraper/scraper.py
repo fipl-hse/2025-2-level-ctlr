@@ -352,6 +352,7 @@ class HTMLParser:
         title = (
         article_soup.find("h4", class_="head") or
         article_soup.find("h1") or
+        article_soup.find("h2") or
         article_soup.find("title")
     )
         self.article.title = title.get_text(strip=True) if title else "NOT FOUND"
