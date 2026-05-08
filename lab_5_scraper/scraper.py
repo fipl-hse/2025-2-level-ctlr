@@ -102,7 +102,7 @@ class Config:
         config_dto = self._extract_config_content()
         if not isinstance(config_dto.seed_urls, list):
             raise IncorrectSeedURLError('Seed URLs must be a list')
-        pattern = r'^http?://(www\.)?'
+        pattern = r'^https?://(www\.)?'
         for url in config_dto.seed_urls:
             if not re.match(pattern, url):
                 raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
@@ -256,29 +256,34 @@ class Crawler:
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
+
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
-            try:
-                response = make_request(seed_url, self.config)
-                if not response.ok:
-                    continue
-            except Exception:
-                continue
-            soup = BeautifulSoup(response.text, 'lxml')
-            articles = soup.find_all('div', class_=['blog-content', 'news-item'])
-            for article in articles:
-                if len(self.urls) >= target_count:
-                    return
-                link_tag = article.find('a')
-                if not link_tag:
-                    continue
-                url = self._extract_url(link_tag)
-                if not url:
-                    continue
-                full_url = urljoin('http://isaeva.ru', url)
-                if full_url not in self.urls and ('/blog/' in full_url or '/news/' in full_url):
-                    self.urls.append(full_url)
+            current_page = 1
+            while len(self.urls) < target_count:
+                page_url = f"{seed_url.rstrip('/')}/?page={current_page}"
+                try:
+                    response = make_request(page_url, self.config)
+                    if not response.ok:
+                        break
+                except Exception:
+                    break
+                soup = BeautifulSoup(response.text, 'lxml')
+                found_before = len(self.urls)
+                
+                for link_tag in soup.find_all('a', href=True):
+                    if len(self.urls) >= target_count:
+                        break
+                    url = self._extract_url(link_tag)
+                    full_url = urljoin('http://www.isaeva.ru', url)
+                    if (full_url not in self.urls and 
+                        ('/blog/' in full_url or '/news/' in full_url) and
+                        len(full_url.split('/')) > 4):
+                        self.urls.append(full_url)
+                if len(self.urls) == found_before:
+                    break
+                current_page += 1
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
@@ -383,8 +388,10 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        day, month, year = map(int, date_str.split('.'))
-        return datetime.datetime(year, month, day)
+        try:
+            return datetime.datetime.strptime(date_str.strip(), '%d.%m.%Y')
+        except ValueError:
+            return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
