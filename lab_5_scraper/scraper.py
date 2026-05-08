@@ -206,15 +206,20 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    response = requests.get(
-        url,
-        headers=config.get_headers(),
-        timeout=config.get_timeout(),
-        verify=config.get_verify_certificate()
-    )
-    response.encoding = config.get_encoding()
-    sleep(randint(0, 1))
-    return response
+    try:
+        response = requests.get(
+            url,
+            headers=config.get_headers(),
+            timeout=config.get_timeout(),
+            verify=config.get_verify_certificate()
+        )
+        response.encoding = 'windows-1251'
+        sleep(randint(1, 2))
+        return response
+    except Exception:
+        response = requests.Response()
+        response.status_code = 404
+        return response
 
 class Crawler:
     """
@@ -331,17 +336,14 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        content_div = article_soup.find('div', class_='blog-content')
+        content_div = article_soup.find('div', class_='blog-content') or \
+                  article_soup.find('div', id='content')
         if not content_div:
-            self.article.text = "NOT FOUND"
-            return
-        paragraphs = content_div.find_all('p')
-        text_parts = []
-        for p in paragraphs:
-            txt = p.get_text(strip=True)
-            if txt and not re.match(r'^\d{2}\.\d{2}\.\d{3}$', txt):
-                text_parts.append(txt)
-        self.article.text = '\n'.join(text_parts)
+            paragraphs = article_soup.find_all('p')
+        else:
+            paragraphs = content_div.find_all('p')
+        text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+        self.article.text = '\n'.join(text_parts) if text_parts else "NOT FOUND"
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
