@@ -256,6 +256,7 @@ class Crawler:
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
+
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
