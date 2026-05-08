@@ -303,7 +303,7 @@ class Crawler:
         Find articles.
         """
         needed = self.config.get_num_articles()
-        base_id = 90295
+        base_id = 90200
         base_url = "https://proza.pishi.pro/fantastika/"
 
         for i in range(needed):
