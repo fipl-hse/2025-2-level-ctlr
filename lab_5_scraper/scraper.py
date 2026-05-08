@@ -303,15 +303,13 @@ class Crawler:
         Find articles.
         """
         needed = self.config.get_num_articles()
-        start_id = 90295
+        base_id = 90295
         base_url = "https://proza.pishi.pro/fantastika/"
 
         for i in range(needed):
-            article_id = start_id + i
+            article_id = base_id + i
             full_url = f"{base_url}{article_id}/"
-            if full_url not in self.urls:
-                self.urls.append(full_url)
-
+            self.urls.append(full_url)
 
     def get_search_urls(self) -> list:
         """
