@@ -358,7 +358,7 @@ class HTMLParser:
     )
         if title_tag:
             title_text = title_tag.get_text(strip=True)
-            self.article.title = title_text.replace('\xa0', ' ') 
+            self.article.title = title_text.replace('\xa0', ' ')
         else:
             self.article.title = "NOT FOUND"
         date = article_soup.find("p", class_="caption")
