@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw
+from core_utils.article.io import to_raw, to_meta
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
@@ -363,9 +363,9 @@ class HTMLParser:
         if not author_tag:
             author_tag = article_soup.find('span', class_='author')
         if author_tag:
-            self.article.author = author_tag.get_text(strip=True)
+            self.article.author = [author_tag.get_text(strip=True)]
         else:
-            self.article.author = "Unknown"
+            self.article.author = ["NOT FOUND"]
         date_tag = article_soup.find('div', class_='date')
         if not date_tag:
             date_tag = article_soup.find('span', class_='date')
@@ -459,6 +459,7 @@ def main() -> None:
             article = parser.parse()
             if article:
                 to_raw(article)
+                to_meta(article)
                 saved_count += 1
                 print(f"Saved article {idx}: {url}")
         print(f"\nSuccessfully saved {saved_count} articles to {ASSETS_PATH}")
