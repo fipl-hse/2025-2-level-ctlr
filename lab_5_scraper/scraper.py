@@ -216,7 +216,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         response.encoding = config.get_encoding()
         sleep(randint(0, 1))
         return response
-    except (requests.exceptions.RequestException, Exception):
+    except (Exception):
         response = requests.Response()
         response.status_code = 404
         return response
@@ -271,8 +271,8 @@ class Crawler:
                     break
                 url = self._extract_url(link)
                 full_url = urljoin(seed_url, url)
-                if (full_url not in self.urls and "isaeva.ru" in full_url and 
-                    full_url.endswith('.html')):      
+                if (full_url not in self.urls and "isaeva.ru" in full_url and
+                    full_url.endswith('.html')): 
                     self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
@@ -346,7 +346,7 @@ class HTMLParser:
         for p in paragraphs:
             txt = p.get_text(strip=True)
             if txt and not re.match(r'^\d{2}\.\d{2}\.\d{3}$', txt):
-                text_parts.append(txt)  
+                text_parts.append(txt)
         self.article.text = '\n'.join(text_parts)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
