@@ -267,7 +267,9 @@ class Crawler:
                 full_url = urljoin(seed_url, url)
                 if (full_url not in self.urls and "isaeva.ru" in full_url and
                     full_url.endswith('.html')):
-                    self.urls.append(full_url)
+                    lresponse = make_request(full_url, self.config)
+                    if lresponse.ok:
+                        self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
@@ -348,15 +350,15 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title = (
-        article_soup.find("h4", class_="head") or 
-        article_soup.find("h1") or 
+        article_soup.find("h4", class_="head") or
+        article_soup.find("h1") or
         article_soup.find("title")
     )
         self.article.title = title.get_text(strip=True) if title else "NOT FOUND"
         date = article_soup.find("p", class_="caption")
         if date:
             date_raw = date.get_text(strip=True)
-            date_match = re.search(r'\d{2}\.\d{2}\.\d{3}', date_raw)
+            date_match = re.search(r'\d{2}\.\d{2}\.\d{4}', date_raw)
             if date_match:
                 self.article.date = self.unify_date_format(date_match.group())
         if not self.article.date:
