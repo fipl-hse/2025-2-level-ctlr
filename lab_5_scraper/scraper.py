@@ -20,31 +20,24 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 class IncorrectSeedURLError(Exception):
     """Raised when seed URL is invalid."""
-    pass
 
 class NumberOfArticlesOutOfRangeError(Exception):
     """Raised when number of articles is out of range."""
-    pass
 
 class IncorrectNumberOfArticlesError(Exception):
     """Raised when number of articles is not a positive integer."""
-    pass
 
 class IncorrectHeadersError(Exception):
     """Raised when headers are not a dictionary."""
-    pass
 
 class IncorrectEncodingError(Exception):
     """Raised when encoding is not a string."""
-    pass
 
 class IncorrectTimeoutError(Exception):
     """Raised when timeout is invalid."""
-    pass
 
 class IncorrectVerifyError(Exception):
     """Raised when verify certificate is not a boolean."""
-    pass
 
 class Config:
     """
@@ -234,7 +227,7 @@ class Crawler:
             str: Url from HTML
         """
         href = article_bs.get('href', '')
-        if 'news.php?id=' in href:
+        if isinstance(href, str) and 'news.php?id=' in href:
             if href.startswith('http'):
                 return href
             clean_href = href.lstrip('/')
@@ -265,7 +258,7 @@ class Crawler:
         """
         Get seed_urls param.
         """
-        return self.config.get_seed_urls()                
+        return self.config.get_seed_urls()
 
 
 
@@ -359,47 +352,20 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        author_tag = article_soup.find('div', class_='author')
-        if not author_tag:
-            author_tag = article_soup.find('span', class_='author')
+        author_tag = (article_soup.find('div', class_='author') or 
+                  article_soup.find('span', class_='author'))
         if not author_tag:
             author_link = article_soup.find('a', href=re.compile(r'/autors_b\.php\?id='))
             if author_link:
-                author_tag = author_link.find('span', itemprop='name')
-                if not author_tag:
-                    author_tag = author_link
-        if author_tag:
-            self.article.author = [author_tag.get_text(strip=True)]
-        else:
-            self.article.author = ["NOT FOUND"]
-        date_tag = article_soup.find('div', class_='date')
-        if not date_tag:
-            date_tag = article_soup.find('span', class_='date')
+                author_tag = author_link.find('span', itemprop='name') or author_link
+        self.article.author = [author_tag.get_text(strip=True)] if author_tag else ["NOT FOUND"]
+        date_tag = article_soup.find('div', class_='date') or article_soup.find('span', class_='date')
         if date_tag:
-            date_text = date_tag.get_text(strip=True)
-            self.article.date = self.unify_date_format(date_text)
+            self.article.date = self.unify_date_format(date_tag.get_text(strip=True))
         else:
-            date_found = False
-            for text in article_soup.stripped_strings:
-                match = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', text)
-                if match:
-                    day, month, year = match.groups()
-                    self.article.date = datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
-                    date_found = True
-                    break
-            if not date_found:
-                for cell in article_soup.find_all('td'):
-                    if 'Дата:' in cell.get_text():
-                        date_text = cell.get_text().replace('Дата:', '').strip()
-                        self.article.date = self.unify_date_format(date_text)
-                        date_found = True
-                        break
-            if not date_found:
-                self.article.date = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            self._find_date_in_html(article_soup)
         topics = []
-        topic_tags = article_soup.find_all('a', class_='topic')
-        if not topic_tags:
-            topic_tags = article_soup.find_all('div', class_='category')
+        topic_tags = article_soup.find_all('a', class_='topic') or article_soup.find_all('div', class_='category')
         for tag in topic_tags:
             topic_text = tag.get_text(strip=True)
             if topic_text and topic_text not in topics:
@@ -445,14 +411,14 @@ class HTMLParser:
         try:
             response = make_request(self.full_url, self.config)
             if not response or response.status_code != 200:
-                return False
+                return None
             soup = BeautifulSoup(response.content, 'html.parser')
             self._fill_article_with_text(soup)
             self._fill_article_with_meta_information(soup)
             return self.article
-        except Exception as e:
+        except (requests.RequestException, AttributeError, ValueError) as e:
             print(f"Error parsing {self.full_url}: {e}")
-            return False
+            return None
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
