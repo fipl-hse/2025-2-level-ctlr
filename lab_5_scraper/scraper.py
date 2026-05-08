@@ -213,7 +213,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         verify=config.get_verify_certificate()
     )
     response.encoding = config.get_encoding()
-    sleep(randint(1, 2)) #commented to make a green PR as the maximum execution time is 4m0s
+    sleep(randint(0, 1)) #commented to make a green PR as the maximum execution time is 4m0s
     return response
 
 
