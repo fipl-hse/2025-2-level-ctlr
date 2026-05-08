@@ -256,7 +256,6 @@ class Crawler:
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
-
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
@@ -267,15 +266,19 @@ class Crawler:
             except Exception:
                 continue
             soup = BeautifulSoup(response.text, 'lxml')
-            for link_tag in soup.find_all('a', href=True):
+            articles = soup.find_all('div', class_=['blog-content', 'news-item'])
+            for article in articles:
                 if len(self.urls) >= target_count:
-                    break
-                url = link_tag.get('href')
+                    return
+                link_tag = article.find('a')
+                if not link_tag:
+                    continue
+                url = self._extract_url(link_tag)
+                if not url:
+                    continue
                 full_url = urljoin('http://isaeva.ru', url)
-                if (full_url.startswith('http://isaeva.ru/blog/') or 
-                    full_url.startswith('http://isaeva.ru/news/')):
-                    if len(full_url.split('/')) > 4 and full_url not in self.urls:
-                        self.urls.append(full_url)
+                if full_url not in self.urls and ('/blog/' in full_url or '/news/' in full_url):
+                    self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
