@@ -206,20 +206,15 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=config.get_timeout(),
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = 'windows-1251'
-        sleep(randint(1, 2))
-        return response
-    except Exception:
-        response = requests.Response()
-        response.status_code = 404
-        return response
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    sleep(randint(0, 1))
+    return response
 
 class Crawler:
     """
@@ -352,7 +347,11 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = article_soup.find("h4", class_="head") or article_soup.find("h1")
+        title = (
+        article_soup.find("h4", class_="head") or 
+        article_soup.find("h1") or 
+        article_soup.find("title")
+    )
         self.article.title = title.get_text(strip=True) if title else "NOT FOUND"
         date = article_soup.find("p", class_="caption")
         if date:
