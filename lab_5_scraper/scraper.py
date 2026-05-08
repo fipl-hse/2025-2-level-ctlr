@@ -13,9 +13,9 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.config_dto import ConfigDTO
 from core_utils.article.io import to_raw
-from core_utils.constants import CRAWLER_CONFIG_PATH, ASSETS_PATH
+from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 class IncorrectSeedURLError(Exception):
     """Raised when seed URL is invalid."""
@@ -60,6 +60,12 @@ class Config:
         self.path_to_config = path_to_config
         self.config_dto = self._extract_config_content()
         self._validate_config_content()
+        self._seed_urls = self.config_dto.seed_urls
+        self._num_articles = self.config_dto.total_articles
+        self._headers = self.config_dto.headers
+        self._encoding = self.config_dto.encoding
+        self._timeout = self.config_dto.timeout
+        self._should_verify_certificate = self.config_dto.should_verify_certificate
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -85,13 +91,17 @@ class Config:
         """
         Ensure configuration parameters are not corrupt.
         """
+        if not isinstance(self.config_dto.seed_urls, list):
+            raise IncorrectSeedURLError("Seed URLs must be a list")
         for url in self.config_dto.seed_urls:
-            if not re.match(r'^https?://(www\.)?', url):
+            if not isinstance(url, str) or not re.match(r'^https?://(www\.)?', url):
                 raise IncorrectSeedURLError(f"Invalid seed URL: {url}")
-        num = self.config_dto.total_articles
-        if not isinstance(num, int) or num < 0:
+        if not isinstance(self.config_dto.total_articles, int):
             raise IncorrectNumberOfArticlesError("Number of articles must be a positive integer")
-        if num < 1 or num > 150:
+        num = self.config_dto.total_articles
+        if num <= 0:
+            raise IncorrectNumberOfArticlesError("Number of articles must be a positive integer")
+        if num > 150:
             raise NumberOfArticlesOutOfRangeError("Number of articles must be between 1 and 150")
         if not isinstance(self.config_dto.headers, dict):
             raise IncorrectHeadersError("Headers must be a dictionary")
@@ -102,6 +112,8 @@ class Config:
             raise IncorrectTimeoutError("Timeout must be a positive integer less than 60")
         if not isinstance(self.config_dto.should_verify_certificate, bool):
             raise IncorrectVerifyError("Verify certificate must be a boolean")
+        if not isinstance(self.config_dto.headless_mode, bool):
+            raise IncorrectVerifyError("Headless mode must be either True or False")
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -224,7 +236,8 @@ class Crawler:
         if 'news.php?id=' in href:
             if href.startswith('http'):
                 return href
-            return f"https://fabulae.ru/{href}"
+            clean_href = href.lstrip('/')
+            return f"https://fabulae.ru/{clean_href}"
         return ""
 
     def find_articles(self) -> None:
@@ -246,6 +259,12 @@ class Crawler:
                 article_url = self._extract_url(link)
                 if article_url and article_url not in self.urls:
                     self.urls.append(article_url)
+    
+    def get_search_urls(self) -> list:
+        """
+        Get seed_urls param.
+        """
+        return self.config.get_seed_urls()                
 
 
 
@@ -305,20 +324,32 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title_tag = article_soup.find('h1')
+        if not title_tag:
+            title_tag = article_soup.find('h2')
         if title_tag:
             self.article.title = title_tag.get_text(strip=True)
         else:
             self.article.title = "Без заголовка"
-        content_div = article_soup.find('div', class_='news-text')
-        if not content_div:
-            content_div = article_soup.find('div', class_='content')
+        text_blocks = []
+        content_div = article_soup.find('div', class_='composition_text')
         if content_div:
-            for unwanted in content_div.find_all(['script', 'style', 'iframe']):
-                unwanted.decompose()
             text = content_div.get_text(separator='\n', strip=True)
-            self.article.text = text
-        else:
-            self.article.text = ""
+            lines = text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if len(line) > 20:
+                    text_blocks.append(line)
+        if not text_blocks:
+            content_div = article_soup.find('td', class_='win offset')
+            if content_div:
+                text = content_div.get_text(separator='\n', strip=True)
+                lines = text.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if len(line) > 20 and not line.startswith('Тип:') and not line.startswith('Раздел:'):
+                        text_blocks.append(line)
+        self.article.text = '\n\n'.join(text_blocks)
+        print(f"Article {self.article_id}: extracted {len(self.article.text)} characters")
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -422,8 +453,6 @@ def main() -> None:
         prepare_environment(ASSETS_PATH)
         crawler = Crawler(config)
         crawler.find_articles()
-        articles_dir = ASSETS_PATH / 'articles'
-        articles_dir.mkdir(parents=True, exist_ok=True)
         for idx, url in enumerate(crawler.urls[:config.get_num_articles()], 1):
             parser = HTMLParser(url, idx, config)
             article = parser.parse()
@@ -431,7 +460,7 @@ def main() -> None:
                 to_raw(article)
                 saved_count += 1
                 print(f"Saved article {idx}: {url}")
-        print(f"\nSuccessfully saved {saved_count} articles to {articles_dir}")
+        print(f"\nSuccessfully saved {saved_count} articles to {ASSETS_PATH / 'articles'}")
     except (IncorrectSeedURLError, NumberOfArticlesOutOfRangeError,
             IncorrectNumberOfArticlesError, IncorrectHeadersError,
             IncorrectEncodingError, IncorrectTimeoutError,
