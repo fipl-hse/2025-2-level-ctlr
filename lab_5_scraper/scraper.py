@@ -269,7 +269,8 @@ class Crawler:
                     full_url.endswith('.html')):
                     lresponse = make_request(full_url, self.config)
                     if lresponse.ok:
-                        self.urls.append(full_url)
+                        if "afisha.html" not in full_url:
+                            self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
@@ -349,13 +350,17 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = (
+        title_tag = (
         article_soup.find("h4", class_="head") or
         article_soup.find("h1") or
         article_soup.find("h2") or
         article_soup.find("title")
     )
-        self.article.title = title.get_text(strip=True) if title else "NOT FOUND"
+        if title_tag:
+            title_text = title_tag.get_text(strip=True)
+            self.article.title = title_text.replace('\xa0', ' ') 
+        else:
+            self.article.title = "NOT FOUND"
         date = article_soup.find("p", class_="caption")
         if date:
             date_raw = date.get_text(strip=True)
