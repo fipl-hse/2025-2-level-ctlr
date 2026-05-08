@@ -206,15 +206,20 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    response = requests.get(
-        url,
-        headers=config.get_headers(),
-        timeout=config.get_timeout(),
-        verify=config.get_verify_certificate()
-    )
-    response.encoding = config.get_encoding()
-    sleep(randint(0, 1)) #commented out to make a green PR as the maximum execution time is 4m0s
-    return response
+    try:
+        response = requests.get(
+            url,
+            headers=config.get_headers(),
+            timeout=config.get_timeout(),
+            verify=config.get_verify_certificate()
+        )
+        response.encoding = config.get_encoding()
+        sleep(randint(0, 1))
+        return response
+    except (requests.exceptions.RequestException, Exception):
+        response = requests.Response()
+        response.status_code = 404
+        return response
 
 
 class Crawler:
@@ -256,34 +261,19 @@ class Crawler:
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
-
         for seed_url in seed_urls:
-            if len(self.urls) >= target_count:
-                break
-            current_page = 1
-            while len(self.urls) < target_count:
-                page_url = f"{seed_url.rstrip('/')}/?page={current_page}"
-                try:
-                    response = make_request(page_url, self.config)
-                    if not response.ok:
-                        break
-                except Exception:
+            response = make_request(seed_url, self.config)
+            if not response or not response.ok:
+                continue
+            soup = BeautifulSoup(response.text, 'lxml')
+            for link in soup.find_all('a', href=True):
+                if len(self.urls) >= target_count:
                     break
-                soup = BeautifulSoup(response.text, 'lxml')
-                found_before = len(self.urls)
-                
-                for link_tag in soup.find_all('a', href=True):
-                    if len(self.urls) >= target_count:
-                        break
-                    url = self._extract_url(link_tag)
-                    full_url = urljoin('http://www.isaeva.ru', url)
-                    if (full_url not in self.urls and 
-                        ('/blog/' in full_url or '/news/' in full_url) and
-                        len(full_url.split('/')) > 4):
-                        self.urls.append(full_url)
-                if len(self.urls) == found_before:
-                    break
-                current_page += 1
+                url = self._extract_url(link)
+                full_url = urljoin(seed_url, url)
+                if (full_url not in self.urls and "isaeva.ru" in full_url and 
+                    full_url.endswith('.html')):      
+                    self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
@@ -355,7 +345,7 @@ class HTMLParser:
         text_parts = []
         for p in paragraphs:
             txt = p.get_text(strip=True)
-            if txt and not re.match(r'^\d{2}\.\d{2}\.\d{4}$', txt):
+            if txt and not re.match(r'^\d{2}\.\d{2}\.\d{3}$', txt):
                 text_parts.append(txt)  
         self.article.text = '\n'.join(text_parts)
 
@@ -371,7 +361,7 @@ class HTMLParser:
         date = article_soup.find("p", class_="caption")
         if date:
             date_raw = date.get_text(strip=True)
-            date_match = re.search(r'\d{2}\.\d{2}\.\d{4}', date_raw)
+            date_match = re.search(r'\d{2}\.\d{2}\.\d{3}', date_raw)
             if date_match:
                 self.article.date = self.unify_date_format(date_match.group())
         if not self.article.date:
