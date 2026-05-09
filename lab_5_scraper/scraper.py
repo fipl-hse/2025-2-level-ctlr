@@ -6,7 +6,9 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
+import random
 import re
+import time
 import shutil
 
 import requests
@@ -16,6 +18,7 @@ from core_utils.article.article import Article
 from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+from urllib.parse import urljoin
 
 
 class IncorrectSeedURLError(Exception):
@@ -86,15 +89,7 @@ class Config:
         """
         with open(self.path_to_config, "r", encoding="utf-8") as f:
             raw = json.load(f)
-        return ConfigDTO(
-            seed_urls=raw["seed_urls"],
-            total_articles_to_find_and_parse=raw["total_articles_to_find_and_parse"],
-            headers=raw["headers"],
-            encoding=raw["encoding"],
-            timeout=raw["timeout"],
-            should_verify_certificate=raw["should_verify_certificate"],
-            headless_mode=raw["headless_mode"]
-        )
+        return ConfigDTO(**raw)
 
     def _validate_config_content(self) -> None:
         """
@@ -104,35 +99,34 @@ class Config:
 
         url_pattern = re.compile(r"https?://(www\.)?")
         if not isinstance(dto.seed_urls, list):
-            raise IncorrectSeedURLError("seed_urls должен быть списком")
+            raise IncorrectSeedURLError("seed_urls must be a list")
         for url in dto.seed_urls:
             if not isinstance(url, str) or not re.match(url_pattern, url):
-                raise IncorrectSeedURLError(f"Некорректный seed URL: {url}")
-
-        if not isinstance(dto.total_articles, int) \
-                or dto.total_articles < 1:
+                raise IncorrectSeedURLError(f"Incorrect seed URL: {url}")
+        if (not isinstance(dto.total_articles, int)
+        or dto.total_articles < 1):
             raise IncorrectNumberOfArticlesError(
-                "Количество статей должно быть положительным целым числом"
+                "Total number of articles must be a positive integer"
             )
         if dto.total_articles > 150:
             raise NumberOfArticlesOutOfRangeError(
-                "Количество статей не должно превышать 150"
+                "Total number of articles must not exceed 150"
             )
 
         if not isinstance(dto.headers, dict):
-            raise IncorrectHeadersError("Headers должны быть словарем")
+            raise IncorrectHeadersError("Headers must be a dictionary")
 
         if not isinstance(dto.encoding, str):
-            raise IncorrectEncodingError("Encoding должен быть строкой")
+            raise IncorrectEncodingError("Encoding must be a string")
 
         if not isinstance(dto.timeout, int) or dto.timeout < 0 or dto.timeout > 60:
-            raise IncorrectTimeoutError("Timeout должен быть целым числом от 0 до 60")
+            raise IncorrectTimeoutError("Timeout must be an integer between 0 and 60")
 
         if not isinstance(dto.should_verify_certificate, bool):
-            raise IncorrectVerifyError("should_verify_certificate должен быть bool")
+            raise IncorrectVerifyError("should_verify_certificate must be a boolean")
 
         if not isinstance(dto.headless_mode, bool):
-            raise IncorrectVerifyError("headless_mode должен быть bool")
+            raise IncorrectVerifyError("headless_mode must be a boolean")
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -249,9 +243,7 @@ class Crawler:
             str: Url from HTML
         """
         href = str(article_bs.get("href", ""))
-        if href.startswith("http"):
-            return href
-        return "https://mxat.ru" + href
+        return urljoin("https://mxat.ru", href)
 
     def find_articles(self) -> None:
         """
@@ -263,13 +255,14 @@ class Crawler:
 
             try:
                 response = make_request(seed_url, self.config)
+                time.sleep(random.uniform(1, 3))
             except requests.exceptions.RequestException:
                 continue
 
             if response.status_code != 200:
                 continue
 
-            page_soup = BeautifulSoup(response.text, "html.parser")
+            page_soup = BeautifulSoup(response.text, "lxml")
 
             for link_tag in page_soup.find_all("a", href=True):
                 if len(self.urls) >= self.config.get_num_articles():
@@ -355,13 +348,7 @@ class HTMLParser:
 
         content_block = h1.find_parent()
         if content_block:
-            paragraphs = content_block.find_all("p")
-            if paragraphs:
-                self.article.text = "\n".join(
-                    p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)
-                )
-            else:
-                self.article.text = content_block.get_text(separator="\n", strip=True)
+            self.article.text = content_block.get_text(separator="\n", strip=True)
         else:
             self.article.text = ""
 
@@ -376,28 +363,19 @@ class HTMLParser:
         self.article.title = h1.get_text(strip=True) if h1 else ""
         self.article.author = ["NOT FOUND"]
         self.article.url = self.full_url
-        date_text = ""
-        if h1:
-            parent = h1.find_parent()
-            if parent:
-                full_text = parent.get_text(separator="\n")
-                for line in full_text.split("\n"):
-                    line = line.strip()
-                    months = ["января","февраля","марта","апреля","мая","июня",
-                            "июля","августа","сентября","октября","ноября","декабря"]
-                    if any(m in line.lower() for m in months) and len(line) < 30:
-                        date_text = line
-                        break
 
-        if date_text:
+        time_tag = article_soup.find("time")
+        if time_tag and time_tag.get("datetime"):
             try:
-                self.article.date = self.unify_date_format(date_text)
+                self.article.date = datetime.datetime.strptime(
+                    time_tag["datetime"], "%Y-%m-%d"
+                )
             except ValueError:
                 self.article.date = datetime.datetime(1970, 1, 1)
         else:
             self.article.date = datetime.datetime(1970, 1, 1)
 
-            self.article.topics = []
+        self.article.topics = []
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -422,11 +400,12 @@ class HTMLParser:
         except ValueError:
             pass
 
-        for ru_month, num_month in months.items():
-            if ru_month in date_str.lower():
-                date_str = date_str.lower().replace(ru_month, num_month).strip()
-                date_str = " ".join(date_str.split())
-                return datetime.datetime.strptime(date_str, "%d %m %Y")
+        date_str_lower = date_str.lower()
+        matched_month = next((ru for ru in months if ru in date_str_lower), None)
+        if matched_month:
+            date_str_lower = date_str_lower.replace(matched_month, months[matched_month]).strip()
+            date_str_lower = " ".join(date_str_lower.split())
+            return datetime.datetime.strptime(date_str_lower, "%d %m %Y")
 
         return datetime.datetime(1970, 1, 1)
 
@@ -445,7 +424,7 @@ class HTMLParser:
         if response.status_code != 200:
             return False
 
-        article_soup = BeautifulSoup(response.text, "html.parser")
+        article_soup = BeautifulSoup(response.text, "lxml")
         self._fill_article_with_text(article_soup)
         self._fill_article_with_meta_information(article_soup)
 
@@ -473,14 +452,15 @@ def main() -> None:
     prepare_environment(ASSETS_PATH)
     crawler = Crawler(config=configuration)
     crawler.find_articles()
-    print(f"Найдено статей: {len(crawler.urls)}")
+    print(f"Articles found: {len(crawler.urls)}")
     for i, url in enumerate(crawler.urls, start=1):
         parser = HTMLParser(full_url=url, article_id=i, config=configuration)
         article = parser.parse()
+        time.sleep(random.uniform(1, 3))
         if isinstance(article, Article):
             to_raw(article)
             to_meta(article)
-            print(f"Статья {i} сохранена: {url}")
+            print(f"Article {i} saved: {url}")
 
 
 if __name__ == "__main__":

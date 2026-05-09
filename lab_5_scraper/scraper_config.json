@@ -1,8 +1,14 @@
 {
-    "seed_urls": ["https://mxat.ru/o-teatre/novosti/",
+    "seed_urls": [
+        "https://mxat.ru/o-teatre/novosti/",
         "https://mxat.ru/o-teatre/novosti/?PAGEN_1=2",
-        "https://mxat.ru/o-teatre/novosti/?PAGEN_1=3"],
-    "headers": {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+        "https://mxat.ru/o-teatre/novosti/?PAGEN_1=3"
+    ],
+    "headers": {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"
+    }
     "total_articles_to_find_and_parse": 100,
     "encoding": "utf-8",
     "timeout": 10,
