@@ -113,6 +113,7 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
+        return self._seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -121,6 +122,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
+        return self._num_articles
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -129,6 +131,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
+        return self._headers
 
     def get_encoding(self) -> str:
         """
@@ -137,6 +140,7 @@ class Config:
         Returns:
             str: Encoding
         """
+        return self._encoding
 
     def get_timeout(self) -> int:
         """
@@ -145,6 +149,7 @@ class Config:
         Returns:
             int: Number of seconds to wait for response
         """
+        return self._timeout
 
     def get_verify_certificate(self) -> bool:
         """
@@ -153,6 +158,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
+        return self._should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
@@ -161,6 +167,7 @@ class Config:
         Returns:
             bool: Whether to use headless mode or not
         """
+        return self._headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
@@ -212,10 +219,15 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        href = str(article_bs.get("href", ""))
-        if href.startswith("http"):
-            return href
-        return "https://mxat.ru" + href
+        href = article_bs.get("href", "")
+        if isinstance(href, str):
+            if href.startswith("http"):
+                return href
+            elif href.startswith("/"):
+                return "https://scrapsfromtheloft.com" + href
+            else:
+                return "https://scrapsfromtheloft.com/" + href
+        return ""
 
     def find_articles(self) -> None:
         """
@@ -240,7 +252,7 @@ class Crawler:
                     break
 
                 href = link_tag.get("href", "")
-                if "/o-teatre/novosti/material/" not in href:
+                if "movie-transcripts/" not in href:
                     continue
 
                 full_url = self._extract_url(link_tag)
