@@ -1,6 +1,10 @@
 """
 Crawler implementation.
 """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
@@ -30,6 +34,7 @@ class Config:
         """
         self.path_to_config = path_to_config
         self.config_content = self._extract_config_content()
+        self._seed_urls = self.config_content.seed_urls
         self._validate_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
@@ -41,14 +46,13 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_data = json.load(f)
-        
         return ConfigDTO(
             seed_urls=config_data.get('seed_urls', []),
-            num_articles=config_data.get('total_articles_to_find_and_parse', 100),
+            total_articles_to_find_and_parse=config_data.get('total_articles_to_find_and_parse', 100),
             headers=config_data.get('headers', {}),
             encoding=config_data.get('encoding', 'utf-8'),
             timeout=config_data.get('timeout', 10),
-            verify_certificate=config_data.get('should_verify_certificate', True),
+            should_verify_certificate=config_data.get('should_verify_certificate', True),
             headless_mode=config_data.get('headless_mode', False)
         )
 
@@ -58,9 +62,7 @@ class Config:
         """
         if not isinstance(self.config_content.seed_urls, list):
             raise ValueError()
-        if not isinstance(self.config_content.num_articles, int) or self.config_content.num_articles <= 0:
-            raise ValueError()
-        if self.config_content.num_articles > 1000:
+        if not isinstance(self.config_content.total_articles, int) or self.config_content.total_articles <= 0:
             raise ValueError()
         if not isinstance(self.config_content.timeout, int) or self.config_content.timeout <= 0:
             raise ValueError()
@@ -83,7 +85,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
-        return self.config_content.num_articles
+        return self.config_content.total_articles
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -119,7 +121,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
-        return self.config_content.verify_certificate
+        return self.config_content.should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
@@ -170,7 +172,7 @@ class Crawler:
         self.config = config
         self.seed_urls = config.get_seed_urls()
         self.num_articles = config.get_num_articles()
-        self.article_urls = []
+        self.urls = []
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -195,7 +197,7 @@ class Crawler:
         Find articles.
         """
         for seed_url in self.seed_urls:
-            if len(self.article_urls) >= self.num_articles:
+            if len(self.urls) >= self.num_articles:
                 break
             try:
                 response = make_request(seed_url, self.config)
@@ -205,13 +207,22 @@ class Crawler:
                 soup = BeautifulSoup(response.text, 'lxml')
             except Exception:
                 continue
-            article_links = soup.find_all('h2', class_='entry-title')
-            for link in article_links:
-                if len(self.article_urls) >= self.num_articles:
+            for link in soup.find_all('a', href=True):
+                if len(self.urls) >= self.num_articles:
                     break
-                url = self._extract_url(link)
-                if url and url not in self.article_urls:
-                    self.article_urls.append(url)
+                href = link.get('href')
+                if not href or href == '#' or href.startswith('javascript'):
+                    continue
+                if href.startswith('/'):
+                    full_url = f"https://sufler.su{href}"
+                elif 'sufler.su' in href:
+                    full_url = href
+                else:
+                    continue
+                if full_url == 'https://sufler.su/':
+                    continue
+                if full_url not in self.urls:
+                    self.urls.append(full_url)
 
     def get_search_urls(self) -> list:
         """
@@ -247,30 +258,48 @@ class CrawlerRecursive(Crawler):
         Find number of article urls requested.
         """
         for seed_url in self.seed_urls:
-            if len(self.article_urls) >= self.num_articles:
+            if len(self.urls) >= self.num_articles:
                 break
-            if seed_url in self.visited_pages:
-                continue
-            self.visited_pages.append(seed_url)
-            try:
-                response = make_request(seed_url, self.config)
-            except requests.exceptions.RequestException:
-                continue
-            try:
-                soup = BeautifulSoup(response.text, 'lxml')
-            except Exception:
-                continue
-            for link in soup.find_all('a', href=True):
-                if len(self.article_urls) >= self.num_articles:
+            current_url = seed_url
+            while current_url and len(self.urls) < self.num_articles:
+                if current_url in self.visited_pages:
                     break
-                href = link.get('href')
-                if href and href.startswith('/page/') or '/page' in href:
+                self.visited_pages.append(current_url)
+                try:
+                    response = make_request(current_url, self.config)
+                except requests.exceptions.RequestException:
+                    break
+                try:
+                    soup = BeautifulSoup(response.text, 'lxml')
+                except Exception:
+                    break
+                for link in soup.find_all('a', href=True):
+                    if len(self.urls) >= self.num_articles:
+                        break
+                    href = link.get('href')
+                    if not href or href == '#' or href.startswith('javascript'):
+                        continue
                     if href.startswith('/'):
                         full_url = f"https://sufler.su{href}"
-                    else:
+                    elif 'sufler.su' in href:
                         full_url = href
-                    if full_url not in self.article_urls:
-                        self.article_urls.append(full_url)
+                    else:
+                        continue
+                    if full_url == 'https://sufler.su/':
+                        continue
+                    if full_url not in self.urls:
+                        self.urls.append(full_url)
+                current_url = None
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href')
+                    if href and href.startswith('/page/'):
+                        if href.startswith('/'):
+                            next_url = f"https://sufler.su{href}"
+                        else:
+                            next_url = href
+                        if next_url not in self.visited_pages:
+                            current_url = next_url
+                            break
 
 
 # 4, 6, 8, 10
@@ -326,12 +355,21 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title_tag = article_soup.find('h1')
-        if title_tag:
-            self.article.title = title_tag.get_text().strip()
-        else:
+        if not title_tag:
+            title_tag = article_soup.find('h2', class_='entry-title')
+        if not title_tag:
             title_tag = article_soup.find('title')
-            if title_tag:
-                self.article.title = title_tag.get_text().strip()
+        if title_tag:
+            title_text = title_tag.get_text(strip=True)
+            if title_text:
+                self.article.title = title_text
+            else:
+                self.article.title = f"article_{self.article_id}"
+        else:
+            self.article.title = f"article_{self.article_id}"
+        self.article.author = ["unknown author"]
+        self.article.date = datetime.datetime.now()
+        self.article.topics = ["general"]
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -362,6 +400,12 @@ class HTMLParser:
             return False
         self._fill_article_with_meta_information(soup)
         self._fill_article_with_text(soup)
+        if not self.article.author:
+            self.article.author = ["unknown author"]
+        if self.article.date is None:
+            self.article.date = datetime.datetime.now()
+        if not self.article.topics:
+            self.article.topics = ["general"]
         return self.article
 
 
@@ -382,14 +426,10 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
-    config_path = pathlib.Path("config.json")
+    config_path = pathlib.Path("lab_5_scraper/scraper_config.json")
     if not config_path.exists():
         return
     config = Config(config_path)
-    print(f"seed URLs: {config.get_seed_urls()}")
-    print(f"total articles: {config.get_num_articles()}")
-    print(f"encoding: {config.get_encoding()}")
-    print(f"timeout: {config.get_timeout()}s")
     if config.get_num_articles() <= 0:
         return
     crawler = CrawlerRecursive(config)
@@ -397,8 +437,8 @@ def main() -> None:
     from core_utils.constants import ASSETS_PATH
     prepare_environment(ASSETS_PATH)
     articles_data = []
-    total_to_parse = min(len(crawler.article_urls), config.get_num_articles())
-    for i, url in enumerate(crawler.article_urls[:total_to_parse], 1):
+    total_to_parse = min(len(crawler.urls), config.get_num_articles())
+    for i, url in enumerate(crawler.urls[:total_to_parse], 1):
         parser = HTMLParser(url, i, config)
         article = parser.parse()
         if article and article.text:
@@ -407,11 +447,10 @@ def main() -> None:
             with open(article.get_meta_file_path(), "w", encoding="utf-8") as f:
                 json.dump(article.get_meta(), f, ensure_ascii=False, indent=2)
             articles_data.append(article.get_meta())
-    print(f"\nparsed {len(articles_data)} articles")
     log_path = ASSETS_PATH / "scraping_log.json"
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump({
-            "total_found": len(crawler.article_urls),
+            "total_found": len(crawler.urls),
             "total_parsed": len(articles_data),
             "articles": articles_data
         }, f, ensure_ascii=False, indent=2)
