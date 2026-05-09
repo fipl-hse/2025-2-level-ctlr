@@ -252,7 +252,7 @@ class Crawler:
             all_links = page_soup.find_all("a", href=True)
 
             for link_tag in all_links:
-                if len(self.urls) >= num_articles_needed:
+                if len(self.urls) >= self.config.get_num_articles():
                     break
                 
                 href = link_tag.get("href", "")
