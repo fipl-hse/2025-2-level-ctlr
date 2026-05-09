@@ -5,46 +5,40 @@ Crawler implementation.
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
 import json
-import shutil
 import pathlib
 import re
+import shutil
 from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from core_utils.constants import CRAWLER_CONFIG_PATH, ASSETS_PATH
-
 from core_utils.article.article import Article
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
-from core_utils.article.io import to_raw, to_meta
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+
 
 class IncorrectSeedURLError(Exception):
     """Raised when seed URL does not match expected pattern."""
-    pass
 
 class NumberOfArticlesOutOfRangeError(Exception):
     """Raised when total number of articles is out of range 1-150."""
-    pass
 
 class IncorrectNumberOfArticlesError(Exception):
     """Raised when total number of articles is not integer or less than 0."""
-    pass
 
 class IncorrectHeadersError(Exception):
     """Raised when headers are not a dictionary."""
-    pass
 
 class IncorrectEncodingError(Exception):
     """Raised when encoding is not a string."""
-    pass
 
 class IncorrectTimeoutError(Exception):
     """Raised when timeout is not a positive integer less than 60."""
-    pass
 
 class IncorrectVerifyError(Exception):
     """Raised when verify certificate or headless mode are not boolean."""
-    pass
 
 
 class Config:
@@ -112,7 +106,7 @@ class Config:
                 raise IncorrectSeedURLError(f"Invalid seed URL format: {url}")
 
         total_articles = config_dto.total_articles
-        
+
         if isinstance(total_articles, bool):
             raise IncorrectNumberOfArticlesError(
                 f"Total articles must be an integer, got {type(total_articles).__name__}"
@@ -310,7 +304,8 @@ class Crawler:
 
             pages_to_process = [
                 (seed_url, lambda s: s.find_all("a", class_="read-more")),
-                (seed_url.rstrip("/") + "/archive_news", lambda s: s.find_all("a", string="подробнее")),
+                (seed_url.rstrip("/") + "/archive_news", 
+                lambda s: s.find_all("a", string="подробнее")),
             ]
 
             for page_url, find_links in pages_to_process:
@@ -368,7 +363,6 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
-        super().__init__(config)
 
     def find_articles(self) -> None:
         """
