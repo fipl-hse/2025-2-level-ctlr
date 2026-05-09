@@ -374,6 +374,19 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
+    config_path = pathlib.Path("lab_5_scraper/scraper_config.json")
+    config = Config(config_path)
+    
+    prepare_environment("tmp/articles")
+    
+    crawler = Crawler(config)
+    crawler.find_articles()
+    
+    for article_id, url in enumerate(crawler.urls, start=1):
+        parser = HTMLParser(url, article_id, config)
+        article = parser.parse()
+        if article:
+            pass
 
 
 if __name__ == "__main__":
