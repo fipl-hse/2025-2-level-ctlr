@@ -98,12 +98,9 @@ class Config:
         if not isinstance(seed_urls, list):
             raise IncorrectSeedURLError("Seed URLs must be a list")
 
-        url_pattern = re.compile(r"https?://(www\.)?") 
-        for url in seed_urls:
-            if not isinstance(url, str):
-                raise IncorrectSeedURLError(f"Seed URL must be a string, got {type(url)}")
-            if not url_pattern.match(url):
-                raise IncorrectSeedURLError(f"Invalid seed URL format: {url}")
+        url_pattern = re.compile(r"https?://(www\.)?")
+        if not all(isinstance(url, str) and url_pattern.match(url) for url in seed_urls):
+            raise IncorrectSeedURLError("Invalid seed URL format")
 
         total_articles = config_dto.total_articles
 
@@ -127,45 +124,18 @@ class Config:
                 f"Total articles must be between 1 and 150, got {total_articles}"
             )
 
-        headers = config_dto.headers
-        if not isinstance(headers, dict):
-            raise IncorrectHeadersError(
-                f"Headers must be a dictionary, got {type(headers)}"
-            )
-
-        encoding = config_dto.encoding
-        if not isinstance(encoding, str):
-            raise IncorrectEncodingError(
-                f"Encoding must be a string, got {type(encoding)}"
-            )
-
+        for name, value, expected_type, error_class in [
+            ("headers", config_dto.headers, dict, IncorrectHeadersError),
+            ("encoding", config_dto.encoding, str, IncorrectEncodingError),
+            ("should_verify_certificate", config_dto.should_verify_certificate, bool, IncorrectVerifyError),
+            ("headless_mode", config_dto.headless_mode, bool, IncorrectVerifyError),
+        ]:
+            if not isinstance(value, expected_type):
+                raise error_class(f"{name} must be {expected_type.__name__}, got {type(value).__name__}")
+            
         timeout = config_dto.timeout
-        if not isinstance(timeout, int):
-            raise IncorrectTimeoutError(
-                f"Timeout must be an integer, got {type(timeout)}"
-            )
-
-        if timeout <= 0:
-            raise IncorrectTimeoutError(
-                f"Timeout must be positive, got {timeout}"
-            )
-
-        if timeout >= 60:
-            raise IncorrectTimeoutError(
-                f"Timeout must be less than 60, got {timeout}"
-            )
-
-        should_verify = config_dto.should_verify_certificate
-        if not isinstance(should_verify, bool):
-            raise IncorrectVerifyError(
-                f"should_verify_certificate must be boolean, got {type(should_verify)}"
-            )
-
-        headless_mode = config_dto.headless_mode
-        if not isinstance(headless_mode, bool):
-            raise IncorrectVerifyError(
-                f"headless_mode must be boolean, got {type(headless_mode)}"
-            )
+        if not isinstance(timeout, int) or timeout <= 0 or timeout >= 60:
+            raise IncorrectTimeoutError(f"Timeout must be a positive integer less than 60, got {timeout}")
 
 
     def get_seed_urls(self) -> list[str]:
@@ -304,7 +274,7 @@ class Crawler:
 
             pages_to_process = [
                 (seed_url, lambda s: s.find_all("a", class_="read-more")),
-                (seed_url.rstrip("/") + "/archive_news", 
+                (seed_url.rstrip("/") + "/archive_news",
                 lambda s: s.find_all("a", string="подробнее")),
             ]
 
