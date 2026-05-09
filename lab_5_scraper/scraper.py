@@ -220,14 +220,16 @@ class Crawler:
             str: Url from HTML
         """
         href = article_bs.get("href", "")
-        if isinstance(href, str):
-            if href.startswith("http"):
-                return href
-            elif href.startswith("/"):
-                return "https://scrapsfromtheloft.com" + href
-            else:
-                return "https://scrapsfromtheloft.com/" + href
-        return ""
+        if not href:
+            return ""
+        
+        if href.startswith("http"):
+            return href
+        
+        if href.startswith("/"):
+            return "https://scrapsfromtheloft.com" + href
+        
+        return "https://scrapsfromtheloft.com/" + href
 
     def find_articles(self) -> None:
         """
@@ -247,17 +249,33 @@ class Crawler:
 
             page_soup = BeautifulSoup(response.text, "html.parser")
 
-            for link_tag in page_soup.find_all("a", href=True):
-                if len(self.urls) >= self.config.get_num_articles():
-                    break
+            all_links = page_soup.find_all("a", href=True)
 
+            for link_tag in all_links:
+                if len(self.urls) >= num_articles_needed:
+                    break
+                
                 href = link_tag.get("href", "")
-                if "movie-transcripts/" not in href:
+                if not href:
                     continue
 
-                full_url = self._extract_url(link_tag)
-                if full_url not in self.urls:
-                    self.urls.append(full_url)
+                is_transcript = (
+                    ("/movie-transcripts/" in href) or 
+                    (href.endswith("-transcript")) or
+                    ("transcript" in href.lower() and "page" not in href.lower())
+                )
+
+                is_excluded = (
+                    "page" in href.lower() or
+                    "search" in href.lower() or
+                    href == "/movie-transcripts/"
+                )
+
+                if is_transcript and not is_excluded:
+                    full_url = self._extract_url(link_tag)
+                    if full_url and full_url not in self.urls:
+                        self.urls.append(full_url)
+                        print(f"Found article {len(self.urls)}: {full_url}")
 
     def get_search_urls(self) -> list:
         """
