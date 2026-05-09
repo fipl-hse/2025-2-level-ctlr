@@ -362,30 +362,40 @@ class HTMLParser:
             if author_link:
                 author_tag = author_link.find('span', itemprop='name') or author_link
         self.article.author = [author_tag.get_text(strip=True)] if author_tag else ["NOT FOUND"]
-        date_tag = (article_soup.find('div', class_='date') or
+        date_found = False
+        date_span = article_soup.find('span', itemprop='datePublished')
+        if date_span:
+            date_text = date_span.get_text(strip=True)
+            self.article.date = self.unify_date_format(date_text)
+            date_found = True
+        if not date_found:
+            date_tag = (article_soup.find('div', class_='date') or
             article_soup.find('span', class_='date'))
-        if date_tag:
-            self.article.date = self.unify_date_format(date_tag.get_text(strip=True))
-        else:
-            date_found = False
-            for text in article_soup.stripped_strings:
-                match = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', text)
-                if match:
-                    day, month, year = match.groups()
-                    self.article.date = datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
+            if date_tag:
+                date_text = date_tag.get_text(strip=True)
+                self.article.date = self.unify_date_format(date_text)
+                date_found = True
+        if not date_found:
+            for cell in article_soup.find_all('td'):
+                if 'Дата:' in cell.get_text():
+                    date_text = cell.get_text().replace('Дата:', '').strip()
+                    self.article.date = self.unify_date_format(date_text)
                     date_found = True
                     break
-            if not date_found:
-                for cell in article_soup.find_all('td'):
-                    if 'Дата:' in cell.get_text():
-                        date_text = cell.get_text().replace('Дата:', '').strip()
-                        self.article.date = self.unify_date_format(date_text)
-                        date_found = True
-                        break
-            if not date_found:
-                self.article.date = datetime.datetime.now().replace(
-                        hour=0, minute=0, second=0, microsecond=0
+        if not date_found:
+            for text in article_soup.stripped_strings:
+                match = re.search(r'(\d{2}):(\d{2})\s+(\d{2})\.(\d{2})\.(\d{4})', text)
+                if match:
+                    hour, minute, day, month, year = match.groups()
+                    self.article.date = datetime.datetime(
+                        int(year), int(month), int(day), int(hour), int(minute), 0
                     )
+                    date_found = True
+                    break
+        if not date_found:
+            self.article.date = datetime.datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
         topics = []
         topic_tags = (article_soup.find_all('a', class_='topic') or
               article_soup.find_all('div', class_='category'))
@@ -406,12 +416,7 @@ class HTMLParser:
             datetime.datetime: Datetime object
         """
         date_formats = [
-            '%d.%m.%Y',
-            '%Y-%m-%d',
-            '%d/%m/%Y',
-            '%b %d, %Y',
-            '%d %B %Y',
-            '%Y.%m.%d'
+            '%H:%M %d.%m.%Y'
         ]
         date_str = date_str.strip()
         for date_format in date_formats:
