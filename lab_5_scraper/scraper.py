@@ -57,7 +57,14 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
+        self.config_content = self._extract_config_content()
         self._validate_config_content()
+        self._seed_urls = self.config_content.seed_urls
+        self._num_articles = self.config_content.total_articles
+        self._headers = self.config_content.headers
+        self._encoding = self.config_content.encoding
+        self._timeout = self.config_content.timeout
+        self._should_verify_certificate = self.config_content.should_verify_certificate
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -68,16 +75,8 @@ class Config:
         """
         with open(self.path_to_config) as file:
             config_data = json.load(file)
-        # self.seed_urls = config_data["seed_urls"]
-        # self.total_articles_to_find_and_parse = config_data["total_articles_to_find_and_parse"]
-        # self.headers = config_data["headers"]
-        # self.encoding = config_data["encoding"]
-        # self.timeout = config_data["timeout"]
-        # self.should_verify_certificate = config_data["should_verify_certificate"]
-        # self.headless_mode = config_data["headless_mode"]
-        # #self.config_dto = ConfigDTO(seed_urls, total_articles_to_find_and_parse, headers, encoding, timeout, should_verify_certificate, headless_mode)
-        # return ConfigDTO(self.seed_urls, self.total_articles_to_find_and_parse, self.headers, self.encoding, self.timeout, self.should_verify_certificate, self.headless_mode)
-        return ConfigDTO(**config_data)
+        configuration = ConfigDTO(**config_data)
+        return configuration
 
     def _validate_config_content(self) -> None:
         """
