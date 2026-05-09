@@ -355,7 +355,7 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         author_tag = (article_soup.find('div', class_='author') or
-                    article_soup.find('span', class_='author'))
+                  article_soup.find('span', class_='author'))
         if not author_tag:
             author_link = article_soup.find('a', href=re.compile(r'/autors_b\.php\?id='))
             if author_link:
@@ -365,34 +365,34 @@ class HTMLParser:
         )
         date_text = None
         date_span = article_soup.find('span', itemprop='datePublished')
-        if date_span:
-            date_text = date_span.get_text(strip=True)
-        if not date_text:
-            date_tag = (article_soup.find('div', class_='date') or
-                        article_soup.find('span', class_='date'))
-            if date_tag:
-                date_text = date_tag.get_text(strip=True)
+        date_tag = (article_soup.find('div', class_='date') or
+                    article_soup.find('span', class_='date'))
+        date_text = (date_span and date_span.get_text(strip=True)) or \
+                    (date_tag and date_tag.get_text(strip=True))
         if not date_text:
             for cell in article_soup.find_all('td'):
                 if 'Дата:' in cell.get_text():
                     date_text = cell.get_text().replace('Дата:', '').strip()
                     break
-        if not date_text:
+        if date_text:
+            self.article.date = self.unify_date_format(date_text)
+            date_set = True
+        else:
+            date_set = False
             for text in article_soup.stripped_strings:
                 match = re.search(r'(\d{2}):(\d{2})\s+(\d{2})\.(\d{2})\.(\d{4})', text)
                 if match:
                     parts = match.groups()
                     self.article.date = datetime.datetime(
-                        int(parts[4]), int(parts[3]), int(parts[2]), 
+                        int(parts[4]), int(parts[3]), int(parts[2]),
                         int(parts[0]), int(parts[1]), 0
                     )
+                    date_set = True
                     break
-            else:
-                self.article.date = datetime.datetime.now().replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
-        else:
-            self.article.date = self.unify_date_format(date_text)
+        if not date_set:
+            self.article.date = datetime.datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
         topics = []
         for tag in (article_soup.find_all('a', class_='topic') or
                     article_soup.find_all('div', class_='category')):
