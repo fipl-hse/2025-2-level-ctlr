@@ -23,6 +23,8 @@ from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import CRAWLER_CONFIG_PATH, ASSETS_PATH
+from core_utils.article.io import to_raw
 
 
 class Config:
@@ -322,6 +324,13 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        self.full_url = full_url
+        self.article_id = article_id
+        self.config = config
+        self.article = Article(
+            url=full_url,
+            article_id=article_id
+        )
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -330,6 +339,23 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        text_parts = []
+
+        pre_tag = article_soup.find("pre")
+        if pre_tag:
+            text_parts.append(pre_tag.get_text())
+
+        if not text_parts:
+            body = article_soup.find("body")
+            if body:
+                for tag in body.find_all(["script", "style", "h1", "h2", "hr"]):
+                    tag.decompose()
+                text_parts.append(body.get_text())
+
+        full_text = "\n\n".join(text_parts).strip()
+
+        if full_text:
+            self.article.text = full_text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -338,6 +364,27 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title_tag = article_soup.find("title")
+        if title_tag:
+            title = title_tag.get_text().strip()
+            title = re.sub(r"\s*-\s*lib\.ru.*$", "", title, flags=re.I)
+            self.article.title = title.strip()
+
+        possible_authors = article_soup.find_all(string=re.compile(r"^[А-ЯЁ][а-яё]+ [А-ЯЁ][а-яё]+"))
+        if possible_authors:
+            author = possible_authors[0].strip()
+            self.article.author = author
+
+        date_match = re.search(r"(\d{1,2})\s*([а-яё]+)\s*(\d{4})", article_soup.text, re.I)
+        if date_match:
+            date_str = date_match.group(0)
+            self.article.date = self.unify_date_format(date_str)
+        else:
+            date_match = re.search(r"Date:\s*(\d{2}\s+[а-яё]+\s+\d{4})", article_soup.text, re.I)
+            if date_match:
+                self.article.date = self.unify_date_format(date_match.group(1))
+
+        self.article.topics = []
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -349,6 +396,24 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        month_map = {
+            "января": 1, "февраля": 2, "марта": 3, "апреля": 4,
+            "мая": 5, "июня": 6, "июля": 7, "августа": 8,
+            "сентября": 9, "октября": 10, "ноября": 11, "декабря": 12
+        }
+
+        match = re.search(r"(\d{1,2})\s+([а-яё]+)\s+(\d{4})", date_str.lower())
+        if match:
+            day = int(match.group(1))
+            month_name = match.group(2)
+            year = int(match.group(3))
+            month = month_map.get(month_name, 1)
+            try:
+                return datetime.datetime(year, month, day)
+            except ValueError:
+                pass
+
+        return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
@@ -357,6 +422,18 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
+        try:
+            response = make_request(self.full_url, self.config)
+            article_soup = BeautifulSoup(response.text, "html.parser")
+
+            self._fill_article_with_meta_information(article_soup)
+            self._fill_article_with_text(article_soup)
+
+            return self.article
+
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Failed to parse {self.full_url}: {e}")
+            return False
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -379,6 +456,33 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
+    # 1. Инициализация конфига
+    config = Config(CRAWLER_CONFIG_PATH)
+
+    # 2. Подготовка папки для статей
+    prepare_environment(ASSETS_PATH)
+
+    # 3. Поиск ссылок на статьи
+    crawler = Crawler(config)
+    crawler.find_articles()
+
+    print(f"Found {len(crawler.urls)} articles. Starting parsing...")
+
+    # 4. Парсинг и сохранение статей
+    for i, url in enumerate(crawler.urls, start=1):
+        print(f"[{i}/{len(crawler.urls)}] Processing: {url}")
+
+        parser = HTMLParser(full_url=url, article_id=i, config=config)
+        article = parser.parse()
+
+        if article and isinstance(article, Article):
+            # Сохранение статьи в файл (главное для оценки 4)
+            to_raw(article, ASSETS_PATH)
+            print(f"  ✓ Saved article {i}")
+        else:
+            print(f"  ✗ Failed to parse article {i}")
+
+    print("\nScraping finished!")
 
 
 if __name__ == "__main__":
