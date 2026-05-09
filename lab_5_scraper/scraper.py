@@ -19,24 +19,31 @@ from core_utils.config_dto import ConfigDTO
 from core_utils.article.io import to_raw, to_meta
 
 class IncorrectSeedURLError(Exception):
+    """Raised when seed URL does not match expected pattern."""
     pass
 
 class NumberOfArticlesOutOfRangeError(Exception):
+    """Raised when total number of articles is out of range 1-150."""
     pass
 
 class IncorrectNumberOfArticlesError(Exception):
+    """Raised when total number of articles is not integer or less than 0."""
     pass
 
 class IncorrectHeadersError(Exception):
+    """Raised when headers are not a dictionary."""
     pass
 
 class IncorrectEncodingError(Exception):
+    """Raised when encoding is not a string."""
     pass
 
 class IncorrectTimeoutError(Exception):
+    """Raised when timeout is not a positive integer less than 60."""
     pass
 
 class IncorrectVerifyError(Exception):
+    """Raised when verify certificate or headless mode are not boolean."""
     pass
 
 
@@ -53,7 +60,7 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
-        
+
         self._validate_config_content()
 
         config_dto = self._extract_config_content()
@@ -75,7 +82,7 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as file:
             config_data = json.load(file)
-    
+
         return ConfigDTO(
             seed_urls=config_data.get('seed_urls', []),
             headers=config_data.get('headers', {}),
@@ -85,7 +92,7 @@ class Config:
             should_verify_certificate=config_data.get('should_verify_certificate', True),
             headless_mode=config_data.get('headless_mode', False)
         )
-        
+
 
     def _validate_config_content(self) -> None:
         """
@@ -103,10 +110,10 @@ class Config:
                 raise IncorrectSeedURLError(f"Seed URL must be a string, got {type(url)}")
             if not url_pattern.match(url):
                 raise IncorrectSeedURLError(f"Invalid seed URL format: {url}")
-        
+
         total_articles = config_dto.total_articles
         
-        if type(total_articles) is bool:
+        if isinstance(total_articles, bool):
             raise IncorrectNumberOfArticlesError(
                 f"Total articles must be an integer, got {type(total_articles).__name__}"
             )
@@ -115,57 +122,57 @@ class Config:
             raise IncorrectNumberOfArticlesError(
                 f"Total articles must be an integer, got {type(total_articles)}"
             )
-        
+
         if total_articles < 0:
             raise IncorrectNumberOfArticlesError(
                 f"Total articles cannot be negative: {total_articles}"
             )
-        
+
         if total_articles < 1 or total_articles > 150:
             raise NumberOfArticlesOutOfRangeError(
                 f"Total articles must be between 1 and 150, got {total_articles}"
             )
-        
+
         headers = config_dto.headers
         if not isinstance(headers, dict):
             raise IncorrectHeadersError(
                 f"Headers must be a dictionary, got {type(headers)}"
             )
-        
+
         encoding = config_dto.encoding
         if not isinstance(encoding, str):
             raise IncorrectEncodingError(
                 f"Encoding must be a string, got {type(encoding)}"
             )
-        
+
         timeout = config_dto.timeout
         if not isinstance(timeout, int):
             raise IncorrectTimeoutError(
                 f"Timeout must be an integer, got {type(timeout)}"
             )
-        
+
         if timeout <= 0:
             raise IncorrectTimeoutError(
                 f"Timeout must be positive, got {timeout}"
             )
-        
+
         if timeout >= 60:
             raise IncorrectTimeoutError(
                 f"Timeout must be less than 60, got {timeout}"
             )
-        
+
         should_verify = config_dto.should_verify_certificate
         if not isinstance(should_verify, bool):
             raise IncorrectVerifyError(
                 f"should_verify_certificate must be boolean, got {type(should_verify)}"
             )
-        
+
         headless_mode = config_dto.headless_mode
         if not isinstance(headless_mode, bool):
             raise IncorrectVerifyError(
                 f"headless_mode must be boolean, got {type(headless_mode)}"
             )
-        
+
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -245,7 +252,6 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     headers = config.get_headers()
     timeout = config.get_timeout()
     verify = config.get_verify_certificate()
-    encoding = config.get_encoding()
 
     response = requests.get(url, headers=headers, timeout=timeout, verify=verify)
 
@@ -284,11 +290,11 @@ class Crawler:
         if article_bs.name == "a" and article_bs.get("href"):
             href = article_bs.get("href")
             return urljoin(base_url, href)
-        
+
         link = article_bs.find("a")
         if link and link.get("href"):
             return urljoin(base_url, link.get("href"))
-        
+
         return ""
 
     def find_articles(self) -> None:
@@ -333,7 +339,7 @@ class Crawler:
                             break
 
         print(f"Total found: {len(self.urls)} article URLs (need {target_count})")
-    
+
 
     def get_search_urls(self) -> list:
         """
@@ -362,6 +368,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
 
     def find_articles(self) -> None:
         """
@@ -402,17 +409,17 @@ class HTMLParser:
             script.decompose()
 
         text_container = article_soup.find('div', style=lambda x: x and 'text-align: justify' in x)
-        
+
         if not text_container:
             print(f"Warning: Could not find text container for {self.full_url}")
             self.article.text = ""
             return
-        
+
         for br in text_container.find_all('br'):
             br.replace_with('\n')
 
         structured_tags = text_container.find_all(['p', 'strong', 'em', 'h1', 'h2', 'h3', 'h4'])
-    
+
         if structured_tags:
             text_parts = []
             for tag in structured_tags:
@@ -424,7 +431,7 @@ class HTMLParser:
             full_text = text_container.get_text()
             lines = [line.strip() for line in full_text.split('\n') if line.strip()]
             self.article.text = '\n\n'.join(lines)
-        
+
         print(f"Extracted {len(self.article.text)} characters")
 
 
@@ -440,7 +447,7 @@ class HTMLParser:
             title_tag = article_soup.find('h1')
         if not title_tag:
             title_tag = article_soup.find('title')
-        
+
         if title_tag:
             self.article.title = title_tag.get_text(strip=True)
         else:
@@ -454,12 +461,12 @@ class HTMLParser:
             if author_tag and author_tag.get('content'):
                 self.article.author = [author_tag['content']]
                 return
-        
+
         if author_tag:
             self.article.author = [author_tag.get_text(strip=True)]
         else:
             self.article.author = ["NOT FOUND"]
-        
+
         self.article.topics = []
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -552,8 +559,8 @@ def main() -> None:
 
             to_meta(article)
             print(f"✓ Saved metadata to {article.get_meta_file_path()}")
-            
-        except Exception as e:
+
+        except (ValueError, KeyError, TypeError) as e:
             print(f"✗ Error processing article {i}: {e}")
             continue
 
