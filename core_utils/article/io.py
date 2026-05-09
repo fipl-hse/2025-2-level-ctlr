@@ -14,7 +14,7 @@ from core_utils.article.article import (
 )
 
 
-def to_raw(article: Article, path: pathlib.Path) -> None:
+def to_raw(article: Article) -> None:
     """
     Save raw text.
 
