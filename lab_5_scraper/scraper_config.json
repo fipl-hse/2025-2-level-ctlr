@@ -1,11 +1,17 @@
 {
-    "seed_urls": ["https://www.teatrdoc.ru"],
+    "seed_urls": [
+        "https://www.teatrdoc.ru/schedule/",
+        "https://www.teatrdoc.ru/performances/",
+        "https://www.teatrdoc.ru/news/",
+        "https://www.teatrdoc.ru/persons/"
+    ],
     "headers": {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cookie": "_ym_visorc=w; _fbp=fb.1.1775845504769.83662015274914673; _ga=GA1.1.1419777944.1775845504; _ga_40MYGGRW0S=GS2.1.s1778089054$o6$g1$t1778089225$j32$l0$h0; _ym_isad=2; _ym_fa=11023.SB18iFWujNgDx8dYfd_DY2_p_5o3LQrHcv-3n2fnAsJGGevKUKVI7NYtqAWGSS_r.muHqeLo6h1SZsjmv6hH2nGJiFFY%2C; _ym_d=1775845504; _ym_uid=1775845504224682670; listim_doc_ref=https%3A%2F%2Fwww.google.com.hk%2F"
     },
-    "total_articles_to_find_and_parse": 5,
+    "total_articles_to_find_and_parse": 100,
     "encoding": "utf-8",
     "timeout": 10,
     "should_verify_certificate": true,
