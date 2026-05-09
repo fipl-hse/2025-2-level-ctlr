@@ -239,9 +239,7 @@ class Crawler:
             str: Url from HTML
         """
         url = article_bs.get("href")
-        if not isinstance(url, str) or not url:
-            return ""
-        return url
+        return "" if not isinstance(url, str) or not url else url
 
     def find_articles(self) -> None:
         """
@@ -427,8 +425,7 @@ class CrawlerRecursive(Crawler):
                             None
                         )
                     )
-                else:
-                    if parsed_seed.netloc != urlparse(extracted_url).netloc:
+                elif parsed_seed.netloc != urlparse(extracted_url).netloc:
                         continue
 
                 if extracted_url not in visited:
@@ -474,8 +471,6 @@ class HTMLParser:
         all_text = []
         for article in articles:
             tags = article.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"])
-            if not tags:
-                continue
 
             for tag in tags:
                 if tag.name == "p" and "has-medium-font-size" in tag.get("class", []):
@@ -513,9 +508,8 @@ class HTMLParser:
         self.article.author = author_list if author_list else ["NOT FOUND"]
 
         date = article_soup.find("meta", {"property": "article:published_time"})
-        if isinstance(date, Tag):
-            if date and (date_content := date.get("content")):
-                self.article.date = self.unify_date_format(str(date_content))
+        if isinstance(date, Tag) and (date_content := date.get("content")):
+            self.article.date = self.unify_date_format(str(date_content))
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -567,35 +561,21 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
-    # prepare_environment(ASSETS_PATH)
-    # url_1 = r"https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/"
-    url_2 = r"https://gameofthrones.fan-base.ru/geografija-igra-prestolov/oleni-roga/"
-    # url_3 = r"https://gameofthrones.fan-base.ru/dom-drakona/laris-strong/"
+    prepare_environment(ASSETS_PATH)
 
     config = Config(CRAWLER_CONFIG_PATH)
-    # print(config._extract_config_content())
     crawler = CrawlerRecursive(config)
     crawler.find_articles()
-    # print(len(set(crawler.urls)), len(crawler.urls))
-    # for id, article_url in enumerate(crawler.urls):
-    #     parser = HTMLParser(article_url, id, config)
-    #     parsed_article = parser.parse()
-    #     if isinstance(parsed_article, Article):
-    #         to_raw(parsed_article)
-    #         to_meta(parsed_article)
-    # parser = HTMLParser(url_2, 1, config)
-    # parsed_article = parser.parse()
-
-    with open(CRAWLER_CONFIG_PATH, encoding="utf-8") as config_data:
-            config = json.load(config_data)
-    print(config)
-    # response = make_request(url_2, config)
-    # print(response.ok)
-    # soup = BeautifulSoup(response.text, features="lxml")
-    # all_p = soup.find_all("p")
+    for id, article_url in enumerate(crawler.urls):
+        parser = HTMLParser(article_url, id, config)
+        parsed_article = parser.parse()
+        if isinstance(parsed_article, Article):
+            to_raw(parsed_article)
+            to_meta(parsed_article)
 
 def main2():
-    # prepare_environment(ASSETS_PATH)
+    if not ASSETS_PATH.exists():
+        prepare_environment(ASSETS_PATH)
 
     config = Config(CRAWLER_CONFIG_PATH)
     config._num_articles = 1500
