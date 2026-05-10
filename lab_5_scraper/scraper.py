@@ -361,11 +361,6 @@ class CrawlerRecursive(Crawler):
         else:
             queue = queue.union(set(self.get_search_urls()))
 
-        print("RecursiveCrawler config loaded")
-        print(f"\nTotal visited links: {len(visited)}")
-        print(f"Total links in queue: {len(queue)}")
-        print(f"Total valid urls: {len(self.urls)}\n")
-
         def _safe_current_state() -> None:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump({
