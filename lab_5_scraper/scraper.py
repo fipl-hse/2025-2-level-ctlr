@@ -292,14 +292,14 @@ class CrawlerRecursive(Crawler):
     """
 
     def __init__(self, config: Config) -> None:
-       """
-       Initialize an instance of the CrawlerRecursive class.
+        """
+        Initialize an instance of the CrawlerRecursive class.
 
-       Args:
-           config (Config): Configuration
-       """
-       super().__init__(config)
-       self.start_url = self.config.get_seed_urls()[0]
+        Args:
+            config (Config): Configuration
+        """
+        super().__init__(config)
+        self.start_url = self.config.get_seed_urls()[0]
 
     def find_articles(self) -> None:
         """
