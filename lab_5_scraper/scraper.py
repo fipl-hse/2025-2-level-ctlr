@@ -239,19 +239,21 @@ class Crawler:
         href = article_bs.get("href")
         if not href or not isinstance(href, str):
             return ""
-        parsed = urlparse(href)
-        if parsed.scheme in ('http', 'https'):
-            return href
         base_url = self.config.get_seed_urls()[0]
-        return urljoin(base_url, href)
+        full_url = urljoin(base_url, href)
+        if 'teatrdoc.ru' not in full_url:
+            return ""
+        article_pattern = re.compile(
+            r'/(schedule|performances|persons)/(\d{3,4})/?$|/news/article/\d+/'
+        )
+        if article_pattern.search(full_url):
+            return full_url
+        return ""
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
-        article_pattern = re.compile(
-            r'/(schedule|performances|persons)/(\d{3,4})/?$|/news/article/\d+/'
-        )
         for seed_url in self.config.get_seed_urls():
             if len(self.urls) >= self.config.get_num_articles():
                 return
@@ -262,9 +264,7 @@ class Crawler:
                 soup = BeautifulSoup(response.text, "lxml")
                 for tag in soup.find_all("a"):
                     link = self._extract_url(tag)
-                    if not link or link in self.urls:
-                        continue
-                    if article_pattern.search(link):
+                    if link and link not in self.urls:
                         self.urls.append(link)
                     if len(self.urls) >= self.config.get_num_articles():
                         return
@@ -351,10 +351,7 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title = article_soup.find("title")
-        if title:
-            self.article.title = title.text.strip()
-        else:
-            self.article.title = "NOT FOUND"
+        self.article.title = title.text.strip()
         author = article_soup.find("meta", attrs={"name": "author"})
         if author and author.get("content"):
             self.article.author = [author.get("content").strip()]
