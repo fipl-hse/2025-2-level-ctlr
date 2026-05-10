@@ -1,9 +1,23 @@
 {
-    "seed_urls": [],
-    "headers": {},
-    "total_articles_to_find_and_parse": 0,
-    "encoding": "",
-    "timeout": 0,
+    "seed_urls": [
+        "https://rus-shake.ru/ads-partners/",
+        "https://rus-shake.ru/original/Shakespeare/sources/",
+        "https://rus-shake.ru/stagings/",
+        "https://rus-shake.ru/menu/news/",
+        "https://rus-shake.ru/menu/news/page2.html",
+        "https://rus-shake.ru/menu/news/page3.html",
+        "https://rus-shake.ru/menu/news/page4.html",
+        "https://rus-shake.ru/menu/news/page5.html",
+        "https://rus-shake.ru/bibliography/"
+    ],
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7"
+    },
+    "total_articles_to_find_and_parse": 100,
+    "encoding": "utf-8",
+    "timeout": 5,
     "should_verify_certificate": true,
-    "headless_mode": true
+    "headless_mode": false
 }
