@@ -295,7 +295,7 @@ class Crawler:
                     return
 
                 extracted_url = self._extract_url(tag)
-                if not isinstance(tag, Tag) or not extracted_url:
+                if not extracted_url:
                     continue
 
                 if not re.match("https?://(www.)?", extracted_url):
@@ -362,8 +362,6 @@ class CrawlerRecursive(Crawler):
             queue = queue.union(set(self.get_search_urls()))
 
         def _safe_current_state() -> None:
-            nonlocal visited
-            nonlocal queue
             with open(path, "w", encoding="utf-8") as f:
                 json.dump({
                     "visited": list(visited),
@@ -455,8 +453,6 @@ class HTMLParser:
         author_tags = article_soup.find_all("meta", {"name": "author"})
         author_list = []
         for tag in author_tags:
-            if not isinstance(tag, Tag):
-                continue
             if (author_content := tag.get("content")):
                 author_list.append(author_content)
         self.article.author = author_list if author_list else ["NOT FOUND"]
@@ -510,7 +506,7 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     """
     base_path = pathlib.Path(base_path)
 
-    if pathlib.Path.exists(base_path):
+    if base_path.exists():
         shutil.rmtree(base_path)
 
     base_path.mkdir(parents=True)
@@ -534,7 +530,12 @@ def main() -> None:
         if isinstance(parsed_article, Article):
             to_raw(parsed_article)
             to_meta(parsed_article)
+            if article_id % 10 == 0:
+                print(f"{article_id} articles saved")
             article_id += 1
+        else:
+            print(f"WARNING | Can't be parsed: {article_url}")
+    print(f"Total {article_id} articles saved")
 
 def main2() -> None:
     """
@@ -544,18 +545,25 @@ def main2() -> None:
         prepare_environment(ASSETS_PATH)
 
     config = Config(CRAWLER_CONFIG_PATH)
-    # config._num_articles = 1500
+    # config._num_articles = float("inf")
     crawler = CrawlerRecursive(config)
     crawler.find_articles()
-    print(len(crawler.urls))
+    print(f"Total urls to parse: {len(crawler.urls)}")
 
-    for article_id, article_url in enumerate(crawler.urls, start=1):
+    article_id = 1
+    for article_url in crawler.urls:
         parser = HTMLParser(article_url, article_id, config)
         parsed_article = parser.parse()
         if isinstance(parsed_article, Article):
             to_raw(parsed_article)
             to_meta(parsed_article)
+            if article_id % 10 == 0:
+                print(f"{article_id} articles saved")
+            article_id += 1
+        else:
+            print(f"WARNING | Can't be parsed: {article_url}")
+    print(f"{article_id} articles saved")
 
 
 if __name__ == "__main__":
-    main()
+    main2()
