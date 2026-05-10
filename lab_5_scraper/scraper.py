@@ -305,7 +305,7 @@ class Crawler:
                 if len(self.urls) >= target_count:
                     return
                 href = link.get('href')
-                if (not href or not isinstance(href, str) or 
+                if (not href or not isinstance(href, str) or
                     href == '#' or href.startswith('javascript')):
                     continue
                 if href.startswith('/'):
@@ -314,7 +314,7 @@ class Crawler:
                     full_url = href
                 else:
                     continue
-                is_invalid = (full_url == 'https://sufler.su/' or 
+                is_invalid = (full_url == 'https://sufler.su/' or
                             any(pattern in full_url for pattern in exclude_patterns))
                 if not is_invalid and full_url not in self.urls:
                     self.urls.append(full_url)
