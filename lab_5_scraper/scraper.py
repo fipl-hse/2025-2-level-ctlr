@@ -21,43 +21,43 @@ from core_utils.config_dto import ConfigDTO
 
 
 class IncorrectEncodingError(Exception):
-    pass
+    """invalid encoding parameter in configuration."""
 
 class IncorrectHeadersError(Exception):
-    pass
+    """invalid headers parameter in configuration."""
 
 class IncorrectNumberOfArticlesError(Exception):
-    pass
+    """invalid total_articles_to_find_and_parse value (must be positive integer)."""
 
 class IncorrectSeedURLError(Exception):
-    pass
+    """invalid seed_urls parameter (must be list of strings)."""
 
 class IncorrectTimeoutError(Exception):
-    pass
+    """invalid timeout value (must be between 1 and 60 seconds)."""
 
 class IncorrectVerifyCertificateError(Exception):
-    pass
+    """invalid should_verify_certificate parameter (must be boolean)."""
 
 class IncorrectVerifyError(Exception):
-    pass
+    """invalid headless_mode parameter (must be boolean)."""
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    pass
+    """total articles exceeds maximum limit of 100."""
 
 class ConfigValidationError(Exception):
-    pass
+    """general configuration validation error."""
 
 class ConfigLoadError(Exception):
-    pass
+    """failed to load configuration file."""
 
 class SeedUrlsError(Exception):
-    pass
+    """error processing seed URLs."""
 
-class TimeoutError(Exception):
-    pass
+class CustomTimeoutError(Exception):
+    """request timeout occurred."""
 
 class URLProcessingError(Exception):
-    pass
+    """error processing or parsing URL."""
 
 class Config:
     """
@@ -266,9 +266,10 @@ class Crawler:
         link_tag = article_bs.find('a', href=True)
         if link_tag:
             href = link_tag.get('href')
-            if href.startswith('/'):
-                return f"https://sufler.su{href}"
-            return href
+            if href and isinstance(href, str):
+                if href.startswith('/'):
+                    return f"https://sufler.su{href}"
+                return href
         return ""
 
     def find_articles(self) -> None:
@@ -364,26 +365,27 @@ class CrawlerRecursive(Crawler):
                     href = link.get('href')
                     if not href or href == '#' or href.startswith('javascript'):
                         continue
-                    if href.startswith('/'):
-                        full_url = f"https://sufler.su{href}"
-                    elif 'sufler.su' in href:
-                        full_url = href
-                    else:
-                        continue
-                    if full_url == 'https://sufler.su/':
-                        continue
-                    if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
-                        continue
-                    if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
-                        continue
-                    if '/author/' in full_url or '/page/' in full_url:
-                        continue
-                    if full_url not in self.urls:
-                        self.urls.append(full_url)
+                    if isinstance(href, str):
+                        if href.startswith('/'):
+                            full_url = f"https://sufler.su{href}"
+                        elif 'sufler.su' in href:
+                            full_url = href
+                        else:
+                            continue
+                        if full_url == 'https://sufler.su/':
+                            continue
+                        if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
+                            continue
+                        if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
+                            continue
+                        if '/author/' in full_url or '/page/' in full_url:
+                            continue
+                        if full_url not in self.urls:
+                            self.urls.append(full_url)
                 current_url = None
                 for link in soup.find_all('a', href=True):
                     href = link.get('href')
-                    if href and href.startswith('/page/'):
+                    if href and isinstance(href, str) and href.startswith('/page/'):
                         if href.startswith('/'):
                             next_url = f"https://sufler.su{href}"
                         else:
@@ -450,8 +452,13 @@ class HTMLParser:
             title_tag = article_soup.find('h2', class_='entry-title')
         if not title_tag:
             title_tag = article_soup.find('title')
+        if not title_tag:
+            title_tag = article_soup.find('meta', property='og:title')
         if title_tag:
-            title_text = title_tag.get_text(strip=True)
+            if title_tag.name == 'meta':
+                title_text = title_tag.get('content', '')
+            else:
+                title_text = title_tag.get_text(strip=True)
             if title_text:
                 self.article.title = title_text
             else:
