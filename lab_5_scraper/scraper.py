@@ -342,6 +342,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        pass
 
     def find_articles(self) -> None:
         """
