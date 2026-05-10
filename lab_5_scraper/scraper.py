@@ -359,8 +359,8 @@ class CrawlerRecursive(Crawler):
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
-        exclude_patterns = ['/feed', '/advanced_search', '/katalog',
-                        '/wp-', '/category/', '/tag/', '/author/']
+        exclude_patterns = ('/feed', '/advanced_search', '/katalog',
+                        '/wp-', '/category/', '/tag/', '/author/')
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
@@ -375,9 +375,11 @@ class CrawlerRecursive(Crawler):
                 if len(self.urls) >= target_count:
                     return
                 href = link.get('href')
-                if not href or not isinstance(href, str):
-                    continue
-                if href == '#' or href.startswith('javascript'):
+                if (not href
+                    or not isinstance(href, str)
+                    or href == '#'
+                    or href.startswith('javascript')
+                ):
                     continue
                 if href.startswith('/'):
                     full_url = f"https://sufler.su{href}"
@@ -385,9 +387,11 @@ class CrawlerRecursive(Crawler):
                     full_url = href
                 else:
                     continue
-                if full_url != 'https://sufler.su/' and full_url not in self.urls:
-                    if not any(pattern in full_url for pattern in exclude_patterns):
-                        self.urls.append(full_url)
+                if full_url == 'https://sufler.su/':
+                    continue
+                is_excluded = any(pattern in full_url for pattern in exclude_patterns)
+                if not is_excluded and full_url not in self.urls:
+                    self.urls.append(full_url)
 
 
 class HTMLParser:
@@ -439,45 +443,30 @@ class HTMLParser:
         meta_title = article_soup.find('meta', property='og:title')
         if meta_title and meta_title.get('content'):
             title = meta_title.get('content').strip()
-        if not title:
-            h1_entry = article_soup.find('h1', class_='entry-title')
-            if h1_entry:
-                title = h1_entry.get_text(strip=True)
-        if not title:
-            h1 = article_soup.find('h1')
-            if h1:
-                title = h1.get_text(strip=True)
-        if not title:
-            title_tag = article_soup.find('title')
-            if title_tag:
-                title = title_tag.get_text(strip=True)
-        if not title:
-            h2_entry = article_soup.find('h2', class_='entry-title')
-            if h2_entry:
-                title = h2_entry.get_text(strip=True)
-        if not title:
-            h2 = article_soup.find('h2')
-            if h2:
-                title = h2.get_text(strip=True)
-        if not title:
-            post_title = article_soup.find(class_='post-title')
-            if post_title:
-                title = post_title.get_text(strip=True)
+        title_selectors = [
+            ('h1', 'entry-title'), ('h1', None), ('title', None),
+            ('h2', 'entry-title'), ('h2', None), (None, 'post-title')
+        ]
+        for tag, class_name in title_selectors:
+            if title:
+                break
+            if tag and class_name:
+                element = article_soup.find(tag, class_=class_name)
+            elif tag:
+                element = article_soup.find(tag)
+            else:
+                element = article_soup.find(class_=class_name)
+            if element:
+                title = element.get_text(strip=True)
         if title:
             self.article.title = title
         else:
-            self.article.title = (
-                self.full_url.split('/')[-2] if self.full_url.endswith('/')
-                else self.full_url.split('/')[-1]
-            )
-            if not self.article.title:
-                self.article.title = f"article_{self.article_id}"
+            url_part = self.full_url.split('/')[-2] if self.full_url.endswith('/') else self.full_url.split('/')[-1]
+            self.article.title = url_part if url_part else f"article_{self.article_id}"
         self.article.author = ['NOT FOUND']
-        date_pattern = r'(\d{2})\.(\d{2})\.(\d{4})'
-        text = article_soup.get_text()
-        match = re.search(date_pattern, text)
-        if match:
-            day, month, year = map(int, match.groups())
+        date_match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', article_soup.get_text())
+        if date_match:
+            day, month, year = map(int, date_match.groups())
             self.article.date = datetime.datetime(year, month, day)
         else:
             self.article.date = datetime.datetime.now()
@@ -507,12 +496,12 @@ class HTMLParser:
             response = make_request(self.full_url, self.config)
             if not response.ok:
                 return self.article
+            soup = BeautifulSoup(response.text, 'lxml')
+            self._fill_article_with_meta_information(soup)
+            self._fill_article_with_text(soup)
+            return self.article
         except requests.exceptions.RequestException:
             return self.article
-        soup = BeautifulSoup(response.text, 'lxml')
-        self._fill_article_with_meta_information(soup)
-        self._fill_article_with_text(soup)
-        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
