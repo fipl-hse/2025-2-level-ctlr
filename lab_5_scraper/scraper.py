@@ -10,14 +10,16 @@ import re
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_meta, to_raw
+from core_utils.article.io import to_raw, to_meta
 from core_utils.config_dto import ConfigDTO
-from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+from core_utils.constants import CRAWLER_CONFIG_PATH, ASSETS_PATH
+
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -123,7 +125,7 @@ class Config:
         if not isinstance(dto.encoding, str):
             raise IncorrectEncodingError("encoding must be str")
 
-        if not isinstance(dto.timeout, int) or not (1 <= dto.timeout <= 60):
+        if not isinstance(dto.timeout, int) or not 1 <= dto.timeout <= 60:
             raise IncorrectTimeoutError("timeout must be 1-60")
 
         if not isinstance(dto.should_verify_certificate, bool):
@@ -273,13 +275,13 @@ class Crawler:
                         article_response = make_request(found_url, self.config)
                         if article_response.status_code == 200 and found_url not in self.urls:
                             self.urls.append(found_url)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-exception-caught
                         queue.append(found_url)
 
                     if len(self.urls) >= target_count:
                         break
 
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 continue
 
     def get_search_urls(self) -> list[str]:
@@ -301,21 +303,7 @@ class CrawlerRecursive(Crawler):
 
     Get one URL of the title page and find requested number of articles recursively.
     """
-    def __init__(self, config: Config) -> None:
-        """
-        Initialize an instance of the CrawlerRecursive class.
-
-        Args:
-            config (Config): Configuration
-        """
-        super().__init__(config)
-
-    def find_articles(self) -> None:
-        """
-        Find number of article urls requested.
-        """
-        # reuse parent method for now; can be replaced with recursive logic later if needed
-        super().find_articles()
+    pass
 
 
 # 4, 6, 8, 10
@@ -370,12 +358,12 @@ class HTMLParser:
 
         self.article.date = self.unify_date_format("")
 
-    def unify_date_format(self, date_str: str) -> datetime.datetime:
+    def unify_date_format(self, date_str: str) -> datetime.datetime:  # pylint: disable=unused-argument
         """
         Unify date format.
 
         Args:
-            date_str (str): Date in text format
+            date_str (str): Date in text format (ignored in this implementation).
 
         Returns:
             datetime.datetime: Datetime object
@@ -395,16 +383,16 @@ class HTMLParser:
             self._fill_article_with_meta_information(soup)
             self._fill_article_with_text(soup)
             return self.article
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return False
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
     """
-    Create ASSETS_PATH folder if no created and remove existing folder.
+    Create ASSETS_PATH folder if not created and remove existing folder.
 
     Args:
-        base_path (pathlib.Path | str): Path where articles store
+        base_path (pathlib.Path | str): Path where articles stored
     """
     if isinstance(base_path, str):
         base_path = pathlib.Path(base_path)
