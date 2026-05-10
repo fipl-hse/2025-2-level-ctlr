@@ -127,15 +127,24 @@ class Config:
         for name, value, expected_type, error_class in [
             ("headers", config_dto.headers, dict, IncorrectHeadersError),
             ("encoding", config_dto.encoding, str, IncorrectEncodingError),
-            ("should_verify_certificate", config_dto.should_verify_certificate, bool, IncorrectVerifyError),
+            (
+                "should_verify_certificate",
+                config_dto.should_verify_certificate,
+                bool,
+                IncorrectVerifyError
+            ),
             ("headless_mode", config_dto.headless_mode, bool, IncorrectVerifyError),
         ]:
             if not isinstance(value, expected_type):
-                raise error_class(f"{name} must be {expected_type.__name__}, got {type(value).__name__}")
-            
+                raise error_class(
+                    f"{name} must be {expected_type.__name__}, got {type(value).__name__}"
+                )
+
         timeout = config_dto.timeout
         if not isinstance(timeout, int) or timeout <= 0 or timeout >= 60:
-            raise IncorrectTimeoutError(f"Timeout must be a positive integer less than 60, got {timeout}")
+            raise IncorrectTimeoutError(
+                f"Timeout must be a positive integer less than 60, got {timeout}"
+            )
 
 
     def get_seed_urls(self) -> list[str]:
