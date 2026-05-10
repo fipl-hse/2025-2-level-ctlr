@@ -303,9 +303,12 @@ class Crawler:
                 if len(self.urls) >= target_count:
                     return
                 href = link.get('href')
-                if not href or not isinstance(href, str):
-                    continue
-                if href == '#' or href.startswith('javascript'):
+                if (
+                    not href
+                    or not isinstance(href, str)
+                    or href == '#'
+                    or href.startswith('javascript')
+                ):
                     continue
                 if href.startswith('/'):
                     full_url = f"https://sufler.su{href}"
@@ -313,11 +316,12 @@ class Crawler:
                     full_url = href
                 else:
                     continue
-                if full_url == 'https://sufler.su/':
-                    continue
-                if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
-                    continue
-                if (('/wp-' in full_url
+                if (
+                    full_url == 'https://sufler.su/'
+                    or '/feed' in full_url
+                    or '/advanced_search' in full_url
+                    or '/katalog' in full_url
+                    or ('/wp-' in full_url
                     or '/category/' in full_url
                     or '/tag/' in full_url)
                     or '/author/' in full_url
@@ -375,9 +379,12 @@ class CrawlerRecursive(Crawler):
                 if len(self.urls) >= target_count:
                     return
                 href = link.get('href')
-                if not href or not isinstance(href, str):
-                    continue
-                if href in ('#',) or href.startswith('javascript'):
+                if (
+                    not href
+                    or not isinstance(href, str)
+                    or href in ('#',)
+                    or href.startswith('javascript')
+                ):
                     continue
                 if href.startswith('/'):
                     full_url = f"https://sufler.su{href}"
