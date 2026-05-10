@@ -76,6 +76,7 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
+        self.config_dto = self._extract_config_content()
         self._validate_config_content()
         self._seed_urls = self._config.seed_urls
         self._num_articles = self._config.total_articles
@@ -99,37 +100,36 @@ class Config:
         """
         Ensure configuration parameters are not corrupt.
         """
-        config_dto = self._extract_config_content()
-        if not isinstance(config_dto.seed_urls, list):
+        if not isinstance(self.config_dto.seed_urls, list):
             raise IncorrectSeedURLError('Seed URLs must be a list')
         pattern = r'^https?://(www\.)?'
-        for url in config_dto.seed_urls:
+        for url in self.config_dto.seed_urls:
             if not re.match(pattern, url):
                 raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
         if (
-            not isinstance(config_dto.total_articles, int)
-            or isinstance(config_dto.total_articles, bool)
-            or config_dto.total_articles < 0
+            not isinstance(self.config_dto.total_articles, int)
+            or isinstance(self.config_dto.total_articles, bool)
+            or self.config_dto.total_articles < 0
         ):
             raise (IncorrectNumberOfArticlesError('Number of articles is either not integer'
             'or less than 0'))
-        if config_dto.total_articles > 150:
+        if self.config_dto.total_articles > 150:
             raise NumberOfArticlesOutOfRangeError('Number if articles is out of range')
-        if not isinstance(config_dto.headers, dict):
+        if not isinstance(self.config_dto.headers, dict):
             raise IncorrectHeadersError('Headers are not in a form of dictionary')
-        if not isinstance(config_dto.encoding, str):
+        if not isinstance(self.config_dto.encoding, str):
             raise IncorrectEncodingError('Encoding is not in a form of string')
         if (
-            not isinstance(config_dto.timeout, int)
-            or config_dto.timeout >= 60
-            or config_dto.timeout < 0
+            not isinstance(self.config_dto.timeout, int)
+            or self.config_dto.timeout >= 60
+            or self.config_dto.timeout < 0
         ):
             raise IncorrectTimeoutError('Timeout must be a positive integer and less than 60')
-        if not isinstance(config_dto.should_verify_certificate, bool):
+        if not isinstance(self.config_dto.should_verify_certificate, bool):
             raise IncorrectVerifyError('Verify certificate value must be boolean')
-        if not isinstance(config_dto.headless_mode, bool):
+        if not isinstance(self.config_dto.headless_mode, bool):
             raise IncorrectVerifyError('Headless mode value must be boolean')
-        self._config = config_dto
+        self._config = self.config_dto
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -283,26 +283,26 @@ class Crawler:
 
 # 10
 
-# class CrawlerRecursive(Crawler):
-#     """
-#     Recursive implementation.
+class CrawlerRecursive(Crawler):
+    """
+    Recursive implementation.
 
-#     Get one URL of the title page and find requested number of articles recursively.
-#     """
+    Get one URL of the title page and find requested number of articles recursively.
+    """
 
-#     def __init__(self, config: Config) -> None:
-#         """
-#         Initialize an instance of the CrawlerRecursive class.
+    def __init__(self, config: Config) -> None:
+        """
+        Initialize an instance of the CrawlerRecursive class.
 
-#         Args:
-#             config (Config): Configuration
-#         """
-#         super().__init__(config)
+        Args:
+            config (Config): Configuration
+        """
+        super().__init__(config)
 
-#     def find_articles(self) -> None:
-#         """
-#         Find number of article urls requested.
-#         """
+    def find_articles(self) -> None:
+        """
+        Find number of article urls requested.
+        """
 
 
 # 4, 6, 8, 10
