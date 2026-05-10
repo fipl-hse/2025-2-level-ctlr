@@ -287,11 +287,11 @@ class Crawler:
                     full_url = href
                 else:
                     continue
-                if (full_url == 'https://sufler.su/'
-                    or '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url
-                    or ('/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url)
-                    or '/author/' in full_url
-                    ):
+                if full_url == 'https://sufler.su/':
+                    continue
+                if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
+                    continue
+                if ('/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url) or '/author/' in full_url:
                     continue
                 if full_url and full_url not in self.urls:
                     self.urls.append(full_url)
@@ -347,9 +347,9 @@ class CrawlerRecursive(Crawler):
                     if len(self.urls) >= target_count:
                         break
                     href = link.get('href')
-                    if (not href or not isinstance(href, str)
-                        or href == '#'
-                        or href.startswith('javascript')):
+                    if not href or not isinstance(href, str):
+                        continue
+                    if href == '#' or href.startswith('javascript'):
                         continue
                     if href.startswith('/'):
                         full_url = f"https://sufler.su{href}"
@@ -357,12 +357,14 @@ class CrawlerRecursive(Crawler):
                         full_url = href
                     else:
                         continue
+                    if full_url == 'https://sufler.su/':
+                        continue
                     if ('/feed' in full_url or '/advanced_search' in full_url
                         or '/katalog' in full_url):
                         continue
-                    if ('/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url
-                        or '/author/' in full_url or '/page/' in full_url
-                        or full_url == 'https://sufler.su/'):
+                    if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
+                        continue
+                    if '/author/' in full_url or '/page/' in full_url:
                         continue
                     if full_url and full_url not in self.urls:
                         self.urls.append(full_url)
@@ -429,18 +431,23 @@ class HTMLParser:
             h1_entry = article_soup.find('h1', class_='entry-title')
             if h1_entry:
                 title = h1_entry.get_text(strip=True)
+        if not title:
             h1 = article_soup.find('h1')
             if h1:
                 title = h1.get_text(strip=True)
+        if not title:
             title_tag = article_soup.find('title')
             if title_tag:
                 title = title_tag.get_text(strip=True)
+        if not title:
             h2_entry = article_soup.find('h2', class_='entry-title')
             if h2_entry:
                 title = h2_entry.get_text(strip=True)
+        if not title:
             h2 = article_soup.find('h2')
             if h2:
                 title = h2.get_text(strip=True)
+        if not title:
             post_title = article_soup.find(class_='post-title')
             if post_title:
                 title = post_title.get_text(strip=True)
