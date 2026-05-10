@@ -2,52 +2,66 @@
 Crawler implementation.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import datetime
 import json
 import pathlib
 import re
 import shutil
-from typing import Any
+import sys
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw, to_meta
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
-from core_utils.constants import CRAWLER_CONFIG_PATH, ASSETS_PATH
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 
 class IncorrectSeedURLError(Exception):
-    pass
+    """
+    Invalid seed URL format.
+    """
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    pass
+    """
+    Number of articles exceeds allowed range.
+    """
 
 
 class IncorrectNumberOfArticlesError(Exception):
-    pass
+    """
+    Invalid number of articles.
+    """
 
 
 class IncorrectHeadersError(Exception):
-    pass
+    """
+    Invalid headers.
+    """
 
 
 class IncorrectEncodingError(Exception):
-    pass
+    """
+    Invalid encoding.
+    """
 
 
 class IncorrectTimeoutError(Exception):
-    pass
+    """
+    Invalid timeout.
+    """
 
 
 class IncorrectVerifyError(Exception):
-    pass
+    """
+    Invalid verify certificate or headless mode flag.
+    """
 
 
 class Config:
@@ -181,6 +195,7 @@ class Config:
         """
         return self._headless_mode
 
+
 def make_request(url: str, config: Config) -> requests.models.Response:
     """
     Deliver a response from a request with given configuration.
@@ -286,7 +301,6 @@ class CrawlerRecursive(Crawler):
 
     Get one URL of the title page and find requested number of articles recursively.
     """
-
     def __init__(self, config: Config) -> None:
         """
         Initialize an instance of the CrawlerRecursive class.
@@ -294,11 +308,14 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
+        # reuse parent method for now; can be replaced with recursive logic later if needed
+        super().find_articles()
 
 
 # 4, 6, 8, 10
@@ -322,7 +339,7 @@ class HTMLParser:
         self.article_id = article_id
         self.config = config
         self.article = Article(url=full_url, article_id=article_id)
-    
+
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
         Find text of article.
@@ -373,26 +390,28 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         try:
-                resp = make_request(self.full_url, self.config)
-                soup = BeautifulSoup(resp.text, "html.parser")
-                self._fill_article_with_meta_information(soup)
-                self._fill_article_with_text(soup)
-                return self.article
+            resp = make_request(self.full_url, self.config)
+            soup = BeautifulSoup(resp.text, "html.parser")
+            self._fill_article_with_meta_information(soup)
+            self._fill_article_with_text(soup)
+            return self.article
         except Exception:
-                return False
+            return False
+
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
     """
     Create ASSETS_PATH folder if no created and remove existing folder.
 
     Args:
-        base_path (pathlib.Path | str): Path where articles stores
+        base_path (pathlib.Path | str): Path where articles store
     """
     if isinstance(base_path, str):
         base_path = pathlib.Path(base_path)
     if base_path.exists():
         shutil.rmtree(base_path)
     base_path.mkdir(parents=True, exist_ok=True)
+
 
 def main() -> None:
     """
@@ -413,6 +432,7 @@ def main() -> None:
 
         if isinstance(article, Article):
             to_raw(article)
+            to_meta(article)
             print(f"  ✓ Saved article {i}")
         else:
             print(f"  ✗ Failed to parse article {i}")
