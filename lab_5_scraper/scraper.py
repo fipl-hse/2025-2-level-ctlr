@@ -263,6 +263,7 @@ class Crawler:
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
+        excluded_patterns = ['/feed', '/advanced_search', '/katalog', '/wp-', '/category/', '/tag/', '/author/']
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
@@ -277,9 +278,7 @@ class Crawler:
                 if len(self.urls) >= target_count:
                     return
                 href = link.get('href')
-                if not href or not isinstance(href, str):
-                    continue
-                if href == '#' or href.startswith('javascript'):
+                if not href or not isinstance(href, str) or href == '#' or href.startswith('javascript'):
                     continue
                 if href.startswith('/'):
                     full_url = f"https://sufler.su{href}"
@@ -289,9 +288,7 @@ class Crawler:
                     continue
                 if full_url == 'https://sufler.su/':
                     continue
-                if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
-                    continue
-                if ('/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url) or '/author/' in full_url:
+                if any(pattern in full_url for pattern in excluded_patterns):
                     continue
                 if full_url and full_url not in self.urls:
                     self.urls.append(full_url)
@@ -328,6 +325,7 @@ class CrawlerRecursive(Crawler):
         Find number of article urls requested.
         """
         target_count = self.config.get_num_articles()
+        excluded_patterns = ['/feed', '/advanced_search', '/katalog', '/wp-', '/category/', '/tag/']
         for seed_url in self.get_search_urls():
             if len(self.urls) >= target_count:
                 break
@@ -343,33 +341,23 @@ class CrawlerRecursive(Crawler):
                 if not response.ok:
                     break
                 soup = BeautifulSoup(response.text, 'lxml')
-                for link in soup.find_all('a', href=True):
+                all_links = soup.find_all('a', href=True)
+                for link in all_links:
                     if len(self.urls) >= target_count:
                         break
                     href = link.get('href')
-                    if not href or not isinstance(href, str):
+                    if not href or not isinstance(href, str) or href in ('#',) or href.startswith('javascript'):
                         continue
-                    if href == '#' or href.startswith('javascript'):
+                    full_url = f"https://sufler.su{href}" if href.startswith('/') else href if 'sufler.su' in href else ''
+                    if not full_url or full_url in self.urls or full_url == 'https://sufler.su/':
                         continue
-                    if href.startswith('/'):
-                        full_url = f"https://sufler.su{href}"
-                    elif 'sufler.su' in href:
-                        full_url = href
-                    else:
-                        continue
-                    if full_url == 'https://sufler.su/':
-                        continue
-                    if ('/feed' in full_url or '/advanced_search' in full_url
-                        or '/katalog' in full_url):
-                        continue
-                    if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
+                    if any(pattern in full_url for pattern in excluded_patterns):
                         continue
                     if '/author/' in full_url or '/page/' in full_url:
                         continue
-                    if full_url and full_url not in self.urls:
-                        self.urls.append(full_url)
+                    self.urls.append(full_url)
                 current_url = None
-                for link in soup.find_all('a', href=True):
+                for link in all_links:
                     href = link.get('href')
                     if href and isinstance(href, str) and href.startswith('/page/'):
                         next_url = f"https://sufler.su{href}"
@@ -423,47 +411,38 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title_selectors = [
+            ('meta', {'property': 'og:title'}, 'content'),
+            ('h1', {'class_': 'entry-title'}, 'text'),
+            ('h1', {}, 'text'),
+            ('title', {}, 'text'),
+            ('h2', {'class_': 'entry-title'}, 'text'),
+            ('h2', {}, 'text'),
+            (None, {'class_': 'post-title'}, 'text'),
+        ] 
         title = None
-        meta_title = article_soup.find('meta', property='og:title')
-        if meta_title and meta_title.get('content'):
-            title = meta_title.get('content').strip()
-        if not title:
-            h1_entry = article_soup.find('h1', class_='entry-title')
-            if h1_entry:
-                title = h1_entry.get_text(strip=True)
-        if not title:
-            h1 = article_soup.find('h1')
-            if h1:
-                title = h1.get_text(strip=True)
-        if not title:
-            title_tag = article_soup.find('title')
-            if title_tag:
-                title = title_tag.get_text(strip=True)
-        if not title:
-            h2_entry = article_soup.find('h2', class_='entry-title')
-            if h2_entry:
-                title = h2_entry.get_text(strip=True)
-        if not title:
-            h2 = article_soup.find('h2')
-            if h2:
-                title = h2.get_text(strip=True)
-        if not title:
-            post_title = article_soup.find(class_='post-title')
-            if post_title:
-                title = post_title.get_text(strip=True)
+        for tag, attrs, attr_type in title_selectors:
+            if tag:
+                element = article_soup.find(tag, **attrs) if attrs else article_soup.find(tag)
+            else:
+                element = article_soup.find(**attrs)
+            if element:
+                if attr_type == 'content':
+                    title = element.get('content', '').strip()
+                else:
+                    title = element.get_text(strip=True)
+                if title:
+                    break
         if title:
             self.article.title = title
         else:
             self.article.title = (
                 self.full_url.split('/')[-2] if self.full_url.endswith('/')
                 else self.full_url.split('/')[-1]
-            )
-            if not self.article.title:
-                self.article.title = f"article_{self.article_id}"
+            ) or f"article_{self.article_id}"
         self.article.author = ['NOT FOUND']
         date_pattern = r'(\d{2})\.(\d{2})\.(\d{4})'
-        text = article_soup.get_text()
-        match = re.search(date_pattern, text)
+        match = re.search(date_pattern, article_soup.get_text())
         if match:
             day, month, year = map(int, match.groups())
             self.article.date = datetime.datetime(year, month, day)
@@ -541,23 +520,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    # config_path = pathlib.Path("lab_5_scraper/scraper_config.json")
-    # if not config_path.exists():
-    #     exit(1)
-    # config = Config(config_path)
-    # prepare_environment(ASSETS_PATH)
-    # crawler = CrawlerRecursive(config)
-    # crawler.find_articles()
-    # crawler.urls = [url for url in crawler.urls if url not in [
-    #     'https://sufler.su', 'https://sufler.su/'
-    # ]]
-    # for i, url in enumerate(crawler.urls, 1):
-    #     if i > config.get_num_articles():
-    #         break
-    #     parser = HTMLParser(url, i, config)
-    #     article = parser.parse()
-    #     if isinstance(article, Article):
-    #         with open(article.get_raw_text_path(), "w", encoding="utf-8") as f:
-    #             f.write(article.text)
-    #         with open(article.get_meta_file_path(), "w", encoding="utf-8") as f:
-    #             json.dump(article.get_meta(), f, ensure_ascii=False, indent=2)
