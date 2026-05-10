@@ -109,10 +109,10 @@ class Config:
         config_dto = self._extract_config_content()
         if not isinstance(config_dto.seed_urls, list):
             raise IncorrectSeedURLError()
-        for url in config_dto.seed_urls:
-            if not isinstance(url, str):
+        for seed_url in config_dto.seed_urls:
+            if not isinstance(seed_url, str):
                 raise IncorrectSeedURLError()
-            if 'sufler.su' not in url:
+            if 'sufler.su' not in seed_url:
                 raise IncorrectSeedURLError()
         if (not isinstance(config_dto.total_articles, int)
             or isinstance(config_dto.total_articles, bool)
@@ -291,9 +291,7 @@ class Crawler:
                     continue
                 if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
                     continue
-                if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
-                    continue
-                if '/author/' in full_url:
+                if ('/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url) or '/author/' in full_url:
                     continue
                 if full_url and full_url not in self.urls:
                     self.urls.append(full_url)
@@ -459,7 +457,7 @@ class HTMLParser:
             self.article.title = (
                 self.full_url.split('/')[-2] if self.full_url.endswith('/')
                 else self.full_url.split('/')[-1]
-                )
+            )
             if not self.article.title:
                 self.article.title = f"article_{self.article_id}"
         self.article.author = ['NOT FOUND']
@@ -542,23 +540,24 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    config_path = pathlib.Path("lab_5_scraper/scraper_config.json")
-    if not config_path.exists():
-        exit(1)
-    config = Config(config_path)
-    prepare_environment(ASSETS_PATH)
-    crawler = CrawlerRecursive(config)
-    crawler.find_articles()
-    crawler.urls = [url for url in crawler.urls if url not in [
-        'https://sufler.su', 'https://sufler.su/'
-    ]]
-    for i, url in enumerate(crawler.urls, 1):
-        if i > config.get_num_articles():
-            break
-        parser = HTMLParser(url, i, config)
-        article = parser.parse()
-        if isinstance(article, Article):
-            with open(article.get_raw_text_path(), "w", encoding="utf-8") as f:
-                f.write(article.text)
-            with open(article.get_meta_file_path(), "w", encoding="utf-8") as f:
-                json.dump(article.get_meta(), f, ensure_ascii=False, indent=2)
+    main()
+    # config_path = pathlib.Path("lab_5_scraper/scraper_config.json")
+    # if not config_path.exists():
+    #     exit(1)
+    # config = Config(config_path)
+    # prepare_environment(ASSETS_PATH)
+    # crawler = CrawlerRecursive(config)
+    # crawler.find_articles()
+    # crawler.urls = [url for url in crawler.urls if url not in [
+    #     'https://sufler.su', 'https://sufler.su/'
+    # ]]
+    # for i, url in enumerate(crawler.urls, 1):
+    #     if i > config.get_num_articles():
+    #         break
+    #     parser = HTMLParser(url, i, config)
+    #     article = parser.parse()
+    #     if isinstance(article, Article):
+    #         with open(article.get_raw_text_path(), "w", encoding="utf-8") as f:
+    #             f.write(article.text)
+    #         with open(article.get_meta_file_path(), "w", encoding="utf-8") as f:
+    #             json.dump(article.get_meta(), f, ensure_ascii=False, indent=2)
