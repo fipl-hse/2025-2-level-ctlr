@@ -455,33 +455,45 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = None
-        title_tag = article_soup.find('h1')
-        if not title_tag:
-            title_tag = article_soup.find(class_='entry-title')
-        if not title_tag:
+        title_text = None
+        meta_title = article_soup.find('meta', property='og:title')
+        if meta_title:
+            title_text = meta_title.get('content', '')
+        if not title_text:
+            h1_tag = article_soup.find('h1')
+            if h1_tag:
+                title_text = h1_tag.get_text(strip=True)
+        if not title_text:
+            entry_title = article_soup.find(class_='entry-title')
+            if entry_title:
+                title_text = entry_title.get_text(strip=True)
+        if not title_text:
             title_tag = article_soup.find('title')
-        if not title_tag:
-            meta_title = article_soup.find('meta', property='og:title')
-            if meta_title:
-                title_text = meta_title.get('content', '')
-                if title_text:
-                    self.article.title = title_text
-                    self.article.author = ["unknown author"]
-                    self.article.date = datetime.datetime.now()
-                    self.article.topics = []
-                    return
-        if not title_tag:
+            if title_tag:
+                title_text = title_tag.get_text(strip=True)
+        if not title_text:
+            h2_tag = article_soup.find('h2')
+            if h2_tag:
+                title_text = h2_tag.get_text(strip=True)
+        if not title_text:
+            article_header = article_soup.find('header')
+            if article_header:
+                h1_in_header = article_header.find('h1')
+                if h1_in_header:
+                    title_text = h1_in_header.get_text(strip=True)
+        if not title_text:
+            post_title = article_soup.find(class_='post-title')
+            if post_title:
+                title_text = post_title.get_text(strip=True)
+        if not title_text:
             for header in ['h1', 'h2', 'h3', 'h4']:
-                title_tag = article_soup.find(header)
-                if title_tag:
-                    break
-        if title_tag:
-            title_text = title_tag.get_text(strip=True)
-            if title_text:
-                self.article.title = title_text
-            else:
-                self.article.title = f"article_{self.article_id}"
+                header_tag = article_soup.find(header)
+                if header_tag:
+                    title_text = header_tag.get_text(strip=True)
+                    if title_text:
+                        break
+        if title_text:
+            self.article.title = title_text
         else:
             self.article.title = f"article_{self.article_id}"
         self.article.author = ["unknown author"]
