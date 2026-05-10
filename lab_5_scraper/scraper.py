@@ -37,7 +37,8 @@ class IncorrectNumberOfArticlesError(Exception):
     """
 
 class IncorrectHeadersError(Exception):
-    """Headers are not in a form of dictionary.
+    """
+    Headers are not in a form of dictionary.
     """
 
 class IncorrectEncodingError(Exception):
@@ -247,6 +248,7 @@ class Crawler:
         """
         Find articles.
         """
+        article_pattern = re.compile(r'/(schedule|performances|persons)/(\d{3,4})/?$|/news/article/\d+/')
         for seed_url in self.config.get_seed_urls():
             if len(self.urls) >= self.config.get_num_articles():
                 return
@@ -254,13 +256,12 @@ class Crawler:
                 response = make_request(seed_url, self.config)
                 if not response:
                     continue
-                soup = BeautifulSoup(response.text, "xml")
+                soup = BeautifulSoup(response.text, "lxml")
                 for tag in soup.find_all("a"):
                     link = self._extract_url(tag)
                     if not link or link in self.urls:
                         continue
-                    last_part = link.rstrip('/').split('/')[-1]
-                    if last_part.isdigit() and len(last_part) in (3, 4):
+                    if article_pattern.search(link):
                         self.urls.append(link)
                     if len(self.urls) >= self.config.get_num_articles():
                         return
@@ -331,11 +332,13 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         texts = []
-        for p in article_soup.find_all("p"):
-            text = p.get_text(strip=True)
-            if text:
-                texts.append(text)
-        self.article.text = "\n\n".join(texts)
+        content_block = article_soup.find("div", class_="content content_1")
+        if content_block:
+            for p in content_block.find_all("p"):
+                text = p.get_text(strip=True)
+                if text:
+                    texts.append(text)
+        self.article.text = "\n\n".join(texts) if texts else ""
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -354,6 +357,14 @@ class HTMLParser:
             self.article.author = [author.get("content").strip()]
         else:
             self.article.author = ["NOT FOUND"]
+        date_div = article_soup.find("div", class_="date_post")
+        if date_div:
+            self.article.date = self.unify_date_format(date_div.get_text(strip=True))
+        keywords = article_soup.find("meta", {"name": "keywords"})
+        if keywords and keywords.get("content"):
+            self.article.topics = [k.strip() for k in keywords["content"].split(",")]
+        else:
+            self.article.topics = []
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -365,6 +376,15 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        months = {
+        'января': 1, 'февраля': 2, 'марта': 3, 'апреля': 4,
+        'мая': 5, 'июня': 6, 'июля': 7, 'августа': 8,
+        'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
+        }
+        date_str = date_str.replace(" г.", "")
+        day, month_name, year = date_str.split()
+        month = months[month_name]
+        return datetime.datetime(int(year), month, int(day))
 
     def parse(self) -> Article | bool:
         """
@@ -376,7 +396,7 @@ class HTMLParser:
         response = make_request(self.full_url, self.config)
         if not response:
             return False
-        article_soup = BeautifulSoup(response.text, "xml")
+        article_soup = BeautifulSoup(response.text, "lxml")
         self._fill_article_with_text(article_soup)
         self._fill_article_with_meta_information(article_soup)
         return self.article
@@ -389,9 +409,10 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
-    if pathlib.Path(base_path).exists():
-        shutil.rmtree(base_path)
-    pathlib.Path(base_path).mkdir(parents=True)
+    path = pathlib.Path(base_path)
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> None:
