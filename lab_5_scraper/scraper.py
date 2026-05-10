@@ -18,55 +18,55 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    """Exception raised when seed URL does not match standard pattern."""
+    """invalid seed url format"""
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    """Exception raised when total number of articles is out of range from 1 to 100."""
+    """articles count out of range 1-100"""
 
 
 class IncorrectNumberOfArticlesError(Exception):
-    """Exception raised when total number of articles to parse is not integer or less than 0."""
+    """invalid articles count type or value"""
 
 
 class IncorrectHeadersError(Exception):
-    """Exception raised when headers are not in a form of dictionary."""
+    """headers must be a dictionary"""
 
 
 class IncorrectEncodingError(Exception):
-    """Exception raised when encoding must be specified as a string."""
+    """encoding must be a string"""
 
 
 class IncorrectTimeoutError(Exception):
-    """Exception raised when timeout value must be a positive integer less than 60."""
+    """timeout must be positive integer less than 60"""
 
 
 class IncorrectVerifyError(Exception):
-    """Exception raised when verify certificate and headless mode values must either be True or False."""
+    """verify certificate and headless mode must be boolean"""
 
 
 class IncorrectVerifyCertificateError(Exception):
-    """Exception raised when verify certificate value must be boolean."""
+    """verify certificate must be boolean"""
 
 
 class ConfigValidationError(Exception):
-    """General configuration validation error."""
+    """configuration validation failed"""
 
 
 class ConfigLoadError(Exception):
-    """Failed to load configuration file."""
+    """cannot load configuration file"""
 
 
 class SeedUrlsError(Exception):
-    """Error processing seed URLs."""
+    """seed urls processing error"""
 
 
 class CustomTimeoutError(Exception):
-    """Request timeout occurred."""
+    """request timeout"""
 
 
 class URLProcessingError(Exception):
-    """Error processing or parsing URL."""
+    """url processing error"""
 
 
 class Config:
@@ -101,8 +101,8 @@ class Config:
                 raise IncorrectSeedURLError()
             if 'sufler.su' not in url:
                 raise IncorrectSeedURLError()
-        if (not isinstance(config_dto.total_articles, int) 
-            or isinstance(config_dto.total_articles, bool) 
+        if (not isinstance(config_dto.total_articles, int)
+            or isinstance(config_dto.total_articles, bool)
             or config_dto.total_articles <= 0):
             raise IncorrectNumberOfArticlesError()
         if config_dto.total_articles > 100:
@@ -111,8 +111,8 @@ class Config:
             raise IncorrectHeadersError()
         if not isinstance(config_dto.encoding, str):
             raise IncorrectEncodingError()
-        if (not isinstance(config_dto.timeout, int) 
-            or config_dto.timeout <= 0 
+        if (not isinstance(config_dto.timeout, int)
+            or config_dto.timeout <= 0
             or config_dto.timeout > 60):
             raise IncorrectTimeoutError()
         if not isinstance(config_dto.should_verify_certificate, bool):
@@ -313,7 +313,7 @@ class CrawlerRecursive(Crawler):
                         continue
                     if full_url == 'https://sufler.su/':
                         continue
-                    if ('/feed' in full_url or '/advanced_search' in full_url 
+                    if ('/feed' in full_url or '/advanced_search' in full_url
                         or '/katalog' in full_url):
                         continue
                     if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
@@ -408,7 +408,10 @@ class HTMLParser:
         if title:
             self.article.title = title
         else:
-            self.article.title = self.full_url.split('/')[-2] if self.full_url.endswith('/') else self.full_url.split('/')[-1]
+            self.article.title = (
+                self.full_url.split('/')[-2] if self.full_url.endswith('/')
+                else self.full_url.split('/')[-1]
+                )
             if not self.article.title:
                 self.article.title = f"article_{self.article_id}"
         self.article.author = ['NOT FOUND']
