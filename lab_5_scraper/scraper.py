@@ -44,6 +44,9 @@ class IncorrectVerifyError(Exception):
 class IncorrectHeadlessModeError(Exception):
     pass
 
+class NumberOfArticlesOutOfRangeError(Exception):
+    pass
+
 class ConfigValidationError(Exception):
     pass
 
