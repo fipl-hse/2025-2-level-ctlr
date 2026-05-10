@@ -243,32 +243,27 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        urls = []
+        href = article_bs.get('href', '').strip()
+        if not href:
+            return ''
+        if href.startswith('#') or href.startswith('javascript:') or href.startswith('mailto:'):
+            return ''
+        if href.startswith('http') and 'tarranova.lib.ru' not in href:
+            return ''
+
         base_url = "https://tarranova.lib.ru"
+        full_url = urllib.parse.urljoin(base_url, href)
 
-        for link in article_bs.find_all('a', href=True):
-            href = link['href'].strip()
-            if not href:
-                continue
-            if href.startswith('#') or href.startswith('javascript:') or href.startswith('mailto:'):
-                continue
-            if href.startswith('http') and 'tarranova.lib.ru' not in href:
-                continue
+        if 'tarranova.lib.ru' not in full_url:
+            return ''
+        if full_url.rstrip('/') in ['https://tarranova.lib.ru',
+                                      'https://tarranova.lib.ru/index.html',
+                                      'https://tarranova.lib.ru/index.htm']:
+            return ''
+        if '#' in full_url:
+            return ''
 
-            full_url = urllib.parse.urljoin(base_url, href)
-
-            if 'tarranova.lib.ru' not in full_url:
-                continue
-            if full_url.rstrip('/') in ['https://tarranova.lib.ru', 
-                                          'https://tarranova.lib.ru/index.html',
-                                          'https://tarranova.lib.ru/index.htm']:
-                continue
-            if '#' in full_url:
-                continue
-
-            urls.append(full_url)
-
-        return urls
+        return full_url
         
 
     def find_articles(self) -> None:
@@ -294,10 +289,13 @@ class Crawler:
                 if response.status_code != 200:
                     continue
                 soup = BeautifulSoup(response.text, 'html.parser')
-                links = self._extract_url(soup)
+                links = []
+                for tag in soup.find_all('a', href=True):
+                    url = self._extract_url(tag)
+                    if url:
+                        links.append(url)
                 
                 for link in links:
-                    # If it's a book (.txt or .htm with /authors/ path)
                     if link.endswith('.txt') or '/authors/' in link:
                         if link.endswith('.htm') or link.endswith('.txt'):
                             if link not in self.urls and len(self.urls) < max_articles:
@@ -307,8 +305,7 @@ class Crawler:
                                         self.urls.append(link)
                                 except Exception:
                                     continue
-                    
-                    # If it's another page to crawl (not a book)
+                
                     if link.endswith('.htm') and '/authors/' not in link:
                         if link not in visited_pages and link not in all_pages_to_visit:
                             all_pages_to_visit.append(link)
