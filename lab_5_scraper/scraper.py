@@ -60,7 +60,7 @@ class Config:
     """
     Class for unpacking and validating configurations.
     """
-    
+
 
     def __init__(self, path_to_config: pathlib.Path) -> None:
         """
@@ -95,28 +95,27 @@ class Config:
         """
         Ensure configuration parameters are not corrupt.
         """
-        conf = self._config
         standard_pattern = re.compile(r"https?://(www\.)?")
-        if not isinstance(conf.seed_urls, list):
+        if not isinstance(self._config.seed_urls, list):
             raise IncorrectSeedURLError("Seed URLs must be a list of strings")
-        for url in conf.seed_urls: 
+        for url in self._config.seed_urls:
             if not isinstance(url, str) or not standard_pattern.match(url):
                 raise IncorrectSeedURLError("Seed URL does not match standard pattern")
-        if not isinstance(conf.total_articles, int):
+        if not isinstance(self._config.total_articles, int):
             raise IncorrectNumberOfArticlesError("Total articles must be an integer")
-        if conf.total_articles < 1:
+        if self._config.total_articles < 1:
             raise IncorrectNumberOfArticlesError("Total articles must be at least 1")
-        if conf.total_articles > 150:
+        if self._config.total_articles > 150:
             raise NumberOfArticlesOutOfRangeError("Total articles must not exceed 150")
-        if not isinstance(conf.headers, dict):
+        if not isinstance(self._config.headers, dict):
             raise IncorrectHeadersError("Headers must be a dictionary")
-        if not isinstance(conf.encoding, str):
+        if not isinstance(self._config.encoding, str):
             raise IncorrectEncodingError("Encoding must be a string")
-        if not isinstance(conf.timeout, int) or conf.timeout <= 0 or conf.timeout > 60:
+        if not isinstance(self._config.timeout, int) or self._config.timeout <= 0 or self._config.timeout > 60:
             raise IncorrectTimeoutError("Timeout must be an integer between 1 and 60")
-        if not isinstance(conf.should_verify_certificate, bool):
+        if not isinstance(self._config.should_verify_certificate, bool):
             raise IncorrectVerifyError("should_verify_certificate must be a boolean")
-        if not isinstance(conf.headless_mode, bool):
+        if not isinstance(self._config.headless_mode, bool):
             raise IncorrectVerifyError("headless_mode must be a boolean")
 
 
@@ -127,7 +126,7 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
-        return self._seed_urls  
+        return self._seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -236,7 +235,7 @@ class Crawler:
             str: Url from HTML
         """
         href = article_bs.get("href")
-        if not href:
+        if not href or not isinstance(href, str):
             return ""
         parsed = urlparse(href)
         if parsed.scheme in ('http', 'https'):
@@ -248,7 +247,9 @@ class Crawler:
         """
         Find articles.
         """
-        article_pattern = re.compile(r'/(schedule|performances|persons)/(\d{3,4})/?$|/news/article/\d+/')
+        article_pattern = re.compile(
+            r'/(schedule|performances|persons)/(\d{3,4})/?$|/news/article/\d+/'
+        )
         for seed_url in self.config.get_seed_urls():
             if len(self.urls) >= self.config.get_num_articles():
                 return
@@ -265,7 +266,7 @@ class Crawler:
                         self.urls.append(link)
                     if len(self.urls) >= self.config.get_num_articles():
                         return
-            except Exception:
+            except (requests.RequestException, AttributeError, ValueError):
                 continue
 
     def get_search_urls(self) -> list:
@@ -295,6 +296,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
 
     def find_articles(self) -> None:
         """
@@ -359,7 +361,10 @@ class HTMLParser:
             self.article.author = ["NOT FOUND"]
         date_div = article_soup.find("div", class_="date_post")
         if date_div:
-            self.article.date = self.unify_date_format(date_div.get_text(strip=True))
+            date_text = date_div.get_text(strip=True)
+            self.article.date = self.unify_date_format(date_text)
+        else:
+            self.article.date = datetime.datetime.now()
         keywords = article_soup.find("meta", {"name": "keywords"})
         if keywords and keywords.get("content"):
             self.article.topics = [k.strip() for k in keywords["content"].split(",")]
@@ -427,10 +432,10 @@ def main() -> None:
         if i > configuration.get_num_articles():
             break
         parser = HTMLParser(url, i, configuration)
-        article = parser.parse()
-        if article:
-            to_raw(article)
-            to_meta(article)
+        result = parser.parse()
+        if isinstance(result, Article):
+            to_raw(result)
+            to_meta(result)
 
 
 if __name__ == "__main__":
