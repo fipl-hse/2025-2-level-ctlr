@@ -19,6 +19,41 @@ from bs4 import BeautifulSoup, Tag
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
 
+class IncorrectEncodingError(Exception):
+    pass
+
+class IncorrectHeadersError(Exception):
+    pass
+
+class IncorrectNumberOfArticlesError(Exception):
+    pass
+
+class IncorrectSeedURLError(Exception):
+    pass
+
+class IncorrectTimeoutError(Exception):
+    pass
+
+class IncorrectVerifyCertificateError(Exception):
+    pass
+
+class IncorrectHeadlessModeError(Exception):
+    pass
+
+class ConfigValidationError(Exception):
+    pass
+
+class ConfigLoadError(Exception):
+    pass
+
+class SeedUrlsError(Exception):
+    pass
+
+class TimeoutError(Exception):
+    pass
+
+class URLProcessingError(Exception):
+    pass
 
 class Config:
     """
