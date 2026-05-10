@@ -19,25 +19,39 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    """Raised when seed URL is invalid."""
+    """
+    Seed URL does not match standard pattern "https?://(www.)?".
+    """
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    """Raised when number of articles is out of range."""
+    """
+    Total number of articles is out of range from 1 to 150.
+    """
 
 class IncorrectNumberOfArticlesError(Exception):
-    """Raised when number of articles is not a positive integer."""
+    """
+    Total number of articles to parse is not integer or less than 0.
+    """
 
 class IncorrectHeadersError(Exception):
-    """Raised when headers are not a dictionary."""
+    """
+    Headers are not in a form of dictionary.
+    """
 
 class IncorrectEncodingError(Exception):
-    """Raised when encoding is not a string."""
+    """
+    Encoding must be specified as a string.
+    """
 
 class IncorrectTimeoutError(Exception):
-    """Raised when timeout is invalid."""
+    """
+    Timeout value must be a positive integer less than 60.
+    """
 
 class IncorrectVerifyError(Exception):
-    """Raised when verify certificate is not a boolean."""
+    """
+    Verify certificate and headless mode values must either be True or False.
+    """
 
 class Config:
     """
@@ -184,19 +198,14 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=config.get_timeout(),
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = config.get_encoding()
-        return response
-    except requests.RequestException:
-        response = requests.Response()
-        response.status_code = 404
-        return response
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    return response
 
 
 class Crawler:
@@ -205,7 +214,7 @@ class Crawler:
     """
 
     #: Url pattern
-    url_pattern: re.Pattern | str = re.compile(r'news\.php\?id=\d+')
+    url_pattern: re.Pattern | str
 
     def __init__(self, config: Config) -> None:
         """
@@ -411,19 +420,16 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        date_formats = [
-            '%H:%M %d.%m.%Y'
-        ]
         date_str = date_str.strip()
-        for date_format in date_formats:
-            try:
-                return datetime.datetime.strptime(date_str, date_format)
-            except ValueError:
-                continue
-        year_match = re.search(r'\d{4}', date_str)
-        if year_match:
-            return datetime.datetime(int(year_match.group()), 1, 1)
-        return datetime.datetime.now()
+        try:
+            return datetime.datetime.strptime(date_str, '%H:%M %d.%m.%Y')
+        except ValueError:
+            pass
+        match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', date_str)
+        if match:
+            day, month, year = match.groups()
+            return datetime.datetime(int(year), int(month), int(day), 0, 0, 0)
+        return datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     def parse(self) -> Article | bool:
         """
@@ -432,17 +438,13 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
-        try:
-            response = make_request(self.full_url, self.config)
-            if not response or response.status_code != 200:
-                return False
-            soup = BeautifulSoup(response.content, 'html.parser')
-            self._fill_article_with_text(soup)
-            self._fill_article_with_meta_information(soup)
-            return self.article
-        except (requests.RequestException, AttributeError, ValueError) as e:
-            print(f"Error parsing {self.full_url}: {e}")
+        response = make_request(self.full_url, self.config)
+        if not response or response.status_code != 200:
             return False
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self._fill_article_with_text(soup)
+        self._fill_article_with_meta_information(soup)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -463,26 +465,18 @@ def main() -> None:
     Entrypoint for scraper module.
     """
     saved_count = 0
-    try:
-        config = Config(CRAWLER_CONFIG_PATH)
-        prepare_environment(ASSETS_PATH)
-        crawler = Crawler(config)
-        crawler.find_articles()
-        for idx, url in enumerate(crawler.urls[:config.get_num_articles()], 1):
-            parser = HTMLParser(url, idx, config)
-            article = parser.parse()
-            if isinstance(article, Article) and len(article.text) > 50:
-                to_raw(article)
-                to_meta(article)
-                saved_count += 1
-                print(f"Saved article {idx}: {url}")
-        print(f"\nSuccessfully saved {saved_count} articles to {ASSETS_PATH}")
-    except (IncorrectSeedURLError, NumberOfArticlesOutOfRangeError,
-            IncorrectNumberOfArticlesError, IncorrectHeadersError,
-            IncorrectEncodingError, IncorrectTimeoutError,
-            IncorrectVerifyError) as e:
-        print(f"Configuration error: {e}")
-        raise
+    config = Config(CRAWLER_CONFIG_PATH)
+    prepare_environment(ASSETS_PATH)
+    crawler = Crawler(config)
+    crawler.find_articles()
+    for idx, url in enumerate(crawler.urls[:config.get_num_articles()], 1):
+        parser = HTMLParser(url, idx, config)
+        article = parser.parse()
+        if isinstance(article, Article) and len(article.text) > 50:
+            to_raw(article)
+            to_meta(article)
+            saved_count += 1
+            print(f"Saved article {idx}: {url}")
 
 
 if __name__ == "__main__":
