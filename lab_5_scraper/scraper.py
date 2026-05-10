@@ -76,7 +76,7 @@ class Config:
         self.path_to_config = path_to_config
         self._validate_config_content()
         self._seed_urls = self._config.seed_urls
-        self._num_articles = self._config.total_articles
+        self._num_articles = self._config.total_articles_to_find_and_parse
         self._headers = self._config.headers
         self._encoding = self._config.encoding
         self._timeout = self._config.timeout
@@ -114,13 +114,13 @@ class Config:
             if not re.match(pattern, url):
                 raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
         if (
-            not isinstance(config_dto.total_articles, int)
-            or isinstance(config_dto.total_articles, bool)
-            or config_dto.total_articles < 0
+            not isinstance(config_dto.total_articles_to_find_and_parse, int)
+            or isinstance(config_dto.total_articles_to_find_and_parse, bool)
+            or config_dto.total_articles_to_find_and_parse < 0
         ):
             raise (IncorrectNumberOfArticlesError('Number of articles is either not integer'
             'or less than 0'))
-        if config_dto.total_articles > 150:
+        if config_dto.total_articles_to_find_and_parse > 150:
             raise NumberOfArticlesOutOfRangeError('Number if articles is out of range')
         if not isinstance(config_dto.headers, dict):
             raise IncorrectHeadersError('Headers are not in a form of dictionary')
@@ -289,6 +289,7 @@ class Crawler:
                 if url and "ptj.spb.ru/blog/" in url and url not in self.urls:
 
                     article_response = make_request(url, self.config)
+                    
                     if article_response.status_code == 200:
                         self.urls.append(url)
                     
