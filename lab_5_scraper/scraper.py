@@ -352,6 +352,9 @@ class HTMLParser:
             self.article.title = "No title"
 
         self.article.author = ["NOT FOUND"]
+        self.article.topics = []
+
+        self.article.date = self.unify_date_format("")
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
