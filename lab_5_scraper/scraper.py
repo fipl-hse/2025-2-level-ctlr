@@ -209,7 +209,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     response = requests.get(
         url,
         headers=config.get_headers(),
-        timeout=config.get_timeout(),
+        timeout=5,
         verify=config.get_verify_certificate()
     )
     response.encoding = config.get_encoding()
@@ -275,9 +275,16 @@ class Crawler:
         max_articles = self.config.get_num_articles()
         self.urls = []
 
+        try:
+            test = requests.get("https://tarranova.lib.ru/", timeout=5)
+            if test.status_code != 200:
+                return
+        except Exception:
+            return
+
         all_pages_to_visit = list(seed_urls)
         visited_pages = set()
-        max_pages_to_visit = 20
+        max_pages_to_visit = 50
         
         while all_pages_to_visit and len(self.urls) < max_articles and len(visited_pages) < max_pages_to_visit:
             current_url = all_pages_to_visit.pop(0)
