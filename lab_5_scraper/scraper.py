@@ -7,8 +7,7 @@ import json
 import pathlib
 import re
 import shutil
-import urllib.parse
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -292,7 +291,7 @@ class Crawler:
         href = link_tag.get('href')
         if not href or not isinstance(href, str):
             return ""
-        full_url = urllib.parse.urljoin(base_url, href)
+        full_url = urljoin(base_url, href)
         return full_url
 
     def find_articles(self) -> None:
@@ -630,19 +629,19 @@ class HTMLParser:
             'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
         }
         patterns = [
-            (r'(\d{1,2})\s+([а-я]+)\s+(\d{4})', False),
-            (r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),\s+(\d{2}):(\d{2})', True),
-            (r'(\d{1,2})\.(\d{1,2})\.(\d{4})', False),
-            (r'(\d{4})-(\d{2})-(\d{2})', False),
-            (r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}', True),
+            (r'(\d{1,2})\s+([а-я]+)\s+(\d{4})', False, 'russian'),
+            (r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),\s+(\d{2}):(\d{2})', True, 'russian'),
+            (r'(\d{1,2})\.(\d{1,2})\.(\d{4})', False, 'dot'),
+            (r'(\d{4})-(\d{2})-(\d{2})', False, 'iso'),
+            (r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}', True, 'iso_t'),
         ]
 
         result = None
-        for pattern, has_time in patterns:
+        for pattern, has_time, ptype in patterns:
             match = re.search(pattern, date_str)
             if not match:
                 continue
-            if 'а-я' in pattern:
+            if ptype == 'russian':
                 day = int(match.group(1))
                 month_name = match.group(2)
                 year = int(match.group(3))
@@ -656,11 +655,11 @@ class HTMLParser:
                 else:
                     result = datetime.datetime(year, month, day)
                 break
-            if r'\.' in pattern:
+            if ptype == 'dot':
                 day, month, year = map(int, match.groups())
                 result = datetime.datetime(year, month, day)
                 break
-            if 'T' in pattern:
+            if ptype == 'iso_t':
                 year, month, day, hour, minute = map(int, match.groups())
                 result = datetime.datetime(year, month, day, hour, minute)
                 break
@@ -679,27 +678,24 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        russian_date = self._parse_russian_date(date_str)
-        if russian_date:
-            return russian_date
-
-        formats = [
-            '%Y-%m-%dT%H:%M:%S',
-            '%Y-%m-%d %H:%M:%S',
-            '%Y-%m-%d',
-            '%d/%m/%Y',
-            '%m/%d/%Y',
-            '%B %d, %Y',
-            '%d %B %Y',
-            '%d.%m.%Y',
-        ]
-        for fmt in formats:
-            try:
-                return datetime.datetime.strptime(date_str[:len(fmt)], fmt)
-            except ValueError:
-                continue
-
-        return None
+        result = self._parse_russian_date(date_str)
+        if result is None:
+            formats = [
+                '%Y-%m-%dT%H:%M:%S',
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%d',
+                '%d/%m/%Y',
+                '%m/%d/%Y',
+                '%B %d, %Y',
+                '%d %B %Y',
+                '%d.%m.%Y',
+            ]
+            for fmt in formats:
+                try:
+                    return datetime.datetime.strptime(date_str[:len(fmt)], fmt)
+                except ValueError:
+                    continue
+        return result
 
     def parse(self) -> Article | None:
         """
