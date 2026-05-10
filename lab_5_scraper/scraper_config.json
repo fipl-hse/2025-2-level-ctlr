@@ -15,10 +15,9 @@
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
         "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
         "Accept-Encoding": "gzip, deflate, br",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-        "Cookie": "_ym_uid=1775842089944684160; _ym_d=1775842089; _ga=GA1.1.1887609097.1775842089; _ym_isad=1; _ym_visorc=w; _ga_7L47DC04JE=GS2.1.s1778047522$o8$g1$t1778047679$j50$l0$h0"
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"
     },
-    "total_articles_to_find_and_parse": 150,
+    "total_articles_to_find_and_parse": 20,
     "encoding": "utf-8",
     "timeout": 30,
     "should_verify_certificate": true,

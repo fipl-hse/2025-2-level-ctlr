@@ -389,83 +389,6 @@ class CrawlerRecursive(Crawler):
 
         _safe_current_state()
 
-    # def find_articles_b(self) -> None:
-    #     """
-    #     Find number of article urls requested.
-    #     """
-    #     checkpoint_size = 2
-    #     queue = []
-    #     visited = set()
-    #     path = ASSETS_PATH / "RecursiveCrawlerState.json"
-    #     if path.exists():
-    #         with open(path, encoding="utf-8") as f:
-    #             current_state = json.load(f)
-    #         visited = set(current_state["visited"])
-    #         self._config._seed_urls = current_state["queue"]
-    #         queue = current_state
-    #     else:
-    #         queue.extend(self.get_search_urls())
-
-    #     def _safe_current_state():
-    #         nonlocal visited
-    #         nonlocal queue
-    #         with open(path, "w", encoding="utf-8") as f:
-    #             json.dump({
-    #                 "visited": list(visited),
-    #                 "queue": queue
-    #                  },
-    #                  f
-    #             )
-
-    #     for seed_url in self.get_search_urls():
-    #         try:
-    #             response = make_request(seed_url, self._config)
-    #         except requests.exceptions.RequestException:
-    #             continue
-
-    #         if not response.ok:
-    #             continue
-
-    #         soup = BeautifulSoup(response.text, features="lxml")
-    #         parsed_seed = urlparse(seed_url)
-    #         tags = soup.find_all(["a"])
-    #         if not tags:
-    #             continue
-    #         for tag in tags:
-    #             if len(visited) > self._config.get_num_articles():
-    #                 self.urls = list(visited)
-    #                 return
-    #             if len(visited) % checkpoint_size == 0:
-    #                 _safe_current_state()
-
-    #             if not isinstance(tag, Tag):
-    #                 continue
-
-    #             extracted_url = self._extract_url(tag)
-    #             if not extracted_url:
-    #                 continue
-
-    #             if not re.match("https?://(www.)?", extracted_url):
-    #                 extracted_url = urlunparse(
-    #                     (
-    #                         parsed_seed.scheme,
-    #                         parsed_seed.netloc,
-    #                         extracted_url,
-    #                         None,
-    #                         None,
-    #                         None
-    #                     )
-    #                 )
-    #             elif parsed_seed.netloc != urlparse(extracted_url).netloc:
-    #                 continue
-
-    #             if extracted_url not in visited:
-    #                 visited.add(extracted_url)
-    #         queue.remove(seed_url)
-
-    #     _safe_current_state()
-    #     self.find_articles()
-
 # 4, 6, 8, 10
 
 
@@ -495,13 +418,13 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        articles = article_soup.find_all("article", class_="type-post")
+        articles = article_soup.find_all("article", class_=["type-post", "type-page"])
         if not articles:
             return
 
         all_text = []
         for article in articles:
-            tags = article.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"])
+            tags = article.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"])
 
             for tag in tags:
                 tag_classes = tag.get("class")
@@ -564,7 +487,10 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
-        response = make_request(self.full_url, self._config)
+        try:
+            response = make_request(self.full_url, self._config)
+        except requests.exceptions.RequestException:
+            return False
         if not response.ok:
             return False
 
@@ -601,12 +527,14 @@ def main() -> None:
     crawler.find_articles()
     print(len(crawler.urls))
 
-    for article_id, article_url in enumerate(crawler.urls, start=1):
+    article_id = 1
+    for article_url in crawler.urls:
         parser = HTMLParser(article_url, article_id, config)
         parsed_article = parser.parse()
         if isinstance(parsed_article, Article):
             to_raw(parsed_article)
             to_meta(parsed_article)
+            article_id += 1
 
 def main2() -> None:
     """
