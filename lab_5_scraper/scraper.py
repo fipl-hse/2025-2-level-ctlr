@@ -219,50 +219,47 @@ class Crawler:
         self.urls: list[str] = []
 
     def _extract_url(self, article_bs: Tag) -> str:
-        """
-        Find and retrieve url from HTML.
-
-        Args:
-            article_bs (bs4.Tag): Tag instance
-
-        Returns:
-            str: Url from HTML
-        """
         href = article_bs.get("href")
-        if not href:
+        if not href or not isinstance(href, str):
             return ""
 
-        if href.startswith("/"):
-            full_url = f"https://lib.ru{href}"
-        elif not href.startswith("http"):
-            full_url = f"https://lib.ru/PXESY/{href.lstrip('/')}"
-        else:
+        if href.startswith("http"):
             full_url = href
+        elif href.startswith("/"):
+            full_url = f"https://lib.ru{href}"
+        else:
+            full_url = f"https://lib.ru/PXESY/{href.lstrip('/')}"
 
-        if full_url.endswith(".txt") and "lib.ru" in full_url:
-            return full_url
-        return ""
+        if not full_url.startswith("https://lib.ru/"):
+            return ""
+
+        return full_url
 
     def find_articles(self) -> None:
-        """
-        Find articles.
-        """
         target_count = self.config.get_num_articles()
-        seed_urls = self.config.get_seed_urls()
+        queue = self.config.get_seed_urls().copy()
+        seen = set(queue)
 
-        for seed_url in seed_urls:
-            if len(self.urls) >= target_count:
-                break
+        while queue and len(self.urls) < target_count:
+            current_url = queue.pop(0)
 
             try:
-                response = make_request(seed_url, self.config)
+                response = make_request(current_url, self.config)
                 soup = BeautifulSoup(response.text, "html.parser")
 
                 for link in soup.find_all("a", href=True):
-                    article_url = self._extract_url(link)
+                    found_url = self._extract_url(link)
+                    if not found_url or found_url in seen:
+                        continue
 
-                    if article_url and article_url not in self.urls:
-                        self.urls.append(article_url)
+                    seen.add(found_url)
+
+                    try:
+                        article_response = make_request(found_url, self.config)
+                        if article_response.status_code == 200 and found_url not in self.urls:
+                            self.urls.append(found_url)
+                    except Exception:
+                        queue.append(found_url)
 
                     if len(self.urls) >= target_count:
                         break
@@ -376,14 +373,13 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         try:
-            resp = make_request(self.full_url, self.config)
-            soup = BeautifulSoup(resp.text, "html.parser")
-            self._fill_article_with_meta_information(soup)
-            self._fill_article_with_text(soup)
-            return self.article
+                resp = make_request(self.full_url, self.config)
+                soup = BeautifulSoup(resp.text, "html.parser")
+                self._fill_article_with_meta_information(soup)
+                self._fill_article_with_text(soup)
+                return self.article
         except Exception:
-            return False
-
+                return False
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
     """
