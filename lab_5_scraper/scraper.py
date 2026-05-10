@@ -364,14 +364,9 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title_tag = article_soup.find('h4', class_='head')
-        if title_tag:
-            self.article.title = title_tag.get_text(strip=True)
+        self.article.title = title_tag.get_text(strip=True)
         date_tag = article_soup.find('p', class_='caption')
-        if date_tag:
-            self.article.date = self.unify_date_format(date_tag.get_text(strip=True))
-        else:
-            now = datetime.datetime.now()
-            self.article.date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        self.article.date = self.unify_date_format(date_tag.get_text(strip=True))
         self.article.author = ['NOT FOUND']
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
