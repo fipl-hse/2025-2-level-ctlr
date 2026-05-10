@@ -1,6 +1,6 @@
 {
-    "seed_urls": ["https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/",
-                  "https://gameofthrones.fan-base.ru/",
+    "seed_urls": ["https://gameofthrones.fan-base.ru/",
+                  "https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/",
                   "https://gameofthrones.fan-base.ru/category/personazhi/",
                   "https://gameofthrones.fan-base.ru/category/personazhi/page/2/",
                   "https://gameofthrones.fan-base.ru/category/sushhestva/",

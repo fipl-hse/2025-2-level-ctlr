@@ -271,6 +271,12 @@ class Crawler:
         """
         Find articles.
         """
+        navigation_page_marks = {
+            "category",
+            "tag",
+            "page",
+        }
+
         for seed_url in self.get_search_urls():
             try:
                 response = make_request(seed_url, self._config)
@@ -305,11 +311,20 @@ class Crawler:
                             None
                         )
                     )
-                else:
-                    if parsed_seed.netloc != urlparse(extracted_url).netloc:
+                elif parsed_seed.netloc != urlparse(extracted_url).netloc:
                         continue
 
-                if extracted_url not in self.urls:
+                extracted_url = extracted_url.split('#')[0]
+                if not extracted_url:
+                    continue
+
+                parsed_extracted = urlparse(extracted_url)
+                if set(parsed_extracted.path.split('/')).intersection(navigation_page_marks):
+                    if hasattr(self, "navigation_urls"):
+                        self.navigation_urls.add(extracted_url)
+                    continue
+
+                if extracted_url not in self.urls and extracted_url not in self.get_search_urls():
                     self.urls.append(extracted_url)
 
     def get_search_urls(self) -> list:
@@ -345,10 +360,9 @@ class CrawlerRecursive(Crawler):
                 current_state = json.load(f)
             visited = set(current_state.get("visited", []))
             queue = set(current_state.get("queue", []))
+            self.urls = current_state.get("valid_urls", [])
         else:
             queue = queue.union(set(self.get_search_urls()))
-
-        self.urls = list(visited.union(queue))
 
         def _safe_current_state() -> None:
             nonlocal visited
@@ -356,7 +370,8 @@ class CrawlerRecursive(Crawler):
             with open(path, "w", encoding="utf-8") as f:
                 json.dump({
                     "visited": list(visited),
-                    "queue": list(queue)
+                    "queue": list(queue),
+                    "valid_urls": self.urls
                      },
                      f
                 )
@@ -365,9 +380,14 @@ class CrawlerRecursive(Crawler):
             if len(self.urls) > self._config.get_num_articles():
                 break
             self._config.set_seed_urls([queue.pop() for _ in range(seed_urls_max_size) if queue])
+            self.navigation_urls = set()
             super().find_articles()
             visited = visited.union(self.get_search_urls())
-            queue = queue.union({url for url in self.urls if url not in visited})
+            queue = queue.union({
+                url
+                for url in set(self.urls).union(self.navigation_urls)
+                if url not in visited
+            })
             _safe_current_state()
 
         _safe_current_state()
@@ -583,6 +603,7 @@ def main() -> None:
     crawler = Crawler(config)
     crawler.find_articles()
     print(len(crawler.urls))
+
     for article_id, article_url in enumerate(crawler.urls, start=1):
         parser = HTMLParser(article_url, article_id, config)
         parsed_article = parser.parse()
@@ -598,11 +619,18 @@ def main2() -> None:
         prepare_environment(ASSETS_PATH)
 
     config = Config(CRAWLER_CONFIG_PATH)
-    # config._num_articles = 1500
+    config._num_articles = 1500
     crawler = CrawlerRecursive(config)
     crawler.find_articles()
     print(len(crawler.urls))
 
+    for article_id, article_url in enumerate(crawler.urls, start=1):
+        parser = HTMLParser(article_url, article_id, config)
+        parsed_article = parser.parse()
+        if isinstance(parsed_article, Article):
+            to_raw(parsed_article)
+            to_meta(parsed_article)
+
 
 if __name__ == "__main__":
-    main()
+    main2()
