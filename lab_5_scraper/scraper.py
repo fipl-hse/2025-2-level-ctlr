@@ -401,8 +401,8 @@ def main() -> None:
         parser = HTMLParser(full_url=url, article_id=id, config=config)
         article = parser.parse()
         if article:
-            to_raw(article, ASSETS_PATH)
-            to_meta(article, ASSETS_PATH)
+            to_raw(article)
+            to_meta(article)
 
 
 if __name__ == "__main__":
