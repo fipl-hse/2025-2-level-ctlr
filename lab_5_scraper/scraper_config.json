@@ -1,5 +1,5 @@
 {
-    "seed_urls": ["https://rus.theater/teatralnye-novosti/"],
+    "seed_urls": ["https://rus.theater/"],
     "headers": {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
     "total_articles_to_find_and_parse": 100,
     "encoding": "utf-8",
