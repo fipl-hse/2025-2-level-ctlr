@@ -221,8 +221,7 @@ class Crawler:
             return ""
         if href.startswith(('http://', 'https://')):
             return href
-        seed_url = self._config.get_seed_urls()[0]
-        return urljoin(seed_url, href)
+        return urljoin("https://rus-shake.ru", href)
 
     def find_articles(self) -> None:
         """
