@@ -41,9 +41,6 @@ class IncorrectVerifyCertificateError(Exception):
 class IncorrectVerifyError(Exception):
     pass
 
-class IncorrectHeadlessModeError(Exception):
-    pass
-
 class NumberOfArticlesOutOfRangeError(Exception):
     pass
 
@@ -75,8 +72,33 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
-        self.config_content = self._extract_config_content()
+        if not path_to_config.exists():
+            raise ConfigLoadError()
+        with open(path_to_config, 'r', encoding='utf-8') as f:
+            raw_config = json.load(f)
+        seed_urls = raw_config.get('seed_urls', [])
+        if not isinstance(seed_urls, list):
+            raise IncorrectSeedURLError()
+        if isinstance(seed_urls, list):
+            for i, url in enumerate(seed_urls):
+                if not isinstance(url, str):
+                    raise IncorrectSeedURLError()
+        self.config_content = ConfigDTO(
+            seed_urls=seed_urls,
+            total_articles_to_find_and_parse=raw_config.get('total_articles_to_find_and_parse', 100),
+            headers=raw_config.get('headers', {}),
+            encoding=raw_config.get('encoding', 'utf-8'),
+            timeout=raw_config.get('timeout', 10),
+            should_verify_certificate=raw_config.get('should_verify_certificate', True),
+            headless_mode=raw_config.get('headless_mode', False)
+        )
         self._seed_urls = self.config_content.seed_urls
+        self._num_articles = self.config_content.total_articles
+        self._headers = self.config_content.headers
+        self._encoding = self.config_content.encoding
+        self._timeout = self.config_content.timeout
+        self._should_verify_certificate = self.config_content.should_verify_certificate
+        self._headless_mode = self.config_content.headless_mode
         self._validate_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
@@ -103,13 +125,28 @@ class Config:
         Ensure configuration parameters are not corrupt.
         """
         if not isinstance(self.config_content.seed_urls, list):
-            raise ValueError()
+            raise IncorrectSeedURLError()
+        for url in self.config_content.seed_urls:
+            if not isinstance(url, str):
+                raise IncorrectSeedURLError()
+            if 'sufler.su' not in url:
+                raise IncorrectSeedURLError()
         if not isinstance(self.config_content.total_articles, int) or self.config_content.total_articles <= 0:
-            raise ValueError()
+            raise IncorrectNumberOfArticlesError()
+        if self.config_content.total_articles > 100:
+            raise NumberOfArticlesOutOfRangeError()
         if not isinstance(self.config_content.timeout, int) or self.config_content.timeout <= 0:
-            raise ValueError()
-        if not self.config_content.encoding:
-            raise ValueError()
+            raise IncorrectTimeoutError()
+        if self.config_content.timeout > 60:
+            raise IncorrectTimeoutError()
+        if not isinstance(self.config_content.headers, dict):
+            raise IncorrectHeadersError()
+        if not isinstance(self.config_content.encoding, str) or not self.config_content.encoding:
+            raise IncorrectEncodingError()
+        if not isinstance(self.config_content.should_verify_certificate, bool):
+            raise IncorrectVerifyError()
+        if not isinstance(self.config_content.headless_mode, bool):
+            raise IncorrectVerifyError()
 
     def get_seed_urls(self) -> list[str]:
         """
