@@ -455,49 +455,28 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_text = None
-        meta_title = article_soup.find('meta', property='og:title')
-        if meta_title:
-            title_text = meta_title.get('content', '')
-        if not title_text:
-            h1_tag = article_soup.find('h1')
-            if h1_tag:
-                title_text = h1_tag.get_text(strip=True)
-        if not title_text:
-            entry_title = article_soup.find(class_='entry-title')
-            if entry_title:
-                title_text = entry_title.get_text(strip=True)
-        if not title_text:
+        title_tag = article_soup.find('h1')
+        if not title_tag:
+            title_tag = article_soup.find('h2')
+        if not title_tag:
             title_tag = article_soup.find('title')
-            if title_tag:
-                title_text = title_tag.get_text(strip=True)
-        if not title_text:
-            h2_tag = article_soup.find('h2')
-            if h2_tag:
-                title_text = h2_tag.get_text(strip=True)
-        if not title_text:
-            article_header = article_soup.find('header')
-            if article_header:
-                h1_in_header = article_header.find('h1')
-                if h1_in_header:
-                    title_text = h1_in_header.get_text(strip=True)
-        if not title_text:
-            post_title = article_soup.find(class_='post-title')
-            if post_title:
-                title_text = post_title.get_text(strip=True)
-        if not title_text:
-            for header in ['h1', 'h2', 'h3', 'h4']:
-                header_tag = article_soup.find(header)
-                if header_tag:
-                    title_text = header_tag.get_text(strip=True)
-                    if title_text:
-                        break
-        if title_text:
-            self.article.title = title_text
+        if title_tag:
+            title_text = title_tag.get_text(strip=True)
+            if title_text:
+                self.article.title = title_text
+            else:
+                self.article.title = f"article_{self.article_id}"
         else:
             self.article.title = f"article_{self.article_id}"
-        self.article.author = ["unknown author"]
-        self.article.date = datetime.datetime.now()
+        self.article.author = ["NOT FOUND"]
+        date_pattern = r'(\d{2})\.(\d{2})\.(\d{4})'
+        text = article_soup.get_text()
+        match = re.search(date_pattern, text)
+        if match:
+            day, month, year = map(int, match.groups())
+            self.article.date = datetime.datetime(year, month, day)
+        else:
+            self.article.date = datetime.datetime.now()
         self.article.topics = []
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -510,6 +489,19 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        patterns = [
+            r'(\d{2})\.(\d{2})\.(\d{4})',
+            r'(\d{4})-(\d{2})-(\d{2})',
+            r'(\d{2})/(\d{2})/(\d{4})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, date_str)
+            if match:
+                if pattern == patterns[1]:
+                    year, month, day = map(int, match.groups())
+                else:
+                    day, month, year = map(int, match.groups())
+                return datetime.datetime(year, month, day)
         return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
@@ -521,18 +513,16 @@ class HTMLParser:
         """
         try:
             response = make_request(self.full_url, self.config)
+            if not response.ok:
+                return self.article
         except requests.exceptions.RequestException:
-            return False
+            return self.article
         try:
             soup = BeautifulSoup(response.text, 'lxml')
         except Exception:
-            return False
+            return self.article
         self._fill_article_with_meta_information(soup)
         self._fill_article_with_text(soup)
-        if not self.article.author:
-            self.article.author = ["unknown author"]
-        if self.article.date is None:
-            self.article.date = datetime.datetime.now()
         return self.article
 
 
