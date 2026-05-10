@@ -208,9 +208,6 @@ class Crawler:
     Crawler implementation.
     """
 
-    #: Url pattern
-    url_pattern: re.Pattern | str
-
     def __init__(self, config: Config) -> None:
         """
         Initialize an instance of the Crawler class.
@@ -250,24 +247,30 @@ class Crawler:
         """
         Find articles.
         """
-        target = self.config.get_num_articles()
-        for seed in self.config.get_seed_urls():
-            if len(self.urls) >= target:
-                break
-            try:
-                resp = make_request(seed, self.config)
-                soup = BeautifulSoup(resp.text, "html.parser")
+        target_count = self.config.get_num_articles()
+        seed_urls = self.config.get_seed_urls()
 
-                for a in soup.find_all("a", href=True):
-                    url = self._extract_url(a)
-                    if url.endswith(".txt") and url not in self.urls:
-                        self.urls.append(url)
-                    if len(self.urls) >= target:
-                        return
+        for seed_url in seed_urls:
+            if len(self.urls) >= target_count:
+                break
+
+            try:
+                response = make_request(seed_url, self.config)
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                for link in soup.find_all("a", href=True):
+                    article_url = self._extract_url(link)
+
+                    if article_url and article_url not in self.urls:
+                        self.urls.append(article_url)
+
+                    if len(self.urls) >= target_count:
+                        break
+
             except Exception:
                 continue
 
-    def get_search_urls(self) -> list:
+    def get_search_urls(self) -> list[str]:
         """
         Get seed_urls param.
 
