@@ -412,7 +412,7 @@ def main() -> None:
         article = parser.parse()
 
         if isinstance(article, Article):
-            to_raw(article, ASSETS_PATH)
+            to_raw(article)
             print(f"  ✓ Saved article {i}")
         else:
             print(f"  ✗ Failed to parse article {i}")
