@@ -8,6 +8,7 @@ import json
 import pathlib
 import re
 import shutil
+import sys
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -75,7 +76,12 @@ class Config:
     """
 
     def __init__(self, path_to_config: pathlib.Path) -> None:
-        """Initialize an instance of the Config class."""
+        """
+        Initialize an instance of the Config class.
+
+        Args:
+            path_to_config (pathlib.Path): Path to configuration.
+        """
         self.path_to_config = path_to_config
         self._validate_config_content()
         self._seed_urls = self._config.seed_urls
@@ -87,12 +93,19 @@ class Config:
         self._headless_mode = self._config.headless_mode
 
     def _extract_config_content(self) -> ConfigDTO:
-        """Get config values."""
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            return ConfigDTO(**json.load(f))
+        """
+        Get config values.
+
+        Returns:
+            ConfigDTO: Config values
+        """
+        with open(self.path_to_config, 'r', encoding='utf-8') as file:
+            return ConfigDTO(**json.load(file))
 
     def _validate_config_content(self) -> None:
-        """Ensure configuration parameters are not corrupt."""
+        """
+        Ensure configuration parameters are not corrupt.
+        """
         config_dto = self._extract_config_content()
         if not isinstance(config_dto.seed_urls, list):
             raise IncorrectSeedURLError()
@@ -122,31 +135,66 @@ class Config:
         self._config = config_dto
 
     def get_seed_urls(self) -> list[str]:
-        """Retrieve seed urls."""
+        """
+        Retrieve seed urls.
+
+        Returns:
+            list[str]: Seed urls
+        """
         return self._seed_urls
 
     def get_num_articles(self) -> int:
-        """Retrieve total number of articles to scrape."""
+        """
+        Retrieve total number of articles to scrape.
+
+        Returns:
+            int: Total number of articles to scrape
+        """
         return self._num_articles
 
     def get_headers(self) -> dict[str, str]:
-        """Retrieve headers to use during requesting."""
+        """
+        Retrieve headers to use during requesting.
+
+        Returns:
+            dict[str, str]: Headers
+        """
         return self._headers
 
     def get_encoding(self) -> str:
-        """Retrieve encoding to use during parsing."""
+        """
+        Retrieve encoding to use during parsing.
+
+        Returns:
+            str: Encoding
+        """
         return self._encoding
 
     def get_timeout(self) -> int:
-        """Retrieve number of seconds to wait for response."""
+        """
+        Retrieve number of seconds to wait for response.
+
+        Returns:
+            int: Number of seconds to wait for response
+        """
         return self._timeout
 
     def get_verify_certificate(self) -> bool:
-        """Retrieve whether to verify certificate."""
+        """
+        Retrieve whether to verify certificate.
+
+        Returns:
+            bool: Whether to verify certificate or not
+        """
         return self._should_verify_certificate
 
     def get_headless_mode(self) -> bool:
-        """Retrieve whether to use headless mode."""
+        """
+        Retrieve whether to use headless mode.
+
+        Returns:
+            bool: Whether to use headless mode or not
+        """
         return self._headless_mode
 
 
