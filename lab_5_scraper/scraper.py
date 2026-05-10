@@ -296,12 +296,13 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
-        super().__init__(config)
+        pass
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
+        pass
 
 
 # 4, 6, 8, 10
