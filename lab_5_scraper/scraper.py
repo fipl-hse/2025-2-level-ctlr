@@ -321,11 +321,14 @@ class Crawler:
                     or '/feed' in full_url
                     or '/advanced_search' in full_url
                     or '/katalog' in full_url
-                    or ('/wp-' in full_url
+                ):
+                    continue
+                if (
+                    ('/wp-' in full_url
                     or '/category/' in full_url
                     or '/tag/' in full_url)
                     or '/author/' in full_url
-                    ):
+                ):
                     continue
                 if full_url and full_url not in self.urls:
                     self.urls.append(full_url)
