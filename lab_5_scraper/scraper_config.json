@@ -17,7 +17,7 @@
         "Accept-Language": "ru,en;q=0.9",
         "Cookie": "_ym_uid=1775856068681112852;_ym_d=1775856068; tmr_lvid=5b23175692db09db511e11876f2b42bf; tmr_lvidTS=1775856068127; _ga=GA1.2.1126163064.1775856114; tildauid=1777274793755.211997; PHPSESSID=c2b6ca0c692f0564cd2f17cceb91b8be; _ym_isad=2; _gid=GA1.2.365979987.1777969707; domain_sid=rDml4Mr12RBuFMCDDP2x2%3A1777969707873; _ym_visorc=w; _gat=1; _ga_G1HBF3GXV7=GS2.2.s1777984801$o14$g1$t1777987138$j60$l0$h0; tmr_detect=0%7C1777987143147"
     },
-    "total_articles_to_find_and_parse": 100,
+    "total_articles_to_find_and_parse": 5,
     "encoding": "windows-1251",
     "timeout": 40,
     "should_verify_certificate": true,

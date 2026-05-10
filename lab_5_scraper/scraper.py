@@ -77,13 +77,14 @@ class Config:
         """
         self.path_to_config = path_to_config
         self._validate_config_content()
-        self._seed_urls = self._config.seed_urls
-        self._num_articles = self._config.total_articles
-        self._headers = self._config.headers
-        self._encoding = self._config.encoding
-        self._timeout = self._config.timeout
-        self._should_verify_certificate = self._config.should_verify_certificate
-        self._headless_mode = self._config.headless_mode
+        config_dto = self._extract_config_content()
+        self._seed_urls = config_dto.seed_urls
+        self._num_articles = config_dto.total_articles
+        self._headers = config_dto.headers
+        self._encoding = config_dto.encoding
+        self._timeout = config_dto.timeout
+        self._should_verify_certificate = config_dto.should_verify_certificate
+        self._headless_mode = config_dto.headless_mode
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -129,7 +130,6 @@ class Config:
             raise IncorrectVerifyError('Verify certificate value must be boolean')
         if not isinstance(config_dto.headless_mode, bool):
             raise IncorrectVerifyError('Headless mode value must be boolean')
-        self._config = config_dto
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -213,7 +213,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         verify=config.get_verify_certificate()
     )
     response.encoding = config.get_encoding()
-    sleep(randint(0, 1)) #commented out to make a green PR as the maximum execution time is 4m0s
+    sleep(randint(0, 1))
     return response
 
 
@@ -287,26 +287,27 @@ class Crawler:
 
 # 10
 
-# class CrawlerRecursive(Crawler):
-#     """
-#     Recursive implementation.
+class CrawlerRecursive(Crawler):
+    """
+    Recursive implementation.
 
-#     Get one URL of the title page and find requested number of articles recursively.
-#     """
+    Get one URL of the title page and find requested number of articles recursively.
+    """
 
-#     def __init__(self, config: Config) -> None:
-#         """
-#         Initialize an instance of the CrawlerRecursive class.
+    def __init__(self, config: Config) -> None:
+        """
+        Initialize an instance of the CrawlerRecursive class.
 
-#         Args:
-#             config (Config): Configuration
-#         """
-#         super().__init__(config)
+        Args:
+            config (Config): Configuration
+        """
+        super().__init__(config)
+        self.start_url = self.config.get_seed_urls()[0]
 
-#     def find_articles(self) -> None:
-#         """
-#         Find number of article urls requested.
-#         """
+    def find_articles(self) -> None:
+        """
+        Find number of article urls requested.
+        """
 
 
 # 4, 6, 8, 10
@@ -339,15 +340,21 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         content_div = article_soup.find('div', class_='blog-content')
-        if not content_div:
-            return
+        for icon in content_div.find_all('i', class_=True):
+            icon.decompose()
+        for span in content_div.find_all('span', class_=True):
+            classes = span.get('class')
+            if classes and isinstance(classes, list) and 'icon' in ' '.join(classes):
+                span.decompose()
+        for tag in content_div.find_all(['h4', 'p'], class_=['head', 'caption']):
+            tag.decompose()
         paragraphs = content_div.find_all('p')
-        text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
-        text = '\n'.join(text_parts)
-        lines = text.split('\n')
-        if lines and re.match(r'\d{2}\.\d{2}\.\d{4}', lines[0]):
-            text = '\n'.join(lines[1:])
-        self.article.text = text
+        text_blocks = [p.get_text(' ', strip=True) for p in paragraphs if p.get_text(strip=True)]
+        final_text = '\n\n'.join(text_blocks)
+        pattern = r'\b(info_outline|question_answer|material-icons|theatre/blog)\b'
+        final_text = re.sub(pattern, '', final_text)
+        final_text = re.sub(r'\s+', ' ', final_text).strip()
+        self.article.text = final_text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -361,8 +368,10 @@ class HTMLParser:
             self.article.title = title_tag.get_text(strip=True)
         date_tag = article_soup.find('p', class_='caption')
         if date_tag:
-            data_text = date_tag.get_text(strip=True)
-            self.article.date = self.unify_date_format(data_text)
+            self.article.date = self.unify_date_format(date_tag.get_text(strip=True))
+        else:
+            now = datetime.datetime.now()
+            self.article.date = now.replace(hour=0, minute=0, second=0, microsecond=0)
         self.article.author = ['NOT FOUND']
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -389,8 +398,8 @@ class HTMLParser:
         if not response.ok:
             return self.article
         soup = BeautifulSoup(response.text, 'lxml')
-        self._fill_article_with_text(soup)
         self._fill_article_with_meta_information(soup)
+        self._fill_article_with_text(soup)
         return self.article
 
 
