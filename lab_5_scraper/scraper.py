@@ -15,9 +15,10 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw, to_meta
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+
 
 class IncorrectSeedURLError(Exception):
     """Seed URL does not match standard pattern."""
@@ -274,11 +275,11 @@ class Crawler:
         max_articles = self.config.get_num_articles()
         self.urls = []
 
-        # Step 1: Collect ALL links from ALL seed_urls
         all_pages_to_visit = list(seed_urls)
         visited_pages = set()
+        max_pages_to_visit = 50  # Limit crawling depth for CI
         
-        while all_pages_to_visit and len(self.urls) < max_articles:
+        while all_pages_to_visit and len(self.urls) < max_articles and len(visited_pages) < max_pages_to_visit:
             current_url = all_pages_to_visit.pop(0)
             if current_url in visited_pages:
                 continue
@@ -296,9 +297,11 @@ class Crawler:
                         links.append(url)
                 
                 for link in links:
+                    if len(self.urls) >= max_articles:
+                        break
                     if link.endswith('.txt') or '/authors/' in link:
                         if link.endswith('.htm') or link.endswith('.txt'):
-                            if link not in self.urls and len(self.urls) < max_articles:
+                            if link not in self.urls:
                                 try:
                                     test_response = make_request(link, self.config)
                                     if test_response.status_code == 200:
@@ -308,7 +311,8 @@ class Crawler:
                 
                     if link.endswith('.htm') and '/authors/' not in link:
                         if link not in visited_pages and link not in all_pages_to_visit:
-                            all_pages_to_visit.append(link)
+                            if len(visited_pages) < max_pages_to_visit:
+                                all_pages_to_visit.append(link)
                             
             except Exception:
                 continue
