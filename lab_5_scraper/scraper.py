@@ -19,55 +19,81 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    """invalid seed url format"""
+    """
+    invalid seed url format
+    """
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    """articles count out of range 1-100"""
+    """
+    articles count out of range 1-100
+    """
 
 
 class IncorrectNumberOfArticlesError(Exception):
-    """invalid articles count type or value"""
+    """
+    invalid articles count type or value
+    """
 
 
 class IncorrectHeadersError(Exception):
-    """headers must be a dictionary"""
+    """
+    headers must be a dictionary
+    """
 
 
 class IncorrectEncodingError(Exception):
-    """encoding must be a string"""
+    """
+    encoding must be a string
+    """
 
 
 class IncorrectTimeoutError(Exception):
-    """timeout must be positive integer less than 60"""
+    """
+    timeout must be positive integer less than 60
+    """
 
 
 class IncorrectVerifyError(Exception):
-    """verify certificate and headless mode must be boolean"""
+    """
+    verify certificate and headless mode must be boolean
+    """
 
 
 class IncorrectVerifyCertificateError(Exception):
-    """verify certificate must be boolean"""
+    """
+    verify certificate must be boolean
+    """
 
 
 class ConfigValidationError(Exception):
-    """configuration validation failed"""
+    """
+    configuration validation failed
+    """
 
 
 class ConfigLoadError(Exception):
-    """cannot load configuration file"""
+    """
+    cannot load configuration file
+    """
 
 
 class SeedUrlsError(Exception):
-    """seed urls processing error"""
+    """
+    seed urls processing error
+    """
 
 
 class CustomTimeoutError(Exception):
-    """request timeout"""
+    """
+    request timeout
+    """
 
 
 class URLProcessingError(Exception):
-    """url processing error"""
+    """
+    url processing error
+    """
 
 
 class Config:
