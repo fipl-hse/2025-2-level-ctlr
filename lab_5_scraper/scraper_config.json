@@ -1,6 +1,10 @@
 {
     "seed_urls": [
-        "https://tarranova.lib.ru/authors.htm"
+        "https://tarranova.lib.ru/",
+        "https://tarranova.lib.ru/authors.htm",
+        "https://tarranova.lib.ru/tr_det.htm",
+        "https://tarranova.lib.ru/tr_pro.htm",
+        "https://tarranova.lib.ru/tr_fan.htm"
     ],
     "headers": {
         "user-agent": "Mozilla/5.0"
