@@ -10,16 +10,14 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Any
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw, to_meta
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
-from core_utils.constants import CRAWLER_CONFIG_PATH, ASSETS_PATH
-
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -236,6 +234,15 @@ class Crawler:
         self.urls: list[str] = []
 
     def _extract_url(self, article_bs: Tag) -> str:
+        """
+        Find and retrieve url from HTML.
+
+        Args:
+            article_bs (bs4.Tag): Tag instance
+
+        Returns:
+            str: Url from HTML
+        """
         href = article_bs.get("href")
         if not href or not isinstance(href, str):
             return ""
@@ -253,6 +260,9 @@ class Crawler:
         return full_url
 
     def find_articles(self) -> None:
+        """
+        Find number of article urls requested.
+        """
         target_count = self.config.get_num_articles()
         queue = self.config.get_seed_urls().copy()
         seen = set(queue)
@@ -303,7 +313,6 @@ class CrawlerRecursive(Crawler):
 
     Get one URL of the title page and find requested number of articles recursively.
     """
-    pass
 
 
 # 4, 6, 8, 10
