@@ -252,6 +252,7 @@ class Crawler:
             config (Config): Configuration
         """
         self._config = config
+        self.navigation_urls = set()
         self.urls = []
 
     def _extract_url(self, article_bs: Tag) -> str:
@@ -293,11 +294,8 @@ class Crawler:
                 if len(self.urls) > self._config.get_num_articles():
                     return
 
-                if not isinstance(tag, Tag):
-                    continue
-
                 extracted_url = self._extract_url(tag)
-                if not extracted_url:
+                if not isinstance(tag, Tag) or not extracted_url:
                     continue
 
                 if not re.match("https?://(www.)?", extracted_url):
@@ -312,7 +310,7 @@ class Crawler:
                         )
                     )
                 elif parsed_seed.netloc != urlparse(extracted_url).netloc:
-                        continue
+                    continue
 
                 extracted_url = extracted_url.split('#')[0]
                 if not extracted_url:
@@ -320,8 +318,7 @@ class Crawler:
 
                 parsed_extracted = urlparse(extracted_url)
                 if set(parsed_extracted.path.split('/')).intersection(navigation_page_marks):
-                    if hasattr(self, "navigation_urls"):
-                        self.navigation_urls.add(extracted_url)
+                    self.navigation_urls.add(extracted_url)
                     continue
 
                 if extracted_url not in self.urls and extracted_url not in self.get_search_urls():
@@ -619,7 +616,7 @@ def main2() -> None:
         prepare_environment(ASSETS_PATH)
 
     config = Config(CRAWLER_CONFIG_PATH)
-    config._num_articles = 1500
+    # config._num_articles = 1500
     crawler = CrawlerRecursive(config)
     crawler.find_articles()
     print(len(crawler.urls))
@@ -633,4 +630,4 @@ def main2() -> None:
 
 
 if __name__ == "__main__":
-    main2()
+    main()
