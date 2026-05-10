@@ -204,7 +204,7 @@ class Config:
         """
         return self._headless_mode
 
-    def set_seed_urls(self, seed_urls) -> None:
+    def set_seed_urls(self, seed_urls: list[str]) -> None:
         """
         Set seed urls to parse.
 
@@ -350,7 +350,7 @@ class CrawlerRecursive(Crawler):
 
         self.urls = list(visited.union(queue))
 
-        def _safe_current_state():
+        def _safe_current_state() -> None:
             nonlocal visited
             nonlocal queue
             with open(path, "w", encoding="utf-8") as f:
@@ -487,7 +487,8 @@ class HTMLParser:
             tags = article.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"])
 
             for tag in tags:
-                if tag.name == "p" and "has-medium-font-size" in tag.get("class", []):
+                tag_classes = tag.get("class")
+                if tag.name == "p" and tag_classes and "has-medium-font-size" in tag_classes:
                     continue
 
                 text = tag.get_text(strip=True)
@@ -524,7 +525,7 @@ class HTMLParser:
         if isinstance(date, Tag) and (date_content := date.get("content")):
             self.article.date = self.unify_date_format(str(date_content))
         else:
-            date = datetime.datetime.now()
+            self.article.date = datetime.datetime.now()
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -589,7 +590,7 @@ def main() -> None:
             to_raw(parsed_article)
             to_meta(parsed_article)
 
-def main2():
+def main2() -> None:
     """
     Entrypoint for recursivescraper module.
     """
