@@ -111,7 +111,9 @@ class Config:
             raise IncorrectHeadersError("Headers must be a dictionary")
         if not isinstance(self._config.encoding, str):
             raise IncorrectEncodingError("Encoding must be a string")
-        if not isinstance(self._config.timeout, int) or self._config.timeout <= 0 or self._config.timeout > 60:
+        if not isinstance(self._config.timeout, int) or self._config.timeout <= 0:
+            raise IncorrectTimeoutError("Timeout must be an integer between 1 and 60")
+        if self._config.timeout > 60:
             raise IncorrectTimeoutError("Timeout must be an integer between 1 and 60")
         if not isinstance(self._config.should_verify_certificate, bool):
             raise IncorrectVerifyError("should_verify_certificate must be a boolean")
@@ -289,20 +291,18 @@ class CrawlerRecursive(Crawler):
     Get one URL of the title page and find requested number of articles recursively.
     """
 
-    def __init__(self, config: Config) -> None:
-        """
-        Initialize an instance of the CrawlerRecursive class.
-
-        Args:
-            config (Config): Configuration
-        """
-        pass
+#   def __init__(self, config: Config) -> None:
+#       """
+#       Initialize an instance of the CrawlerRecursive class.
+#
+#       Args:
+#           config (Config): Configuration
+#       """
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
-        pass
 
 
 # 4, 6, 8, 10
