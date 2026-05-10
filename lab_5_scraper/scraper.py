@@ -317,7 +317,11 @@ class Crawler:
                     continue
                 if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
                     continue
-                if ('/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url) or '/author/' in full_url:
+                if (('/wp-' in full_url
+                    or '/category/' in full_url
+                    or '/tag/' in full_url)
+                    or '/author/' in full_url
+                    ):
                     continue
                 if full_url and full_url not in self.urls:
                     self.urls.append(full_url)
@@ -354,54 +358,39 @@ class CrawlerRecursive(Crawler):
         Find number of article urls requested.
         """
         target_count = self.config.get_num_articles()
-        for seed_url in self.get_search_urls():
+        seed_urls = self.get_search_urls()
+        for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
-            current_url = seed_url
-            while current_url and len(self.urls) < target_count:
-                if current_url in self.visited_pages:
-                    break
-                self.visited_pages.append(current_url)
-                try:
-                    response = make_request(current_url, self.config)
-                except requests.exceptions.RequestException:
-                    break
-                if not response.ok:
-                    break
-                soup = BeautifulSoup(response.text, 'lxml')
-                for link in soup.find_all('a', href=True):
-                    if len(self.urls) >= target_count:
-                        break
-                    href = link.get('href')
-                    if not href or not isinstance(href, str):
-                        continue
-                    if href == '#' or href.startswith('javascript'):
-                        continue
-                    if href.startswith('/'):
-                        full_url = f"https://sufler.su{href}"
-                    elif 'sufler.su' in href:
-                        full_url = href
-                    else:
-                        continue
-                    if full_url == 'https://sufler.su/':
-                        continue
-                    if ('/feed' in full_url or '/advanced_search' in full_url
-                        or '/katalog' in full_url):
-                        continue
-                    if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
-                        continue
-                    if '/author/' in full_url or '/page/' in full_url:
-                        continue
-                    if full_url and full_url not in self.urls:
-                        self.urls.append(full_url)
-                current_url = None
-                for link in soup.find_all('a', href=True):
-                    href = link.get('href')
-                    if href and isinstance(href, str) and href.startswith('/page/'):
-                        next_url = f"https://sufler.su{href}"
-                        if next_url not in self.visited_pages:
-                            current_url = next_url
-                            break
+            try:
+                response = make_request(seed_url, self.config)
+            except requests.exceptions.RequestException:
+                continue
+            if not response.ok:
+                continue
+            soup = BeautifulSoup(response.text, 'lxml')
+            for link in soup.find_all('a', href=True):
+                if len(self.urls) >= target_count:
+                    return
+                href = link.get('href')
+                if not href or not isinstance(href, str):
+                    continue
+                if href == '#' or href.startswith('javascript'):
+                    continue
+                if href.startswith('/'):
+                    full_url = f"https://sufler.su{href}"
+                elif 'sufler.su' in href:
+                    full_url = href
+                else:
+                    continue
+                if full_url == 'https://sufler.su/':
+                    continue
+                exclude_patterns = ['/feed', '/advanced_search', '/katalog', 
+                                '/wp-', '/category/', '/tag/', '/author/']
+                if any(pattern in full_url for pattern in exclude_patterns):
+                    continue
+                if full_url and full_url not in self.urls:
+                    self.urls.append(full_url)
 
 
 class HTMLParser:
@@ -450,33 +439,31 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title = None
-        meta_title = article_soup.find('meta', property='og:title')
-        if meta_title and meta_title.get('content'):
-            title = meta_title.get('content').strip()
-        if not title:
-            h1_entry = article_soup.find('h1', class_='entry-title')
-            if h1_entry:
-                title = h1_entry.get_text(strip=True)
-        if not title:
-            h1 = article_soup.find('h1')
-            if h1:
-                title = h1.get_text(strip=True)
-        if not title:
-            title_tag = article_soup.find('title')
-            if title_tag:
-                title = title_tag.get_text(strip=True)
-        if not title:
-            h2_entry = article_soup.find('h2', class_='entry-title')
-            if h2_entry:
-                title = h2_entry.get_text(strip=True)
-        if not title:
-            h2 = article_soup.find('h2')
-            if h2:
-                title = h2.get_text(strip=True)
-        if not title:
-            post_title = article_soup.find(class_='post-title')
-            if post_title:
-                title = post_title.get_text(strip=True)
+        title_sources = [
+            ('meta', 'og:title', 'content'),
+            ('h1', 'entry-title', 'text'),
+            ('h1', None, 'text'),
+            ('title', None, 'text'),
+            ('h2', 'entry-title', 'text'),
+            ('h2', None, 'text'),
+            (None, 'post-title', 'text')
+        ]
+        for tag, class_name, source in title_sources:
+            if title:
+                break
+            if source == 'content':
+                meta_title = article_soup.find('meta', property='og:title')
+                if meta_title and meta_title.get('content'):
+                    title = meta_title.get('content').strip()
+            elif source == 'text':
+                if tag and class_name:
+                    element = article_soup.find(tag, class_=class_name)
+                elif tag:
+                    element = article_soup.find(tag)
+                else:
+                    element = article_soup.find(class_=class_name)
+                if element:
+                    title = element.get_text(strip=True)
         if title:
             self.article.title = title
         else:
