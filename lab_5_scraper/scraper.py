@@ -2,14 +2,13 @@
 Crawler implementation.
 """
 
-# pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
 import json
 import pathlib
 import re
 import shutil
 import urllib.parse
-from typing import Any
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -20,6 +19,8 @@ from core_utils.article.io import to_meta
 from core_utils.article.io import to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import CRAWLER_CONFIG_PATH
+
+# pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 
 
 class IncorrectSeedURLError(Exception):
@@ -352,8 +353,9 @@ class CrawlerRecursive(Crawler):
         if not seed_urls:
             raise IncorrectSeedURLError("No seed URLs provided for recursive crawler")
         self.start_url = seed_urls[0]
+        self.start_domain = urlparse(self.start_url).netloc
         self.num_articles = self.config.get_num_articles()
-        self.url_pattern = re.compile(r"/\d{4}/\d{2}/\d{2}/")
+        self.url_pattern = re.compile(r"/\d{4}/\d{2}/\d{2}/[a-z0-9\-]+\.?html?$")
         self._visited: set[str] = set()
 
     def _crawl(self, url: str, depth: int = 0) -> None:
@@ -385,10 +387,16 @@ class CrawlerRecursive(Crawler):
             full_url = self._extract_url(link, url)
             if not full_url:
                 continue
+
+            link_domain = urlparse(full_url).netloc
+            if link_domain != self.start_domain:
+                continue
+
             if self.url_pattern.search(full_url) and full_url not in self.urls:
                 self.urls.append(full_url)
                 if len(self.urls) >= self.num_articles:
                     return
+
             if len(self.urls) < self.num_articles:
                 self._crawl(full_url, depth + 1)
                 if len(self.urls) >= self.num_articles:
@@ -487,92 +495,94 @@ class HTMLParser:
                 continue
         return None
 
-    def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
-        """
-        Find meta information of article.
-
-        Args:
-            article_soup (bs4.BeautifulSoup): BeautifulSoup instance
-        """
-        title_tag = article_soup.find('title')
+    def _extract_title(self, soup: BeautifulSoup) -> str:
+        """Extract article title."""
+        title_tag = soup.find('title')
         if title_tag:
-            self.article.title = title_tag.get_text(strip=True)
-        else:
-            h1 = article_soup.find('h1')
-            if h1:
-                self.article.title = h1.get_text(strip=True)
+            return title_tag.get_text(strip=True)
+        h1 = soup.find('h1')
+        if h1:
+            return h1.get_text(strip=True)
+        return ""
 
-    # Author
-        author_tag = article_soup.find('meta', {'name': 'author'})
+    def _extract_author(self, soup: BeautifulSoup) -> list[str]:
+        """Extract article author(s)."""
+        author_tag = soup.find('meta', {'name': 'author'})
         if author_tag:
             content = author_tag.get('content')
             if isinstance(content, str):
-                self.article.author = self._extract_authors(content)
-            elif isinstance(content, list) and content and isinstance(content[0], str):
-                self.article.author = self._extract_authors(content[0])
-            else:
-                self.article.author = ["NOT FOUND"]
-        else:
-            self.article.author = ["NOT FOUND"]
+                return self._extract_authors(content)
+            if isinstance(content, list) and content and isinstance(content[0], str):
+                return self._extract_authors(content[0])
+        return ["NOT FOUND"]
 
-    # Date - enhanced search
-        date: str | None = None
-
-        def to_str(value: Any) -> str | None:
-            if isinstance(value, str):
-                return value
-            if isinstance(value, list) and value and isinstance(value[0], str):
-                return value[0]
-            return None
-
-    # 1. Meta tags
+    def _extract_date_from_meta(self, soup: BeautifulSoup) -> str | None:
+        """Extract date from meta tags."""
         for meta_name in ['date', 'pubdate', 'publish_date', 'article:published_time',
-                      'og:article:published_time', 'article:modified_time']:
-            tag = (article_soup.find('meta', {'name': meta_name}) or
-               article_soup.find('meta', {'property': meta_name}))
+                          'og:article:published_time', 'article:modified_time']:
+            tag = soup.find('meta', {'name': meta_name}) or (
+                soup.find('meta', {'property': meta_name})
+            )
             if tag:
-                date = to_str(tag.get('content'))
-                if date:
-                    break
+                content = tag.get('content')
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list) and content and isinstance(content[0], str):
+                    return content[0]
+        return None
 
-    # 2. <time> element
-        if not date:
-            time_tag = article_soup.find('time')
-            if time_tag:
-                dt = time_tag.get('datetime') or (
-                    time_tag.get('content') or time_tag.get_text(strip=True)
-                )
-                date = to_str(dt)
+    def _extract_date_from_time_tag(self, soup: BeautifulSoup) -> str | None:
+        """Extract date from <time> element."""
+        time_tag = soup.find('time')
+        if time_tag:
+            dt = time_tag.get('datetime') or time_tag.get('content') or (
+                time_tag.get_text(strip=True)
+            )
+            if isinstance(dt, str):
+                return dt
+        return None
 
-    # 3. JSON-LD
-        if not date:
-            date = self._extract_json_ld_date(article_soup)
+    def _extract_date_from_class(self, soup: BeautifulSoup) -> str | None:
+        """Extract date from element with date-related class."""
+        date_elem = soup.find(class_=re.compile(r'date|time|published', re.I))
+        if date_elem:
+            text = date_elem.get_text(strip=True)
+            if text:
+                return text
+        return None
 
-    # 4. Elements with date-related classes
-        if not date:
-            date_elem = article_soup.find(class_=re.compile(r'date|time|published', re.I))
-            if date_elem:
-                date = to_str(date_elem.get_text(strip=True))
+    def _extract_date_from_data_attr(self, soup: BeautifulSoup) -> str | None:
+        """Extract date from data-* attributes."""
+        for attr in ['data-date', 'data-published', 'data-timestamp']:
+            elem = soup.find(attrs={attr: True})
+            if elem:
+                value = elem.get(attr)
+                if isinstance(value, str):
+                    return value
+        return None
 
-    # 5. Common data attributes
-        if not date:
-            for attr in ['data-date', 'data-published', 'data-timestamp']:
-                elem = article_soup.find(attrs={attr: True})
-                if elem:
-                    date = to_str(elem.get(attr))
-                    if date:
-                        break
+    def _extract_date_string(self, soup: BeautifulSoup) -> str | None:
+        """Try all date extraction strategies and return first found string."""
+        strategies = [
+            self._extract_date_from_meta,
+            self._extract_date_from_time_tag,
+            self._extract_json_ld_date,
+            self._extract_date_from_class,
+            self._extract_date_from_data_attr
+        ]
+        for strategy in strategies:
+            date_str = strategy(soup)
+            if date_str:
+                return date_str
+        return None
 
-        if date:
-            parsed = self.unify_date_format(date)
-            if parsed:
-                self.article.date = parsed
-
-    # Topics
+    def _extract_topics(self, soup: BeautifulSoup) -> list[str]:
+        """Extract topics/keywords."""
         topics = []
         for meta_name in ['news_keywords', 'keywords', 'article:tag']:
-            tag = article_soup.find('meta', {'name': meta_name}) or \
-              article_soup.find('meta', {'property': meta_name})
+            tag = soup.find('meta', {'name': meta_name}) or (
+                soup.find('meta', {'property': meta_name})
+            )
             if tag:
                 content = tag.get('content')
                 if isinstance(content, str):
@@ -582,9 +592,27 @@ class HTMLParser:
                         if isinstance(item, str):
                             topics.extend([t.strip() for t in item.split(',') if t.strip()])
         if topics:
-            self.article.topics = list(dict.fromkeys(topics))[:5]
-        else:
-            self.article.topics = []
+            return list(dict.fromkeys(topics))[:5]
+        return []
+
+    def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
+        """
+        Find meta information of article.
+
+        Args:
+            article_soup (bs4.BeautifulSoup): BeautifulSoup instance
+        """
+        self.article.title = self._extract_title(article_soup)
+
+        self.article.author = self._extract_author(article_soup)
+
+        date_str = self._extract_date_string(article_soup)
+        if date_str:
+            parsed = self.unify_date_format(date_str)
+            if parsed:
+                self.article.date = parsed
+
+        self.article.topics = self._extract_topics(article_soup)
 
     def _parse_russian_date(self, date_str: str) -> datetime.datetime | None:
         """
@@ -608,6 +636,8 @@ class HTMLParser:
             (r'(\d{4})-(\d{2})-(\d{2})', False),
             (r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}', True),
         ]
+
+        result = None
         for pattern, has_time in patterns:
             match = re.search(pattern, date_str)
             if not match:
@@ -622,17 +652,22 @@ class HTMLParser:
                 if has_time:
                     hour = int(match.group(4))
                     minute = int(match.group(5))
-                    return datetime.datetime(year, month, day, hour, minute)
-                return datetime.datetime(year, month, day)
+                    result = datetime.datetime(year, month, day, hour, minute)
+                else:
+                    result = datetime.datetime(year, month, day)
+                break
             if r'\.' in pattern:
                 day, month, year = map(int, match.groups())
-                return datetime.datetime(year, month, day)
+                result = datetime.datetime(year, month, day)
+                break
             if 'T' in pattern:
                 year, month, day, hour, minute = map(int, match.groups())
-                return datetime.datetime(year, month, day, hour, minute)
+                result = datetime.datetime(year, month, day, hour, minute)
+                break
             year, month, day = map(int, match.groups())
-            return datetime.datetime(year, month, day)
-        return None
+            result = datetime.datetime(year, month, day)
+            break
+        return result
 
     def unify_date_format(self, date_str: str) -> datetime.datetime | None:
         """
