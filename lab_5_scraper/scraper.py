@@ -278,7 +278,7 @@ class Crawler:
                 return href
         return ""
 
-    def find_articles(self) -> None:
+    def find_articles(self) -> None:  # pylint: disable=too-many-branches
         """
         Find articles.
         """
@@ -291,7 +291,7 @@ class Crawler:
                 continue
             try:
                 soup = BeautifulSoup(response.text, 'lxml')
-            except Exception:
+            except (UnicodeDecodeError, ValueError, TypeError):
                 continue
             for link in soup.find_all('a', href=True):
                 if len(self.urls) >= self.num_articles:
@@ -325,8 +325,6 @@ class Crawler:
         """
         return self.seed_urls
 
-# 10
-
 
 class CrawlerRecursive(Crawler):
     """
@@ -345,7 +343,7 @@ class CrawlerRecursive(Crawler):
         super().__init__(config)
         self.visited_pages = []
 
-    def find_articles(self) -> None:
+    def find_articles(self) -> None:  # pylint: disable=too-many-branches
         """
         Find number of article urls requested.
         """
@@ -363,7 +361,7 @@ class CrawlerRecursive(Crawler):
                     break
                 try:
                     soup = BeautifulSoup(response.text, 'lxml')
-                except Exception:
+                except (UnicodeDecodeError, ValueError, TypeError):
                     break
                 for link in soup.find_all('a', href=True):
                     if len(self.urls) >= self.num_articles:
@@ -401,9 +399,6 @@ class CrawlerRecursive(Crawler):
                         if next_url not in self.visited_pages:
                             current_url = next_url
                             break
-
-
-# 4, 6, 8, 10
 
 
 class HTMLParser:
@@ -502,7 +497,7 @@ class HTMLParser:
             return False
         try:
             soup = BeautifulSoup(response.text, 'lxml')
-        except Exception:
+        except (UnicodeDecodeError, ValueError, TypeError):
             return False
         self._fill_article_with_meta_information(soup)
         self._fill_article_with_text(soup)
