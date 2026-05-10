@@ -359,6 +359,8 @@ class CrawlerRecursive(Crawler):
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
+        exclude_patterns = ['/feed', '/advanced_search', '/katalog',
+                        '/wp-', '/category/', '/tag/', '/author/']
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
@@ -383,14 +385,9 @@ class CrawlerRecursive(Crawler):
                     full_url = href
                 else:
                     continue
-                if full_url == 'https://sufler.su/':
-                    continue
-                exclude_patterns = ['/feed', '/advanced_search', '/katalog', 
-                                '/wp-', '/category/', '/tag/', '/author/']
-                if any(pattern in full_url for pattern in exclude_patterns):
-                    continue
-                if full_url and full_url not in self.urls:
-                    self.urls.append(full_url)
+                if full_url != 'https://sufler.su/' and full_url not in self.urls:
+                    if not any(pattern in full_url for pattern in exclude_patterns):
+                        self.urls.append(full_url)
 
 
 class HTMLParser:
@@ -439,31 +436,33 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title = None
-        title_sources = [
-            ('meta', 'og:title', 'content'),
-            ('h1', 'entry-title', 'text'),
-            ('h1', None, 'text'),
-            ('title', None, 'text'),
-            ('h2', 'entry-title', 'text'),
-            ('h2', None, 'text'),
-            (None, 'post-title', 'text')
-        ]
-        for tag, class_name, source in title_sources:
-            if title:
-                break
-            if source == 'content':
-                meta_title = article_soup.find('meta', property='og:title')
-                if meta_title and meta_title.get('content'):
-                    title = meta_title.get('content').strip()
-            elif source == 'text':
-                if tag and class_name:
-                    element = article_soup.find(tag, class_=class_name)
-                elif tag:
-                    element = article_soup.find(tag)
-                else:
-                    element = article_soup.find(class_=class_name)
-                if element:
-                    title = element.get_text(strip=True)
+        meta_title = article_soup.find('meta', property='og:title')
+        if meta_title and meta_title.get('content'):
+            title = meta_title.get('content').strip()
+        if not title:
+            h1_entry = article_soup.find('h1', class_='entry-title')
+            if h1_entry:
+                title = h1_entry.get_text(strip=True)
+        if not title:
+            h1 = article_soup.find('h1')
+            if h1:
+                title = h1.get_text(strip=True)
+        if not title:
+            title_tag = article_soup.find('title')
+            if title_tag:
+                title = title_tag.get_text(strip=True)
+        if not title:
+            h2_entry = article_soup.find('h2', class_='entry-title')
+            if h2_entry:
+                title = h2_entry.get_text(strip=True)
+        if not title:
+            h2 = article_soup.find('h2')
+            if h2:
+                title = h2.get_text(strip=True)
+        if not title:
+            post_title = article_soup.find(class_='post-title')
+            if post_title:
+                title = post_title.get_text(strip=True)
         if title:
             self.article.title = title
         else:
