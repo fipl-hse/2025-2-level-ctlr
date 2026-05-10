@@ -6,6 +6,7 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
+import re
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -13,6 +14,26 @@ from bs4 import BeautifulSoup, Tag
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
 
+class IncorrectSeedURLError(Exception):
+    pass
+
+class NumberOfArticlesOutOfRangeError(Exception):
+    pass
+
+class IncorrectNumberOfArticlesError(Exception):
+    pass
+
+class IncorrectHeadersError(Exception):
+    pass
+
+class IncorrectEncodingError(Exception):
+    pass
+
+class IncorrectTimeoutError(Exception):
+    pass
+
+class IncorrectVerifyError(Exception):
+    pass
 
 class Config:
     """
@@ -26,6 +47,9 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
+        self.path_to_config = path_to_config
+        self.config_content = self._extract_config_content()
+        self._validate_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -34,11 +58,44 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_data =  json.load(f)
+        return ConfigDTO(
+            seed_urls = config_data["seed_urls"],
+            headers = config_data["headers"],
+            total_articles_to_find_and_parse = config_data["total_articles_to_find_and_parse"],
+            encoding = config_data["encoding"],
+            timeout = config_data["timeout"],
+            should_verify_certificate = config_data["should_verify_certificate"],
+            headless_mode = config_data["headless_mode"]
+        )
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
+
+        if not isinstance(self.config_content.seed_urls, str) or "https?://(www.)?" not in self.config_content.seed_urls:
+            raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://(www.)?"')
+        
+        if self.config_content.total_articles > 150 or self.config_content.total_articles < 1:
+            raise NumberOfArticlesOutOfRangeError("total number of articles is out of range from 1 to 150")
+        
+        if not isinstance(self.config_content.total_articles, int) or self.config_content.total_articles < 0:
+            raise IncorrectNumberOfArticlesError("total number of articles to parse is not integer or less than 0")
+        
+        if not isinstance(self.config_content.headers, dict):
+            raise IncorrectHeadersError("headers are not in a form of dictionary")
+        
+        if not isinstance(self.config_content.encoding, str):
+            raise IncorrectEncodingError("encoding must be specified as a string")
+        
+        if not isinstance(self.config_content.timeout, int) or self.config_content.timeout < 0 or self.config_content.timeout < 60:
+            raise IncorrectTimeoutError("timeout value must be a positive integer less than 60")
+        
+        if not isinstance(self.config_content.should_verify_certificate, bool):
+            raise IncorrectVerifyError("verify certificate and headless mode values must either be True or False")
+        
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -47,6 +104,7 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
+        return self.config_content.seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -55,6 +113,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
+        return self.config_content.total_articles
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -63,6 +122,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
+        return self.config_content.headers
 
     def get_encoding(self) -> str:
         """
@@ -71,6 +131,7 @@ class Config:
         Returns:
             str: Encoding
         """
+        return self.config_content.encoding
 
     def get_timeout(self) -> int:
         """
@@ -79,6 +140,7 @@ class Config:
         Returns:
             int: Number of seconds to wait for response
         """
+        return self.config_content.timeout
 
     def get_verify_certificate(self) -> bool:
         """
@@ -87,6 +149,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
+        return self.config_content.should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
@@ -95,6 +158,7 @@ class Config:
         Returns:
             bool: Whether to use headless mode or not
         """
+        return self.config_content.headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
