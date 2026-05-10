@@ -221,6 +221,12 @@ class Crawler:
                     continue
                 if full_url == 'https://sufler.su/':
                     continue
+                if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
+                    continue
+                if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
+                    continue
+                if '/author/' in full_url:
+                    continue
                 if full_url not in self.urls:
                     self.urls.append(full_url)
 
@@ -286,6 +292,12 @@ class CrawlerRecursive(Crawler):
                     else:
                         continue
                     if full_url == 'https://sufler.su/':
+                        continue
+                    if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
+                        continue
+                    if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
+                        continue
+                    if '/author/' in full_url or '/page/' in full_url:
                         continue
                     if full_url not in self.urls:
                         self.urls.append(full_url)
@@ -369,7 +381,7 @@ class HTMLParser:
             self.article.title = f"article_{self.article_id}"
         self.article.author = ["unknown author"]
         self.article.date = datetime.datetime.now()
-        self.article.topics = ["general"]
+        self.article.topics = []
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -404,8 +416,6 @@ class HTMLParser:
             self.article.author = ["unknown author"]
         if self.article.date is None:
             self.article.date = datetime.datetime.now()
-        if not self.article.topics:
-            self.article.topics = ["general"]
         return self.article
 
 
@@ -434,6 +444,7 @@ def main() -> None:
         return
     crawler = CrawlerRecursive(config)
     crawler.find_articles()
+    crawler.urls = [url for url in crawler.urls if url not in ['https://sufler.su', 'https://sufler.su/']]
     from core_utils.constants import ASSETS_PATH
     prepare_environment(ASSETS_PATH)
     articles_data = []
