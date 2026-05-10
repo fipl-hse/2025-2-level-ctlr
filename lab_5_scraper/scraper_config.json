@@ -19,5 +19,5 @@
     "encoding": "windows-1251",
     "timeout": 5,
     "should_verify_certificate": true,
-    "headless_mode": false
+    "headless_mode": true
 }

@@ -231,6 +231,8 @@ class Crawler:
         seed_urls = self._config.get_seed_urls()
         number_of_articles = self._config.get_num_articles()
         for seed_url in seed_urls:
+            if len(self.urls) >= number_of_articles:
+                    return
             try:
                 response = make_request(seed_url, self._config)
                 soup = BeautifulSoup(response.text, features="lxml")
@@ -242,8 +244,6 @@ class Crawler:
                         continue
                     if base_path in link:
                         self.urls.append(link)
-                if len(self.urls) >= number_of_articles:
-                    return
             except Exception:
                 continue
 
