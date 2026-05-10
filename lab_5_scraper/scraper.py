@@ -289,6 +289,8 @@ class Crawler:
         """
         target_count = self.config.get_num_articles()
         seed_urls = self.get_search_urls()
+        exclude_patterns = ('/feed', '/advanced_search', '/katalog',
+                        '/wp-', '/category/', '/tag/', '/author/')
         for seed_url in seed_urls:
             if len(self.urls) >= target_count:
                 break
@@ -303,12 +305,8 @@ class Crawler:
                 if len(self.urls) >= target_count:
                     return
                 href = link.get('href')
-                if (
-                    not href
-                    or not isinstance(href, str)
-                    or href == '#'
-                    or href.startswith('javascript')
-                ):
+                if (not href or not isinstance(href, str) or 
+                    href == '#' or href.startswith('javascript')):
                     continue
                 if href.startswith('/'):
                     full_url = f"https://sufler.su{href}"
@@ -316,21 +314,9 @@ class Crawler:
                     full_url = href
                 else:
                     continue
-                if (
-                    full_url == 'https://sufler.su/'
-                    or '/feed' in full_url
-                    or '/advanced_search' in full_url
-                    or '/katalog' in full_url
-                ):
-                    continue
-                if (
-                    ('/wp-' in full_url
-                    or '/category/' in full_url
-                    or '/tag/' in full_url)
-                    or '/author/' in full_url
-                ):
-                    continue
-                if full_url and full_url not in self.urls:
+                is_invalid = (full_url == 'https://sufler.su/' or 
+                            any(pattern in full_url for pattern in exclude_patterns))
+                if not is_invalid and full_url not in self.urls:
                     self.urls.append(full_url)
 
     def get_search_urls(self) -> list:
