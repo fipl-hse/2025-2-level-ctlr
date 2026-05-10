@@ -4,8 +4,6 @@ Crawler implementation.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
 import json
@@ -18,7 +16,9 @@ from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 class IncorrectEncodingError(Exception):
     """invalid encoding parameter in configuration."""
@@ -80,12 +80,14 @@ class Config:
         if not isinstance(seed_urls, list):
             raise IncorrectSeedURLError()
         if isinstance(seed_urls, list):
-            for i, url in enumerate(seed_urls):
+            for _, url in enumerate(seed_urls):
                 if not isinstance(url, str):
                     raise IncorrectSeedURLError()
         self.config_content = ConfigDTO(
             seed_urls=seed_urls,
-            total_articles_to_find_and_parse=raw_config.get('total_articles_to_find_and_parse', 100),
+            total_articles_to_find_and_parse=raw_config.get(
+                'total_articles_to_find_and_parse', 100
+                ),
             headers=raw_config.get('headers', {}),
             encoding=raw_config.get('encoding', 'utf-8'),
             timeout=raw_config.get('timeout', 10),
@@ -112,7 +114,9 @@ class Config:
             config_data = json.load(f)
         return ConfigDTO(
             seed_urls=config_data.get('seed_urls', []),
-            total_articles_to_find_and_parse=config_data.get('total_articles_to_find_and_parse', 100),
+            total_articles_to_find_and_parse=config_data.get(
+                'total_articles_to_find_and_parse', 100
+                ),
             headers=config_data.get('headers', {}),
             encoding=config_data.get('encoding', 'utf-8'),
             timeout=config_data.get('timeout', 10),
@@ -131,7 +135,9 @@ class Config:
                 raise IncorrectSeedURLError()
             if 'sufler.su' not in url:
                 raise IncorrectSeedURLError()
-        if not isinstance(self.config_content.total_articles, int) or self.config_content.total_articles <= 0:
+        if not isinstance(
+            self.config_content.total_articles, int
+            ) or self.config_content.total_articles <= 0:
             raise IncorrectNumberOfArticlesError()
         if self.config_content.total_articles > 100:
             raise NumberOfArticlesOutOfRangeError()
@@ -374,7 +380,9 @@ class CrawlerRecursive(Crawler):
                             continue
                         if full_url == 'https://sufler.su/':
                             continue
-                        if '/feed' in full_url or '/advanced_search' in full_url or '/katalog' in full_url:
+                        if ('/feed' in full_url
+                            or '/advanced_search' in full_url or '/katalog' in full_url
+                        ):
                             continue
                         if '/wp-' in full_url or '/category/' in full_url or '/tag/' in full_url:
                             continue
@@ -530,8 +538,9 @@ def main() -> None:
         return
     crawler = CrawlerRecursive(config)
     crawler.find_articles()
-    crawler.urls = [url for url in crawler.urls if url not in ['https://sufler.su', 'https://sufler.su/']]
-    from core_utils.constants import ASSETS_PATH
+    crawler.urls = [url for url in crawler.urls if url not in [
+        'https://sufler.su', 'https://sufler.su/'
+        ]]
     prepare_environment(ASSETS_PATH)
     articles_data = []
     total_to_parse = min(len(crawler.urls), config.get_num_articles())
