@@ -343,9 +343,15 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = article_soup.find("title")
-        self.article.title = title.get_text().strip() if title else "Без названия"
-        self.article.author = "Unknown"
+        title_tag = article_soup.find("title")
+        if title_tag:
+            title = title_tag.get_text().strip()
+            title = re.sub(r"\s*-\s*lib\.ru.*$", "", title, flags=re.I)
+            self.article.title = title.strip()
+        else:
+            self.article.title = "No title"
+
+        self.article.author = ["NOT FOUND"]
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
