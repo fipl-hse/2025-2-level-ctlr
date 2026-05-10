@@ -9,15 +9,18 @@ import pathlib
 import re
 import shutil
 import urllib.parse
+from typing import Any
 
 import requests
 from bs4 import BeautifulSoup, Tag
 from requests.exceptions import RequestException
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw, to_meta
+from core_utils.article.io import to_meta
+from core_utils.article.io import to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import CRAWLER_CONFIG_PATH
+
 
 class IncorrectSeedURLError(Exception):
     """Raised when seed URL does not match required pattern."""
@@ -55,6 +58,18 @@ class Config:
         self.path_to_config = path_to_config
         self._config_dto: ConfigDTO | None = None
         self._validate_config_content()
+        self._seed_urls: list[str] = self._config_dto.seed_urls.copy() if self._config_dto else []
+        self._num_articles: int = self._config_dto.total_articles if self._config_dto else 0
+        self._headers: dict[str, str] = self._config_dto.headers if self._config_dto else {}
+        self._encoding: str = self._config_dto.encoding if self._config_dto else 'utf-8'
+        self._timeout: int = self._config_dto.timeout if self._config_dto else 10
+        self._should_verify_certificate: bool = (
+            self._config_dto.should_verify_certificate if self._config_dto else True
+        )
+
+    def config_content(self) -> ConfigDTO | None:
+        """Backward compatibility for tests."""
+        return self._config_dto
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -76,13 +91,8 @@ class Config:
             headless_mode=config_data.get('headless_mode', True)
         )
 
-    def _validate_config_content(self) -> None:
-        """
-        Ensure configuration parameters are not corrupt.
-        """
-        self._config_dto = self._extract_config_content()
-        dto = self._config_dto
-
+    def _validate_seed_urls(self, dto: ConfigDTO) -> None:
+        """Validate seed_urls parameter."""
         if not isinstance(dto.seed_urls, list):
             raise IncorrectSeedURLError("seed_urls must be a list")
         if not dto.seed_urls:
@@ -92,26 +102,58 @@ class Config:
             if not url_pattern.match(url):
                 raise IncorrectSeedURLError(f"Invalid seed URL: {url}")
 
+    def _validate_articles_count(self, dto: ConfigDTO) -> None:
+        """Validate total_articles_to_find_and_parse parameter."""
         total = dto.total_articles
-
         if not isinstance(total, int):
-            raise IncorrectNumberOfArticlesError("total_articles must be an integer")
-        if total < 0:
-            raise IncorrectNumberOfArticlesError("total_articles cannot be negative")
-        if total < 1 or total > 150:
-            raise NumberOfArticlesOutOfRangeError("total_articles must be in range 1..150")
+            raise IncorrectNumberOfArticlesError(
+                "total_articles_to_find_and_parse must be an integer"
+            )
+        if total < 1:
+            raise IncorrectNumberOfArticlesError(
+                "total_articles_to_find_and_parse must be a positive integer"
+            )
+        if total > 150:
+            raise NumberOfArticlesOutOfRangeError(
+                "total_articles_to_find_and_parse must be in range 1..150"
+            )
+    def _validate_headers(self, dto: ConfigDTO) -> None:
+        """Validate headers parameter."""
         if not isinstance(dto.headers, dict):
             raise IncorrectHeadersError("headers must be a dictionary")
+
+    def _validate_encoding(self, dto: ConfigDTO) -> None:
+        """Validate encoding parameter."""
         if not isinstance(dto.encoding, str):
             raise IncorrectEncodingError("encoding must be a string")
+
+    def _validate_timeout(self, dto: ConfigDTO) -> None:
+        """Validate timeout parameter."""
         if not isinstance(dto.timeout, int):
             raise IncorrectTimeoutError("timeout must be an integer")
         if dto.timeout <= 0 or dto.timeout > 60:
             raise IncorrectTimeoutError("timeout must be in range 1..60")
+
+    def _validate_boolean_flags(self, dto: ConfigDTO) -> None:
+        """Validate should_verify_certificate and headless_mode parameters."""
         if not isinstance(dto.should_verify_certificate, bool):
             raise IncorrectVerifyError("should_verify_certificate must be boolean")
         if not isinstance(dto.headless_mode, bool):
             raise IncorrectVerifyError("headless_mode must be boolean")
+
+    def _validate_config_content(self) -> None:
+        """
+        Ensure configuration parameters are not corrupt.
+        """
+        self._config_dto = self._extract_config_content()
+        dto = self._config_dto
+
+        self._validate_seed_urls(dto)
+        self._validate_articles_count(dto)
+        self._validate_headers(dto)
+        self._validate_encoding(dto)
+        self._validate_timeout(dto)
+        self._validate_boolean_flags(dto)
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -120,9 +162,7 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
-        if self._config_dto:
-            return self._config_dto.seed_urls
-        return []
+        return self._seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -201,15 +241,17 @@ def make_request(url: str, config: Config) -> requests.Response | None:
     Returns:
         requests.models.Response: A response from a request
     """
-    if url.startswith('#'):
+    if url.startswith('#') or url.startswith('javascript:'):
         return None
+
+    headers = config.get_headers()
+    if not headers:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+
     try:
-        headers = config.get_headers()
-        if not headers:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         response = requests.get(
             url,
-            headers=config.get_headers(),
+            headers=headers,
             timeout=config.get_timeout(),
             verify=config.get_verify_certificate()
         )
@@ -257,19 +299,28 @@ class Crawler:
         Find articles.
         """
         needed = self.config.get_num_articles()
-        for seed in self.config.get_seed_urls():
-            if len(self.urls) >= needed:
-                break
-            response = make_request(seed, self.config)
+        queue = list(self.config.get_seed_urls())
+        visited = set()
+
+        while queue and len(self.urls) < needed:
+            url = queue.pop(0)
+            if url in visited:
+                continue
+            visited.add(url)
+
+            response = make_request(url, self.config)
             if not response or response.status_code != 200:
                 continue
-            soup = BeautifulSoup(response.text, 'html.parser')
+
+            soup = BeautifulSoup(response.content, 'html.parser')
             for link in soup.find_all('a', href=True):
-                full_url = self._extract_url(link, seed)
-                if full_url and full_url not in self.urls:
+                full_url = self._extract_url(link, url)
+                if not full_url:
+                    continue
+                if full_url not in self.urls and len(self.urls) < needed:
                     self.urls.append(full_url)
-                    if len(self.urls) >= needed:
-                        break
+                if full_url not in visited and len(self.urls) < needed:
+                    queue.append(full_url)
 
     def get_search_urls(self) -> list:
         """
@@ -305,22 +356,31 @@ class CrawlerRecursive(Crawler):
         self.url_pattern = re.compile(r"/\d{4}/\d{2}/\d{2}/")
         self._visited: set[str] = set()
 
-    def _crawl(self, url: str) -> None:
+    def _crawl(self, url: str, depth: int = 0) -> None:
         """
         Recursively crawl a single URL to collect article links.
 
         Args:
             url (str): URL to crawl
         """
-        if len(self.urls) >= self.num_articles:
+        if depth > 10 or len(self.urls) >= self.num_articles:
             return
         if url in self._visited:
             return
         self._visited.add(url)
+
         response = make_request(url, self.config)
-        if not response or response.status_code != 200:
+        if not response:
             return
-        soup = BeautifulSoup(response.content, 'html.parser')
+        content_type = response.headers.get('Content-Type', '')
+        if 'text/html' not in content_type:
+            return
+
+        try:
+            soup = BeautifulSoup(response.content, 'html.parser')
+        except (ValueError, UnicodeDecodeError, LookupError):
+            return
+
         for link in soup.find_all('a', href=True):
             full_url = self._extract_url(link, url)
             if not full_url:
@@ -330,7 +390,7 @@ class CrawlerRecursive(Crawler):
                 if len(self.urls) >= self.num_articles:
                     return
             if len(self.urls) < self.num_articles:
-                self._crawl(full_url)
+                self._crawl(full_url, depth + 1)
                 if len(self.urls) >= self.num_articles:
                     return
 
@@ -370,9 +430,21 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        paragraphs = article_soup.find_all('p')
-        text = ' '.join(p.get_text(strip=True) for p in paragraphs)
-        self.article.text = text
+        selectors = [
+        'article', 'div.article-body', 'div.post-content', 'div.content',
+        'div.entry-content', 'div.main-content', 'section.content'
+        ]
+        text_parts = []
+        for selector in selectors:
+            elements = article_soup.select(selector)
+            if elements:
+                for elem in elements:
+                    text_parts.append(elem.get_text(strip=True))
+                break
+        if not text_parts:
+            paragraphs = article_soup.find_all('p')
+            text_parts = [p.get_text(strip=True) for p in paragraphs]
+        self.article.text = ' '.join(text_parts)
 
     def _extract_authors(self, author_value: str) -> list[str]:
         """
@@ -389,6 +461,32 @@ class HTMLParser:
         authors = [a.strip() for a in author_value.split(',') if a.strip()]
         return authors if authors else ["NOT FOUND"]
 
+    def _extract_json_ld_date(self, soup: BeautifulSoup) -> str | None:
+        """Extract date from JSON-LD script."""
+        ld_scripts = soup.find_all('script', type='application/ld+json')
+        for script in ld_scripts:
+            content = script.string
+            if not content or not isinstance(content, str):
+                continue
+            try:
+                data = json.loads(content)
+                if isinstance(data, dict):
+                    stack = [data]
+                    while stack:
+                        obj = stack.pop()
+                        if isinstance(obj, dict):
+                            if 'datePublished' in obj:
+                                val = obj['datePublished']
+                                if isinstance(val, str):
+                                    return val
+                            for val in obj.values():
+                                stack.append(val)
+                        elif isinstance(obj, list):
+                            stack.extend(obj)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return None
+
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
         Find meta information of article.
@@ -399,30 +497,90 @@ class HTMLParser:
         title_tag = article_soup.find('title')
         if title_tag:
             self.article.title = title_tag.get_text(strip=True)
+        else:
+            h1 = article_soup.find('h1')
+            if h1:
+                self.article.title = h1.get_text(strip=True)
 
+    # Author
         author_tag = article_soup.find('meta', {'name': 'author'})
-        if author_tag and author_tag.get('content'):
-            self.article.author = [author_tag['content']]
+        if author_tag:
+            content = author_tag.get('content')
+            if isinstance(content, str):
+                self.article.author = self._extract_authors(content)
+            elif isinstance(content, list) and content and isinstance(content[0], str):
+                self.article.author = self._extract_authors(content[0])
+            else:
+                self.article.author = ["NOT FOUND"]
         else:
             self.article.author = ["NOT FOUND"]
-        date_tag = (article_soup.find('meta', {'name': 'date'}) or
-                    article_soup.find('meta', {'property': 'article:published_time'}) or
-                    article_soup.find('time'))
-        if date_tag:
-            date_str = date_tag.get('content') or date_tag.get('datetime') or date_tag.get_text()
-            if date_str and isinstance(date_str, str):
-                parsed_date = self.unify_date_format(date_str)
-                if parsed_date:
-                    self.article.date = parsed_date
 
+    # Date - enhanced search
+        date: str | None = None
+
+        def to_str(value: Any) -> str | None:
+            if isinstance(value, str):
+                return value
+            if isinstance(value, list) and value and isinstance(value[0], str):
+                return value[0]
+            return None
+
+    # 1. Meta tags
+        for meta_name in ['date', 'pubdate', 'publish_date', 'article:published_time',
+                      'og:article:published_time', 'article:modified_time']:
+            tag = (article_soup.find('meta', {'name': meta_name}) or
+               article_soup.find('meta', {'property': meta_name}))
+            if tag:
+                date = to_str(tag.get('content'))
+                if date:
+                    break
+
+    # 2. <time> element
+        if not date:
+            time_tag = article_soup.find('time')
+            if time_tag:
+                dt = time_tag.get('datetime') or (
+                    time_tag.get('content') or time_tag.get_text(strip=True)
+                )
+                date = to_str(dt)
+
+    # 3. JSON-LD
+        if not date:
+            date = self._extract_json_ld_date(article_soup)
+
+    # 4. Elements with date-related classes
+        if not date:
+            date_elem = article_soup.find(class_=re.compile(r'date|time|published', re.I))
+            if date_elem:
+                date = to_str(date_elem.get_text(strip=True))
+
+    # 5. Common data attributes
+        if not date:
+            for attr in ['data-date', 'data-published', 'data-timestamp']:
+                elem = article_soup.find(attrs={attr: True})
+                if elem:
+                    date = to_str(elem.get(attr))
+                    if date:
+                        break
+
+        if date:
+            parsed = self.unify_date_format(date)
+            if parsed:
+                self.article.date = parsed
+
+    # Topics
         topics = []
-        topic_tags = article_soup.find_all('meta', {'name': 'news_keywords'})
-        for tag in topic_tags:
-            if tag.get('content'):
-                topics.extend(tag['content'].split(','))
-        keywords_tag = article_soup.find('meta', {'name': 'keywords'})
-        if keywords_tag and keywords_tag.get('content'):
-            topics.extend(keywords_tag['content'].split(','))
+        for meta_name in ['news_keywords', 'keywords', 'article:tag']:
+            tag = article_soup.find('meta', {'name': meta_name}) or \
+              article_soup.find('meta', {'property': meta_name})
+            if tag:
+                content = tag.get('content')
+                if isinstance(content, str):
+                    topics.extend([t.strip() for t in content.split(',') if t.strip()])
+                elif isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, str):
+                            topics.extend([t.strip() for t in item.split(',') if t.strip()])
         if topics:
             self.article.topics = list(dict.fromkeys(topics))[:5]
         else:
@@ -443,27 +601,37 @@ class HTMLParser:
             'мая': 5, 'июня': 6, 'июля': 7, 'августа': 8,
             'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
         }
-
         patterns = [
-            r'(\d{1,2})\s+([а-я]+)\s+(\d{4})',
-            r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),\s+(\d{2}):(\d{2})',
+            (r'(\d{1,2})\s+([а-я]+)\s+(\d{4})', False),
+            (r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),\s+(\d{2}):(\d{2})', True),
+            (r'(\d{1,2})\.(\d{1,2})\.(\d{4})', False),
+            (r'(\d{4})-(\d{2})-(\d{2})', False),
+            (r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}', True),
         ]
-
-        for pattern in patterns:
-            match = re.search(pattern, date_str.lower())
-            if match:
+        for pattern, has_time in patterns:
+            match = re.search(pattern, date_str)
+            if not match:
+                continue
+            if 'а-я' in pattern:
                 day = int(match.group(1))
                 month_name = match.group(2)
                 year = int(match.group(3))
-
-                if month_name in russian_months:
-                    month = russian_months[month_name]
-                    if len(match.groups()) >= 5:
-                        hour = int(match.group(4))
-                        minute = int(match.group(5))
-                        return datetime.datetime(year, month, day, hour, minute)
-                    return datetime.datetime(year, month, day)
-
+                month = russian_months.get(month_name)
+                if month is None:
+                    continue
+                if has_time:
+                    hour = int(match.group(4))
+                    minute = int(match.group(5))
+                    return datetime.datetime(year, month, day, hour, minute)
+                return datetime.datetime(year, month, day)
+            if r'\.' in pattern:
+                day, month, year = map(int, match.groups())
+                return datetime.datetime(year, month, day)
+            if 'T' in pattern:
+                year, month, day, hour, minute = map(int, match.groups())
+                return datetime.datetime(year, month, day, hour, minute)
+            year, month, day = map(int, match.groups())
+            return datetime.datetime(year, month, day)
         return None
 
     def unify_date_format(self, date_str: str) -> datetime.datetime | None:
@@ -506,9 +674,9 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         response = make_request(self.full_url, self.config)
-        if not response or response.status_code != 200:
+        if not response:
             return None
-        soup = BeautifulSoup(response.content, self.config.get_encoding())
+        soup = BeautifulSoup(response.content, 'html.parser')
         self._fill_article_with_meta_information(soup)
         self._fill_article_with_text(soup)
         self.article.url = self.full_url
