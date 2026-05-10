@@ -8,7 +8,7 @@ import json
 import pathlib
 import re
 import shutil
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -17,8 +17,6 @@ from core_utils.article.article import Article
 from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
-
-ILIBRARY_BASE_URL = "https://ilibrary.ru"
 
 
 class IncorrectSeedURLError(Exception):
@@ -262,9 +260,13 @@ class Crawler:
         """
         self._config = config
         self.urls = []
+
+        parsed_url = urlparse(self.get_search_urls()[0])
+        self.base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
         self.url_pattern = re.compile(
-                    r"^(https://ilibrary\.ru)?/text/\d+/(p\.\d+/)?index\.html$"
-                )
+            r"^(https?://[^/]+)?/text/\d+/(p\.\d+/)?index\.html$"
+        )
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -290,7 +292,7 @@ class Crawler:
             href,
         )
 
-        return urljoin(ILIBRARY_BASE_URL, href)
+        return urljoin(self.base_url, href)
 
     def find_articles(self) -> None:
         """
