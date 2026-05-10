@@ -1,9 +1,17 @@
 {
-    "seed_urls": [],
-    "headers": {},
-    "total_articles_to_find_and_parse": 0,
-    "encoding": "",
-    "timeout": 0,
+    "seed_urls": [
+        "https://lib.ru/PXESY/",
+        "https://lib.ru/PXESY/index.shtml",
+        "https://lib.ru/PXESY/0/",
+        "https://lib.ru/PXESY/1/",
+        "https://lib.ru/PXESY/2/"
+    ],
+    "total_articles_to_find_and_parse": 30,
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    },
+    "encoding": "utf-8",
+    "timeout": 15,
     "should_verify_certificate": true,
-    "headless_mode": true
+    "headless_mode": false
 }
