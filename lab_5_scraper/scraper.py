@@ -291,13 +291,15 @@ class CrawlerRecursive(Crawler):
     Get one URL of the title page and find requested number of articles recursively.
     """
 
-#   def __init__(self, config: Config) -> None:
-#       """
-#       Initialize an instance of the CrawlerRecursive class.
-#
-#       Args:
-#           config (Config): Configuration
-#       """
+    def __init__(self, config: Config) -> None:
+       """
+       Initialize an instance of the CrawlerRecursive class.
+
+       Args:
+           config (Config): Configuration
+       """
+       super().__init__(config)
+       self.start_url = self.config.get_seed_urls()[0]
 
     def find_articles(self) -> None:
         """
