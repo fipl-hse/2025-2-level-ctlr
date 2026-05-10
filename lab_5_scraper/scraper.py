@@ -455,18 +455,29 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title_tag = None
         title_tag = article_soup.find('h1')
         if not title_tag:
-            title_tag = article_soup.find('h2', class_='entry-title')
+            title_tag = article_soup.find(class_='entry-title')
         if not title_tag:
             title_tag = article_soup.find('title')
         if not title_tag:
-            title_tag = article_soup.find('meta', property='og:title')
+            meta_title = article_soup.find('meta', property='og:title')
+            if meta_title:
+                title_text = meta_title.get('content', '')
+                if title_text:
+                    self.article.title = title_text
+                    self.article.author = ["unknown author"]
+                    self.article.date = datetime.datetime.now()
+                    self.article.topics = []
+                    return
+        if not title_tag:
+            for header in ['h1', 'h2', 'h3', 'h4']:
+                title_tag = article_soup.find(header)
+                if title_tag:
+                    break
         if title_tag:
-            if title_tag.name == 'meta':
-                title_text = title_tag.get('content', '')
-            else:
-                title_text = title_tag.get_text(strip=True)
+            title_text = title_tag.get_text(strip=True)
             if title_text:
                 self.article.title = title_text
             else:
