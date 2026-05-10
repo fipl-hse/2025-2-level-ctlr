@@ -5,9 +5,9 @@ Crawler implementation.
 import pathlib
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
-import sys
+#import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+#sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
 import datetime
 import json
@@ -181,7 +181,6 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
-        """Validate seed URLs pattern."""
         return self.dto.seed_urls
 
     def get_num_articles(self) -> int:
@@ -257,10 +256,11 @@ def make_request(url: str, config: Config) -> requests.models.Response:
             timeout=config.get_timeout(),
             verify=config.get_verify_certificate()
         )
-        response.encoding = config.get_encoding()
-        return response
     except requests.RequestException:
         return None
+
+    response.encoding = config.get_encoding()
+    return response
 
 
 
