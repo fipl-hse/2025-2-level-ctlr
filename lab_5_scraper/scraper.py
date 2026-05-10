@@ -99,25 +99,20 @@ class Config:
         """
         self._config_dto = self._extract_config_content()
         dto = self._config_dto
-        if not isinstance(dto.seed_urls, list):
-            raise IncorrectSeedURLError("seed_urls must be a list")
-        if not dto.seed_urls:
-            raise IncorrectSeedURLError("seed_urls cannot be empty")
-        url_pattern = re.compile(r"^https?://(www\.)?")
-        for url in dto.seed_urls:
-            if not url_pattern.match(url):
-                raise IncorrectSeedURLError(f"Invalid seed URL: {url}")
+        if not (isinstance(dto.seed_urls, list) and dto.seed_urls and
+            all(re.match(r'^https?://(www\.)?', url) for url in dto.seed_urls)):
+            raise IncorrectSeedURLError("Invalid seed URLs")
 
         total = dto.total_articles
         if not isinstance(total, int):
             raise IncorrectNumberOfArticlesError(
                 "total_articles_to_find_and_parse must be an integer"
             )
-        if total < 1:
-            raise IncorrectNumberOfArticlesError(
-                "total_articles_to_find_and_parse must be a positive integer"
-            )
-        if total > 150:
+        if not (1 <= total <= 150):
+            if total < 1:
+                raise IncorrectNumberOfArticlesError(
+                    "total_articles_to_find_and_parse must be a positive integer"
+                )
             raise NumberOfArticlesOutOfRangeError(
                 "total_articles_to_find_and_parse must be in range 1..150"
             )
@@ -350,17 +345,12 @@ class CrawlerRecursive(Crawler):
         Args:
             url (str): URL to crawl
         """
-        if depth > 10 or len(self.urls) >= self.num_articles:
-            return
-        if url in self._visited:
+        if depth > 10 or len(self.urls) >= self.num_articles or url in self._visited:
             return
         self._visited.add(url)
 
         response = make_request(url, self.config)
-        if not response:
-            return
-        content_type = response.headers.get('Content-Type', '')
-        if 'text/html' not in content_type:
+        if not response or 'text/html' not in response.headers.get('Content-Type', ''):
             return
 
         try:
