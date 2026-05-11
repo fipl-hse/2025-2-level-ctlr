@@ -1,12 +1,12 @@
 {
     "seed_urls": [
         "https://proza.pishi.pro/fantastika/",
-        "https://proza.pishi.pro/fantastika/90304/",
-        "https://proza.pishi.pro/fantastika/90303/",
-        "https://proza.pishi.pro/fantastika/90302/",
-        "https://proza.pishi.pro/fantastika/90301/",
-        "https://proza.pishi.pro/fantastika/90300/",
-        "https://proza.pishi.pro/fantastika/90299/"
+        "https://proza.pishi.pro/fantastika/?page=2",
+        "https://proza.pishi.pro/fantastika/?page=3",
+        "https://proza.pishi.pro/fantastika/?page=4",
+        "https://proza.pishi.pro/fantastika/?page=5",
+        "https://proza.pishi.pro/fantastika/?page=6",
+        "https://proza.pishi.pro/fantastika/?page=7"
     ],
     "headers": {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
