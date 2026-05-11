@@ -342,6 +342,9 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
+        self.urls = []
+
 
     def find_articles(self) -> None:
         """
@@ -528,18 +531,17 @@ def main() -> None:
             article = parser.parse()
 
             to_raw(article)
-            print(f"✓ Saved text to {article.get_raw_text_path()}")
+            print(f"Saved text to {article.get_raw_text_path()}")
 
             to_meta(article)
-            print(f"✓ Saved metadata to {article.get_meta_file_path()}")
+            print(f"Saved metadata to {article.get_meta_file_path()}")
 
         except (ValueError, KeyError, TypeError) as e:
-            print(f"✗ Error processing article {i}: {e}")
+            print(f"Error processing article {i}: {e}")
             continue
 
-    print("\n" + "="*50)
+    print("\n")
     print(f"Done! Saved {target_count} articles to {ASSETS_PATH}")
-    print("="*50)
 
 if __name__ == "__main__":
     main()
