@@ -11,7 +11,7 @@
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     },
     "encoding": "utf-8",
-    "timeout": 15,
+    "timeout": 3,
     "should_verify_certificate": true,
-    "headless_mode": false
+    "headless_mode": true
 }
