@@ -273,8 +273,6 @@ class Crawler:
                 if len(self.urls) >= needed_count:
                     return
                 href = link.get('href')
-                if not href or href in ('#', 'javascript:'):
-                    continue
                 full = href if href.startswith(('http://', 'https://')) else 'https://proza.ru' + href
                 if full not in self.urls and re.search(r'/\d{4}/\d{2}/\d{2}/\d+', full):
                     self.urls.append(full)
@@ -362,25 +360,17 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = article_soup.find('h1')
-        if not title_tag:
-            title_tag = article_soup.find('title')
-        if not title_tag:
-            title_tag = article_soup.find('div', class_='title')
-        if title_tag:
-            self.article.title = title_tag.get_text(strip=True)
-        else:
-            self.article.title = "NOT FOUND"
+        title_tag = article_soup.find('h1') or article_soup.find('title')
+        self.article.title = title_tag.get_text(strip=True) if title_tag else "NOT FOUND"
         author_tag = article_soup.find('a', href=lambda x: x and '/avtor/' in x)
-        if not author_tag:
-            author_tag = article_soup.find('span', class_='author')
-        if not author_tag:
-            author_tag = article_soup.find('div', class_='author')
-        if author_tag:
-            self.article.author = [author_tag.get_text(strip=True)]
-        else:
-            self.article.author = ["NOT FOUND"]
+        self.article.author = [author_tag.get_text(strip=True)] if author_tag else ["NOT FOUND"]
         self.article.url = self.full_url
+        next_tag = article_soup.find('a', href='/editor/next')
+        if next_tag:
+            next_href = next_tag.get('href')
+            self.article.next_url = 'https://proza.ru' + next_href if next_href.startswith('/') else next_href
+        else:
+            self.article.next_url = ""
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
