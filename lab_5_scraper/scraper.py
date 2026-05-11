@@ -79,6 +79,7 @@ class Config:
         self._encoding = self.config_content.encoding
         self._timeout = self.config_content.timeout
         self._should_verify_certificate = self.config_content.should_verify_certificate
+        self._headless_mode = self.config_content.headless_mode
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -126,8 +127,7 @@ class Config:
         Returns:
             list[str]: Seed urls
         """
-        config_content = self._extract_config_content()
-        return config_content.seed_urls
+        return self._seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -136,8 +136,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
-        config_content = self._extract_config_content()
-        return config_content.total_articles
+        return self._num_articles
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -146,8 +145,7 @@ class Config:
         Returns:
             dict[str, str]: Headers
         """
-        config_content = self._extract_config_content()
-        return config_content.headers
+        return self._headers
 
     def get_encoding(self) -> str:
         """
@@ -156,8 +154,7 @@ class Config:
         Returns:
             str: Encoding
         """
-        config_content = self._extract_config_content()
-        return config_content.encoding
+        return self._encoding
 
     def get_timeout(self) -> int:
         """
@@ -166,8 +163,7 @@ class Config:
         Returns:
             int: Number of seconds to wait for response
         """
-        config_content = self._extract_config_content()
-        return config_content.timeout
+        return self._timeout
 
     def get_verify_certificate(self) -> bool:
         """
@@ -176,8 +172,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
-        config_content = self._extract_config_content()
-        return config_content.should_verify_certificate
+        return self._should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
@@ -186,8 +181,7 @@ class Config:
         Returns:
             bool: Whether to use headless mode or not
         """
-        config_content = self._extract_config_content()
-        return config_content.headless_mode
+        return self._headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
