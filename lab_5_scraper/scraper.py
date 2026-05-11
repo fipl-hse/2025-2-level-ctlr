@@ -6,8 +6,10 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
+import random
 import re
 import shutil
+import time
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -206,6 +208,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
+    time.sleep(random.uniform(0.5, 1.5))
     response = requests.get(
         url,
         headers=config.get_headers(),
