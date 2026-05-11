@@ -20,26 +20,39 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    "seed URL does not match standard pattern"
-    pass
+    """
+    Seed URL does not match standard pattern
+    """
+
 class NumberOfArticlesOutOfRangeError(Exception):
-    "total number of articles is out of range from 1 to 150"
-    pass
+    """
+    Total number of articles is out of range from 1 to 150
+    """
+
 class IncorrectNumberOfArticlesError(Exception):
-    "total number of articles to parse is not integer or less than 0"
-    pass
+    """
+    Total number of articles to parse is not integer or less than 0
+    """
+
 class IncorrectHeadersError(Exception):
-    "headers are not in a form of dictionary"
-    pass
+    """
+    Headers are not in a form of dictionary
+    """
+
 class IncorrectEncodingError(Exception):
-    "encoding must be specified as a string"
-    pass
+    """
+    Encoding must be specified as a string
+    """
+
 class IncorrectTimeoutError(Exception):
-    "timeout value must be a positive integer less than 60"
-    pass
+    """
+    Timeout value must be a positive integer less than 60
+    """
+
 class IncorrectVerifyError(Exception):
-    "verify certificate and headless mode values must either be 'True' or 'False'"
-    pass
+    """
+    Verify certificate and headless mode values must either be 'True' or 'False'
+    """
 
 class Config:
     """
@@ -234,17 +247,17 @@ class Crawler:
                     return
             try:
                 response = make_request(seed_url, self._config)
-                soup = BeautifulSoup(response.text, features="lxml")
-                base_path = seed_url.replace('https://rus-shake.ru', '')
-                base_path = base_path[:base_path.rfind('/')] + '/'
-                for tag in soup.find_all('a', href=True):
-                    link = self._extract_url(tag)
-                    if not link or link in self.urls:
-                        continue
-                    if base_path in link:
-                        self.urls.append(link)
             except Exception:
                 continue
+            soup = BeautifulSoup(response.text, features="lxml")
+            base_path = seed_url.replace('https://rus-shake.ru', '')
+            base_path = base_path[:base_path.rfind('/')] + '/'
+            for tag in soup.find_all('a', href=True):
+                link = self._extract_url(tag)
+                if not link or link in self.urls:
+                    continue
+                if base_path in link:
+                    self.urls.append(link)
 
     def get_search_urls(self) -> list:
         """
@@ -365,12 +378,12 @@ class HTMLParser:
         """
         try:
             response = make_request(self.full_url, self.config)
-            article_soup = BeautifulSoup(response.text, features="lxml")
-            self._fill_article_with_text(article_soup)
-            self._fill_article_with_meta_information(article_soup)
-            return self.article
         except requests.RequestException:
             return False
+        article_soup = BeautifulSoup(response.text, features="lxml")
+        self._fill_article_with_text(article_soup)
+        self._fill_article_with_meta_information(article_soup)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
