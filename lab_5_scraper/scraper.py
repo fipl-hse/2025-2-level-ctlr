@@ -271,6 +271,7 @@ class Crawler:
                     if lresponse.ok:
                         if "afisha.html" not in full_url:
                             self.urls.append(full_url)
+                            print("foundNewURL", full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
