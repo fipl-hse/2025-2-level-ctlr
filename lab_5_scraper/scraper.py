@@ -329,6 +329,9 @@ class Crawler:
         return self.config.get_seed_urls()
 
 
+#10
+
+
 class CrawlerRecursive(Crawler):
     """
     Recursive implementation.
@@ -386,6 +389,9 @@ class CrawlerRecursive(Crawler):
                 is_bad = any(p in full_url for p in exclude)
                 if not is_bad and full_url not in self.urls:
                     self.urls.append(full_url)
+
+
+# 4, 6, 8, 10
 
 
 class HTMLParser:
