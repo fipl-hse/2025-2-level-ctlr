@@ -22,25 +22,39 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    'seed URL does not match standard pattern "https?://(www.)?"'
+    """
+    Raised when seed URL does not match standard pattern 'https?://(www.)?'
+    """
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    "total number of articles to parse is not integer or less than 0"
+    """
+    Raised when total number of articles is out of range from 1 to 150
+    """
 
 class IncorrectNumberOfArticlesError(Exception):
-    "total number of articles is out of range from 1 to 150"
+    """
+    Raised when total number of articles to parse is not integer or less than 0
+    """
 
 class IncorrectHeadersError(Exception):
-    "headers are not in a form of dictionary"
+    """
+    Raised when headers are not in a form of dictionary
+    """
 
 class IncorrectEncodingError(Exception):
-    "encoding must be specified as a string"
+    """
+    Raied when encoding is not specified as a string
+    """
 
 class IncorrectTimeoutError(Exception):
-    "timeout value must be a positive integer less than 60"
+    """
+    Raised when timeout value is not a positive integer that less than 60
+    """
 
 class IncorrectVerifyError(Exception):
-    "verify certificate and headless mode values must either be True or False"
+    """
+    Raised when verify certificate and headless mode values are not True or False
+    """
 
 class Config:
     """
@@ -87,42 +101,36 @@ class Config:
         self._config_dto = self._extract_config_content()
 
         if not isinstance(self._config_dto.seed_urls, list):
-            raise IncorrectSeedURLError()
+            raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://(www.)?"')
 
         url_pattern = re.compile(r"^https?://(www\.)?")
         for url in self._config_dto.seed_urls:
             if not isinstance(url, str) or not url_pattern.match(url):
-                raise IncorrectSeedURLError()
+                raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://(www.)?"')
 
         if not isinstance(self._config_dto.total_articles, int):
-            raise IncorrectNumberOfArticlesError()
+            raise IncorrectNumberOfArticlesError('seed URL does not match standard pattern "https?://(www.)?"')
         if  self._config_dto.total_articles < 1:
-            raise IncorrectNumberOfArticlesError()
+            raise IncorrectNumberOfArticlesError("total number of articles is out of range from 1 to 150")
         if self._config_dto.total_articles > 150:
-            raise NumberOfArticlesOutOfRangeError()
+            raise NumberOfArticlesOutOfRangeError("total number of articles is out of range from 1 to 150")
 
         if not isinstance(self._config_dto.headers, dict):
-            raise IncorrectHeadersError()
+            raise IncorrectHeadersError("headers are not in a form of dictionary")
 
         if not isinstance(self._config_dto.encoding, str):
-            raise IncorrectEncodingError()
+            raise IncorrectEncodingError("encoding must be specified as a string")
 
         if not isinstance(self._config_dto.timeout, int) or not 0 < self._config_dto.timeout < 60:
-            raise IncorrectTimeoutError()
+            raise IncorrectTimeoutError("timeout value must be a positive integer less than 60")
 
         if not isinstance(self._config_dto.should_verify_certificate, bool):
-            raise IncorrectVerifyError()
+            raise IncorrectVerifyError("verify certificate and headless mode values must either be True or False")
 
         if not isinstance(self._config_dto.headless_mode, bool):
-            raise IncorrectVerifyError()
+            raise IncorrectVerifyError("verify certificate and headless mode values must either be True or False")
 
-        # do not use next lines!!!
-        # self._seed_urls = self._config_dto.seed_urls
-        # self._num_articles = self._config_dto.total_articles
-        # self._headers = self._config_dto.headers
-        # self._encoding = self._config_dto.encoding
-        # self._timeout = self._config_dto.timeout
-        # self._should_verify_certificate = self._config_dto.should_verify_certificate
+
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -226,7 +234,6 @@ class Crawler:
         """
         self.config = config
         self.urls: list[str] = []
-        # do not delete the next line!!!
         self.url_pattern = re.compile(r'^https?://teatr-lib\.ru/Library/[\w\-/]+/?$')
         self._current_base = ""
 
@@ -350,9 +357,7 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title_tag = article_soup.find('h1')
-        self.article.title = title_tag.get_text(strip=True) if title_tag else "NOT FOUND"
-        self.article.author = ["NOT FOUND"]
-
+        self.article.title = title_tag.get_text(strip=True)
         date_tag = article_soup.find('time')
         if date_tag:
             date_str = date_tag.get('datetime') or date_tag.get_text(strip=True)
@@ -388,7 +393,7 @@ class HTMLParser:
             response = make_request(self.full_url, self.config)
             if response.status_code != 200:
                 return False
-            soup = BeautifulSoup(response.text, 'html.parser')
+            soup = BeautifulSoup(response.text, 'lxml.parser')
             self._fill_article_with_text(soup)
             self._fill_article_with_meta_information(soup)
             return self.article
