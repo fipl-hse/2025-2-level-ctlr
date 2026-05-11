@@ -209,7 +209,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     response = requests.get(
         url,
         headers=config.get_headers(),
-        timeout=5,
+        timeout=1,
         verify=config.get_verify_certificate()
     )
     response.encoding = config.get_encoding()
