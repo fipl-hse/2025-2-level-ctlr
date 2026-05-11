@@ -1,12 +1,12 @@
 """
 Crawler implementation.
 """
+
 import datetime
 import json
 import pathlib
 import re
 import shutil
-
 
 import requests
 from bs4 import BeautifulSoup
@@ -30,8 +30,8 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self._path = path_to_config
-        self._seed_urls, self._total, self._headers, self._encoding, \
-            self._timeout, self._verify, self._headless = self._validate_and_load()
+        (self._seed_urls, self._total, self._headers, self._encoding,
+         self._timeout, self._verify, self._headless) = self._validate_and_load()
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -342,7 +342,7 @@ def main() -> None:
     crawler = Crawler(config)
     crawler.find_articles()
     article_urls = crawler.urls
-    
+
     for idx, url in enumerate(article_urls, start=1):
         parser = HTMLParser(url, idx, config)
         article = parser.parse()
