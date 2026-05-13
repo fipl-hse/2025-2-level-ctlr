@@ -341,13 +341,16 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        paragraphs = article_soup.find_all('p')
-        if paragraphs:
-            text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
-            self.article.text = '\n\n'.join(text_parts)
-        else:
-            body = article_soup.find('body')
-            self.article.text = ' '.join(body.get_text().split()) if body else ''
+        try:
+            paragraphs = article_soup.find_all('p')
+            if paragraphs:
+                text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+                self.article.text = '\n\n'.join(text_parts)
+            else:
+                body = article_soup.find('body')
+                self.article.text = ' '.join(body.get_text().split())
+        except Exception:
+            self.article.text = ''
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -356,18 +359,19 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = article_soup.find('h1')
-        self.article.title = title_tag.get_text(strip=True)
-        date_tag = article_soup.find('time')
-        if date_tag:
-            date_str = date_tag.get('datetime') or date_tag.get_text(strip=True)
-            self.article.date = self.unify_date_format(date_str)
-        else:
-            meta_date = article_soup.find('meta', {'name': 'date'})
-            if meta_date and meta_date.get('content'):
-                self.article.date = self.unify_date_format(meta_date['content'])
+        try:
+            title_tag = article_soup.find('h1')
+            self.article.title = title_tag.get_text(strip=True)
+            date_tag = article_soup.find('time')
+            if date_tag:
+                date_str = date_tag.get('datetime') or date_tag.get_text(strip=True)
+                self.article.date = self.unify_date_format(date_str)
             else:
-                self.article.date = datetime.datetime.now()
+                meta_date = article_soup.find('meta', {'name': 'date'})
+                if meta_date and meta_date.get('content'):
+                    self.article.date = self.unify_date_format(meta_date['content'])
+        except Exception:
+            self.article.date = datetime.datetime.now()
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
