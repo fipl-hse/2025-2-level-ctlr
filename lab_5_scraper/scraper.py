@@ -7,10 +7,10 @@ import datetime
 import json
 import pathlib
 import re
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup, Tag
-from urllib.parse import urljoin
 
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
@@ -308,7 +308,7 @@ class HTMLParser:
         self.full_url = full_url
         self.article_id = article_id
         self.config = config
-        self.article = Article(full_url)
+        self.article = Article(full_url, article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -317,6 +317,11 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        all_body = article_soup.find_all("p")
+        texts = []
+        for p in all_body:
+            texts.append(p.text)
+        self.article.text = " ".join(texts)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -344,6 +349,10 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
+        response = requests.get(self.full_url)
+        article_bs = BeautifulSoup(response.text)
+        self._fill_article_with_text(article_bs)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
