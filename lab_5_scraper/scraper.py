@@ -251,12 +251,11 @@ def make_request(url: str, config: Config) -> requests.models.Response:
             timeout=config.get_timeout(),
             verify=config.get_verify_certificate()
         )
-    except requests.RequestException:
+    except requests.RequestException as e:
         return None
 
     response.encoding = config.get_encoding()
     return response
-
 
 
 class Crawler:
@@ -288,25 +287,49 @@ class Crawler:
             str: Url from HTML
         """
         href = article_bs.get('href', '')
-        if not href:
-            return ''
+        
+        if not isinstance(href, str):
+            return ""
 
-        if href.startswith('http'):
-            return href
-        return urljoin('https://proza.pishi.pro', href)
+        if '/fantastika/' in href:
+            if href.startswith('http'):
+                return href
+            
+            elif href.startswith('/'):
+                return f"https://proza.pishi.pro{href}"
+
+            else:
+                return f"https://proza.pishi.pro/{href}"
+
+        return ""
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
         needed = self.config.get_num_articles()
-        base_id = 90250
-        base_url = "https://proza.pishi.pro/fantastika/"
 
-        for i in range(needed):
-            article_id = base_id + i
-            full_url = f"{base_url}{article_id}/"
-            self.urls.append(full_url)
+        for seed_url in self.config.get_seed_urls():
+            if len(self.urls) >= needed:
+                break
+
+            response = make_request(seed_url, self.config)
+            if not response:
+                continue
+
+            if response.status_code != 200:
+                continue
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            all_links = soup.find_all('a')
+
+            for link in all_links:
+                if len(self.urls) >= needed:
+                    break
+
+                article_url = self._extract_url(link)
+                if article_url and article_url not in self.urls:
+                    self.urls.append(article_url)
 
     def get_search_urls(self) -> list:
         """
@@ -335,6 +358,8 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
+        self.visited_urls = set()
 
     def find_articles(self) -> None:
         """
@@ -371,18 +396,29 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        text_parts = []
-        for paragraph in article_soup.find_all(['p', 'div.article-text', 'div.content']):
-            raw_text = paragraph.get_text(strip=True)
-            if raw_text and len(raw_text) > 50:
-                text_parts.append(raw_text)
+        text_blocks = []
 
-        if not text_parts:
-            body = article_soup.find('body')
-            if body:
-                text_parts.append(body.get_text(strip=True))
+        content_div = article_soup.find('div', class_='composition_text')
+        if content_div:
+            text = content_div.get_text(separator='\n', strip=True)
+            lines = text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if len(line) > 20:
+                    text_blocks.append(line)
 
-        self.article.text = '\n\n'.join(text_parts)
+        if not text_blocks:
+            content_div = article_soup.find('td', class_='win offset')
+            if content_div:
+                text = content_div.get_text(separator='\n', strip=True)
+                lines = text.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if len(line) > 20 and not line.startswith('Тип:') and not line.startswith('Раздел:'):
+                        text_blocks.append(line)
+        
+        self.article.text = '\n\n'.join(text_blocks)
+        print(f"Article {self.article_id}: extracted {len(self.article.text)} characters")
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -392,16 +428,54 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title_tag = article_soup.find('h1')
+        if not title_tag:
+            title_tag = article_soup.find('h2')
         if title_tag:
             self.article.title = title_tag.get_text(strip=True)
         else:
-            self.article.title = "NOT FOUND"
+            self.article.title = "Без заголовка"
 
-        author_tag = article_soup.find(class_=re.compile(r'author', re.I))
+        author_tag = article_soup.find('div', class_='author') or article_soup.find('span', class_='author')
+        if not author_tag:
+            author_link = article_soup.find('a', href=re.compile(r'/autors_b\.php\?id='))
+            if author_link:
+                author_tag = author_link.find('span', itemprop='name') or author_link
+
         if author_tag:
             self.article.author = [author_tag.get_text(strip=True)]
         else:
             self.article.author = ["NOT FOUND"]
+
+        date_text = None
+        date_div = article_soup.find('div', class_='date')
+        if date_div:
+            date_text = date_div.get_text(strip=True)
+
+        if not date_text:
+            date_span = article_soup.find('span', itemprop='datePublished')
+            if date_span:
+                date_text = date_span.get_text(strip=True)
+
+        if not date_text:
+            for cell in article_soup.find_all('td'):
+                if 'Дата:' in cell.get_text() or 'Дата добавления' in cell.get_text():
+                    date_text = cell.get_text().replace('Дата:', '').replace('Дата добавления', '').strip()
+                    break
+
+        if date_text:
+            self.article.date = self.unify_date_format(date_text)
+            print(f"Article {self.article_id}: found date '{date_text}' -> {self.article.date}")
+        else:
+            self.article.date = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            print(f"Article {self.article_id}: date not found, using today")
+
+        topics = []
+        topic_tags = article_soup.find_all('a', class_='topic') or article_soup.find_all('div', class_='category')
+        for tag in topic_tags:
+            topic_text = tag.get_text(strip=True)
+            if topic_text and topic_text not in topics:
+                topics.append(topic_text)
+        self.article.topics = topics
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -413,7 +487,33 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        return datetime.datetime.now()
+        date_str = date_str.strip()
+
+        months = {
+            'января': 1, 'февраля': 2, 'марта': 3, 'апреля': 4,
+            'мая': 5, 'июня': 6, 'июля': 7, 'августа': 8,
+            'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
+        }
+
+        match = re.search(r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),?\s+(\d{1,2}):(\d{2})', date_str, re.IGNORECASE)
+        if match:
+            day = int(match.group(1))
+            month_name = match.group(2).lower()
+            year = int(match.group(3))
+            hour = int(match.group(4))
+            minute = int(match.group(5))
+
+            month = months.get(month_name, 1)
+            return datetime.datetime(year, month, day, hour, minute, 0)
+
+        match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', date_str)
+        if match:
+            day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            return datetime.datetime(year, month, day, 0, 0, 0)
+
+        print(f"Warning: Could not parse date string: '{date_str}'")
+        return datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
 
     def parse(self) -> Article | bool:
         """
@@ -423,10 +523,10 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         response = make_request(self.full_url, self.config)
-        if response is None or response.status_code != 200:
+        if not response or response.status_code != 200:
             return False
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.content, 'html.parser')
         self._fill_article_with_text(soup)
         self._fill_article_with_meta_information(soup)
 
@@ -453,17 +553,26 @@ def main() -> None:
     """
     config = Config(CRAWLER_CONFIG_PATH)
     prepare_environment(ASSETS_PATH)
-    crawler = Crawler(config)
-    crawler.find_articles()
-    print(f"Articles that were founded: {len(crawler.urls)}")
 
-    for idx, url in enumerate(crawler.get_search_urls(), start=1):
+    crawler = CrawlerRecursive(config)
+    crawler.find_articles()
+
+    print(f"Found {len(crawler.urls)} article URLs")
+
+    saved_count = 0
+    for idx, url in enumerate(crawler.urls[:config.get_num_articles()], 1):
         parser = HTMLParser(full_url=url, article_id=idx, config=config)
         article = parser.parse()
-        if article and article.text:
+
+        if isinstance(article, Article) and len(article.text) > 50:
             to_raw(article)
             to_meta(article)
-            print(f"Article {idx} saved: {url}")
+            saved_count += 1
+            print(f"Saved article {idx}: {url}")
+        else:
+            print(f"Skipped article {idx} (text too short)")
+
+    print(f"Successfully saved {saved_count} out of {config.get_num_articles()} articles")
 
 
 if __name__ == "__main__":
