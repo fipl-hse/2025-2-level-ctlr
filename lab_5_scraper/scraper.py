@@ -213,7 +213,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         verify=config.get_verify_certificate()
     )
     response.encoding = config.get_encoding()
-    sleep(randint(0, 1))
+    sleep(1)
     return response
 
 class Crawler:
@@ -265,13 +265,9 @@ class Crawler:
                     break
                 url = self._extract_url(link)
                 full_url = urljoin(seed_url, url)
-                if (full_url not in self.urls and "isaeva.ru" in full_url and
-                    full_url.endswith('.html')):
-                    lresponse = make_request(full_url, self.config)
-                    if lresponse.ok:
-                        if "afisha.html" not in full_url:
-                            self.urls.append(full_url)
-                            print("foundNewURL", full_url)
+                if (full_url not in self.urls and full_url.endswith('.html')):
+                    self.urls.append(full_url)
+                    print("foundNewURL", full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
@@ -336,12 +332,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        content_div = article_soup.find('div', class_='blog-content') or \
-                  article_soup.find('div', id='content')
-        if not content_div:
-            paragraphs = article_soup.find_all('p')
-        else:
-            paragraphs = content_div.find_all('p')
+        paragraphs = article_soup.find_all('p')
         text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
         self.article.text = '\n'.join(text_parts) if text_parts else "NOT FOUND"
 
