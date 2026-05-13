@@ -67,8 +67,7 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self._path = path_to_config
-        (self._seed_urls, self._total, self._headers, self._encoding,
-         self._timeout, self._verify, self._headless) = self._validate_and_load()
+        self._load_and_validate()
 
 
     def _extract_config_content(self) -> ConfigDTO:
@@ -78,32 +77,23 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
-        with open(self._path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return ConfigDTO(
-            seed_urls=data.get('seed_urls', []),
-            total_articles=data.get('total_articles_to_find_and_parse', 0),
-            headers=data.get('headers', {}),
-            encoding=data.get('encoding', 'utf-8'),
-            timeout=data.get('timeout', 5),
-            should_verify_certificate=data.get('should_verify_certificate', True),
-            headless_mode=data.get('headless_mode', False)
-        )
+        pass
 
 
-    def _validate_and_load(self) -> None:
+    def _load_and_validate(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
-        dto = self._extract_config_content()
+        with open(self._path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
 
-        seed_urls = dto.seed_urls
-        total = dto.total_articles
-        headers = dto.headers
-        encoding = dto.encoding
-        timeout = dto.timeout
-        verify = dto.should_verify_certificate
-        headless = dto.headless_mode
+        seed_urls = data.get('seed_urls', [])
+        total = data.get('total_articles_to_find_and_parse', 0)
+        headers = data.get('headers', {})
+        encoding = data.get('encoding', 'utf-8')
+        timeout = data.get('timeout', 5)
+        verify = data.get('should_verify_certificate', True)
+        headless = data.get('headless_mode', False)
 
         if not isinstance(seed_urls, list):
             raise IncorrectSeedURLError("seed_urls must be a list")
@@ -116,6 +106,7 @@ class Config:
             raise IncorrectNumberOfArticlesError("total_articles must be positive integer")
         if total > 150:
             raise NumberOfArticlesOutOfRangeError("total_articles must not exceed 150")
+
         if not isinstance(headers, dict):
             raise IncorrectHeadersError("headers must be a dict")
         if not isinstance(encoding, str):
@@ -127,7 +118,13 @@ class Config:
         if not isinstance(headless, bool):
             raise IncorrectVerifyError("headless_mode must be boolean")
 
-        return seed_urls, total, headers, encoding, timeout, verify, headless
+        self._seed_urls = seed_urls
+        self._total = total
+        self._headers = headers
+        self._encoding = encoding
+        self._timeout = timeout
+        self._verify = verify
+        self._headless = headless
 
 
     def get_seed_urls(self) -> list[str]:
@@ -239,7 +236,7 @@ class Crawler:
         self.config = config
         self.urls = []
 
-    def _extract_url(self, article_bs: Tag) -> str:
+    def _extract_url(self, tag: Tag) -> str:
         """
         Find and retrieve url from HTML.
 
@@ -249,39 +246,17 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        href = article_bs.get('href', '')
+        href = tag.get('href', '')
         return urljoin('https://www.netslova.ru', href)
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
+        self.urls = self.config.get_seed_urls()
         needed = self.config.get_num_articles()
-        visited = set()
-
-        for seed in self.config.get_seed_urls():
-            if len(self.urls) >= needed:
-                break
-            if seed in visited:
-                continue
-            visited.add(seed)
-
-            response = make_request(seed, self.config)
-            if response.status_code != 200:
-                continue
-            soup = BeautifulSoup(response.text, 'html.parser')
-            for link in soup.find_all('a', href=True):
-                if len(self.urls) >= needed:
-                    break
-                href = link['href']
-                full_url = urljoin(seed, href)
-                if (full_url.startswith('https://www.netslova.ru')
-                        and full_url not in visited
-                        and full_url not in self.urls):
-                    if full_url.endswith(('.htm', '.html')):
-                        self.urls.append(full_url)
-                        visited.add(full_url)
-
+        if len(self.urls) > needed:
+            self.urls = self.urls[:needed]
 
     def get_search_urls(self) -> list:
         """
@@ -347,13 +322,13 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        for elem in soup(['script', 'style', 'nav', 'header', 'footer']):
+        for elem in article_soup(['script', 'style', 'nav', 'header', 'footer']):
             elem.decompose()
-        content = soup.find('pre')
+        content = article_soup.find('pre')
         if not content:
-            content = soup.find('div', class_='text')
+            content = article_soup.find('div', class_='text')
         if not content:
-            content = soup.find('body')
+            content = article_soup.find('body')
         if content:
             paragraphs = content.find_all(['p', 'pre', 'div'])
             if paragraphs:
@@ -390,7 +365,7 @@ class HTMLParser:
         else:
             self.article.author = ["NOT FOUND"]
 
-    def unify_date_format(self, date_str: str) -> datetime.datetime:
+    def unify_date_format(self, _: str) -> datetime.datetime:
         """
         Unify date format.
 
@@ -446,9 +421,11 @@ def main() -> None:
         parser = HTMLParser(url, idx, config)
         article = parser.parse()
         if article and article.text:
-            to_raw(article, ASSETS_PATH)
-            to_meta(article, ASSETS_PATH)
-            
+            to_raw(article)
+            to_meta(article)
+            print(f"Saved article {idx}: {url}")
+
+    print(f"Done. {len(article_urls)} articles saved.")
 
 if __name__ == "__main__":
     main()
