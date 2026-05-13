@@ -266,8 +266,8 @@ class Crawler:
                 url = self._extract_url(link)
                 full_url = urljoin(seed_url, url)
                 if (full_url not in self.urls and full_url.endswith('.html')):
-                    self.urls.append(full_url)
-                    print("foundNewURL", full_url)
+                    if "afisha.html" not in full_url:
+                        self.urls.append(full_url)
     def get_search_urls(self) -> list:
         """
         Get seed_urls param.
