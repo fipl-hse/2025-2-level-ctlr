@@ -393,7 +393,7 @@ class HTMLParser:
             response = make_request(self.full_url, self.config)
             if response.status_code != 200:
                 return False
-            soup = BeautifulSoup(response.text, 'lxml.parser')
+            soup = BeautifulSoup(response.text, 'lxml')
             self._fill_article_with_text(soup)
             self._fill_article_with_meta_information(soup)
             return self.article
