@@ -341,16 +341,16 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        try:
-            paragraphs = article_soup.find_all('p')
-            if paragraphs:
-                text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
-                self.article.text = '\n\n'.join(text_parts)
-            else:
-                body = article_soup.find('body')
+        paragraphs = article_soup.find_all('p')
+        if paragraphs:
+            text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+            self.article.text = '\n\n'.join(text_parts)
+        else:
+            body = article_soup.find('body')
+            if body is not None:
                 self.article.text = ' '.join(body.get_text().split())
-        except Exception:
-            self.article.text = ''
+            else:
+                self.article.text = ''
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
