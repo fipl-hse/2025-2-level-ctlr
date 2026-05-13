@@ -358,7 +358,7 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         title_tag = article_soup.find('h1')
-        self.article.title = title_tag.get_text(strip=True)
+        self.article.title = title_tag.get_text(strip=True) if title_tag else "No heading"
         date_tag = article_soup.find('time')
         if date_tag and date_tag.get('datetime'):
             self.article.date = self.unify_date_format(date_tag['datetime'])
@@ -390,7 +390,7 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         self.article.text = ""
-        self.article.title = "Ошибка загрузки"
+        self.article.title = "Downloading error"
         self.article.date = datetime.datetime.now()
 
         try:
@@ -403,7 +403,6 @@ class HTMLParser:
                 print(f"Non-200 status {response.status_code} for {self.full_url}")
         except requests.exceptions.RequestException as e:
             print(f"Request error for {self.full_url}: {e}")
-
         return self.article
 
 
