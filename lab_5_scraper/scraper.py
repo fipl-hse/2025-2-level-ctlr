@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw, to_meta
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
@@ -66,8 +66,8 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
-        self._path = path_to_config
-        self._load_and_validate()
+        self.path_to_config = path_to_config
+        self._validate_and_load()
 
 
     def _extract_config_content(self) -> ConfigDTO:
@@ -77,15 +77,15 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
 
-    def _load_and_validate(self) -> None:
+    def _validate_and_load(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
-        with open(self._path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        data = self._extract_config_content()
 
         seed_urls = data.get('seed_urls', [])
         total = data.get('total_articles_to_find_and_parse', 0)
@@ -119,12 +119,12 @@ class Config:
             raise IncorrectVerifyError("headless_mode must be boolean")
 
         self._seed_urls = seed_urls
-        self._total = total
+        self._num_articles = total
         self._headers = headers
         self._encoding = encoding
         self._timeout = timeout
-        self._verify = verify
-        self._headless = headless
+        self._should_verify_certificate = verify
+        self._headless_mode = headless
 
 
     def get_seed_urls(self) -> list[str]:
@@ -144,7 +144,7 @@ class Config:
         Returns:
             int: Total number of articles to scrape
         """
-        return self._total
+        return self._num_articles
 
 
     def get_headers(self) -> dict[str, str]:
@@ -184,7 +184,7 @@ class Config:
         Returns:
             bool: Whether to verify certificate or not
         """
-        return self._verify
+        return self._should_verify_certificate
 
 
     def get_headless_mode(self) -> bool:
@@ -194,7 +194,7 @@ class Config:
         Returns:
             bool: Whether to use headless mode or not
         """
-        return self._headless
+        return self._headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
@@ -253,8 +253,8 @@ class Crawler:
         """
         Find articles.
         """
-        self.urls = self.config.get_seed_urls()
         needed = self.config.get_num_articles()
+        self.urls = self.config.get_seed_urls()
         if len(self.urls) > needed:
             self.urls = self.urls[:needed]
 
@@ -423,9 +423,7 @@ def main() -> None:
         if article and article.text:
             to_raw(article)
             to_meta(article)
-            print(f"Saved article {idx}: {url}")
-
-    print(f"Done. {len(article_urls)} articles saved.")
+            
 
 if __name__ == "__main__":
     main()
