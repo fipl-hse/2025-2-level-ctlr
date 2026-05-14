@@ -372,12 +372,12 @@ class HTMLParser:
         else:
             self.article.title = title.get_text(strip=True)
 
-        author = article_soup.find('div', class_= 'author')
+        author = article_soup.find('div', class_= 'author_name author_name_last')
 
         if author is None:
             self.article.author = ["NOT FOUND"]
         else:
-            self.article.author = author.get_text(strip=True)
+            self.article.author = [author.get_text(strip=True)]
 
         date = article_soup.find('div', class_ = "entry_date")
 
