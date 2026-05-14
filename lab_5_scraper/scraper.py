@@ -281,7 +281,7 @@ class Crawler:
             if not response or response.status_code != 200:
                 continue
 
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, 'lxml')
             self._current_base = url
 
             for link in soup.find_all('a', href=True):
@@ -290,11 +290,19 @@ class Crawler:
                     continue
                 if any(full_url.lower().endswith(ext) for ext in skip_extensions):
                     continue
+
+                if '/Library/' not in full_url:
+                    continue
+
+                link_text = link.get_text(strip=True).lower()
+                if link_text != 'читать':
+                    continue
+
                 if full_url not in self.urls and len(self.urls) < needed:
                     self.urls.append(full_url)
+
                 if full_url not in visited and len(self.urls) < needed:
                     queue.append(full_url)
-        print(f"Crawling finished. Collected {len(self.urls)} URLs.")
 
     def get_search_urls(self) -> list:
         """
@@ -362,12 +370,12 @@ class HTMLParser:
         """
         paragraphs = article_soup.find_all('p')
         if paragraphs:
-            text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+            text_parts = [p.get_text(strip=True, separator=' ') for p in paragraphs if p.get_text(strip=True, separator=' ')]
             self.article.text = '\n\n'.join(text_parts)
         else:
             body = article_soup.find('body')
             if body is not None:
-                self.article.text = ' '.join(body.get_text().split())
+                self.article.text = ' '.join(body.get_text(strip=True, separator=' ').split())
             else:
                 self.article.text = ''
 
@@ -378,21 +386,19 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title = None
         if article_soup.title and article_soup.title.string:
-            title = article_soup.title.string.strip()
-        else:
-            title = None
-            meta_title = article_soup.find('meta', property='og:title')
-            if meta_title and meta_title.get('content'):
-                title = meta_title['content'].strip()
-            if not title:
-                h1 = article_soup.find('h1')
-                if h1:
-                    title = h1.get_text(strip=True)
-            if not title:
-                title = "No heading"
+            raw_title = article_soup.title.string.strip()
+            for sep in ['|', '–', '—', '::', '-', '»']:
+                if sep in raw_title:
+                    raw_title = raw_title.split(sep)[0].strip()
+                    break
+            title = raw_title
+        if not title:
+            title = "No heading"
+        title = title.strip()
         self.article.title = title
-        print(f"DEBUG title: {title}")
+        print(f"DEBUG: {self.full_url} -> title='{title}'")
 
         author = ["NOT FOUND"]
         meta_author = article_soup.find('meta', {'name': 'author'})
