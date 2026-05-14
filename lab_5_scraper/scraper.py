@@ -76,7 +76,7 @@ class Config:
         self.path_to_config = path_to_config
         self._validate_config_content()
         self._seed_urls = self._config.seed_urls
-        self._num_articles = self._config.total_articles_to_find_and_parse
+        self._num_articles = self._config.total_articles
         self._headers = self._config.headers
         self._encoding = self._config.encoding
         self._timeout = self._config.timeout
@@ -114,13 +114,13 @@ class Config:
             if not re.match(pattern, url):
                 raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
         if (
-            not isinstance(config_dto.total_articles_to_find_and_parse, int)
-            or isinstance(config_dto.total_articles_to_find_and_parse, bool)
-            or config_dto.total_articles_to_find_and_parse < 0
+            not isinstance(config_dto.total_articles, int)
+            or isinstance(config_dto.total_articles, bool)
+            or config_dto.total_articles < 0
         ):
             raise (IncorrectNumberOfArticlesError('Number of articles is either not integer'
             'or less than 0'))
-        if config_dto.total_articles_to_find_and_parse > 150:
+        if config_dto.total_articles > 150:
             raise NumberOfArticlesOutOfRangeError('Number if articles is out of range')
         if not isinstance(config_dto.headers, dict):
             raise IncorrectHeadersError('Headers are not in a form of dictionary')
@@ -374,7 +374,13 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        return datetime.datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        response = make_request(self.full_url, self.config)
+        if not response.ok:
+            return False
+        soup = BeautifulSoup(response.text, 'lxml')
+        self._fill_article_with_text(soup)
+        self._fill_article_with_meta_information(soup)
+        return self.article
 
     def parse(self) -> Article | bool:
         """
