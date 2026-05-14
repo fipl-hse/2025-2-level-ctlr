@@ -382,7 +382,7 @@ class HTMLParser:
         date = article_soup.find('div', class_ = "entry_date")
 
         if date is None:
-            self.article.date = ["NOT FOUND"]
+            self.article.date = datetime.datetime.now()
         else:
             raw_date = date.get('content')
             self.article.date = self.unify_date_format(raw_date)
@@ -397,13 +397,10 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        response = make_request(self.full_url, self.config)
-        if not response.ok:
-            return False
-        soup = BeautifulSoup(response.text, 'lxml')
-        self._fill_article_with_text(soup)
-        self._fill_article_with_meta_information(soup)
-        return self.article
+        try:
+            return datetime.datetime.fromisoformat(date_str)
+        except (ValueError, TypeError):
+            return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
