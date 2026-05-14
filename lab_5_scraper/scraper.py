@@ -283,6 +283,8 @@ class Crawler:
             self._current_base = url
 
             for link in soup.find_all('a', href=True):
+                if len(self.urls) >= needed:
+                    break
                 full_url = self._extract_url(link)
                 if not full_url:
                     continue
