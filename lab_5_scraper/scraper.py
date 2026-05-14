@@ -259,7 +259,7 @@ class Crawler:
         if 'ptj.spb.ru' not in full_url:
             return ""
         article_pattern = re.compile(
-            r'(archive/\d+/.+/.+/|blog/[^/]+/?)$'
+            r'(archive/\d+/.+/.+/|blog/[^/#?]+/?)(?:[#?].*)?$'
         )
         if article_pattern.search(full_url):
             return full_url
@@ -366,11 +366,36 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = article_soup.find('div', class_ = "title")
-        if title is None:
-            self.article.title = ["NOT FOUND"]
+        # title = article_soup.find("title")
+        # if title:
+        #     self.article.title = title.get_text(strip=True)
+        # else:
+        #     self.article.title = "NOT FOUND"
+
+        # author = article_soup.find('div', class_= 'author_name author_name_last')
+
+        # if author is None:
+        #     self.article.author = ["NOT FOUND"]
+        # else:
+        #     self.article.author = [author.get_text(strip=True)]
+
+        # date = article_soup.find('div', class_ = "entry_date")
+
+        # if date is None:
+        #     self.article.date = datetime.datetime.now()
+        # else:
+        #     raw_date = date.get('content')
+        #     self.article.date = self.unify_date_format(raw_date)
+        title_tag = article_soup.find('div', class_='title')
+        if not title_tag:
+            title_tag = article_soup.find('h1')
+        if not title_tag:
+            title_tag = article_soup.find('title')
+
+        if title_tag:
+            self.article.title = title_tag.get_text(strip=True)
         else:
-            self.article.title = title.get_text(strip=True)
+            self.article.title = "NOT FOUND"
 
         author = article_soup.find('div', class_= 'author_name author_name_last')
 
@@ -378,9 +403,8 @@ class HTMLParser:
             self.article.author = ["NOT FOUND"]
         else:
             self.article.author = [author.get_text(strip=True)]
-
+        
         date = article_soup.find('div', class_ = "entry_date")
-
         if date is None:
             self.article.date = datetime.datetime.now()
         else:
