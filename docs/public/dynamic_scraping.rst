@@ -8,11 +8,9 @@ articles dynamically, for example, after a user scrolls or presses a
 button. In such cases, it is often impossible to collect a significant
 number of articles by just iterating over seed URLs. Alternative
 solution would be employing frameworks that are capable of emulating
-user activity. One of them is `selenium library <https://www.selenium.dev/>`__.
+user activity. One of them is `selenium library
+<https://www.selenium.dev/selenium/docs/api/py/api.html#>`__.
 
-.. hint:: Follow `instruction <https://www.selenium.dev/
-          documentation/webdriver/getting_started/install_drivers/>`__
-          to install Chrome driver.
 
 Let’s discuss how to imitate two most popular user activities: scrolling
 and button pressing.
@@ -20,8 +18,9 @@ and button pressing.
 What if my web source expects a user to scroll to provide more URLs?
 --------------------------------------------------------------------
 
-Firstly, instantiate
-`selenium.webdriver.Chrome <https://www.selenium.dev/documentation/webdriver/browsers/chrome/>`__
+Firstly, instantiate Chrome webdriver
+`selenium.webdriver.chrome.webdriver.WebDriver
+<https://www.selenium.dev/selenium/docs/api/py/selenium_webdriver_chrome/selenium.webdriver.chrome.webdriver.html>`__
 class. It emulates a native browsing. Save the Chrome instance to the
 ``driver`` attribute of a Crawler.
 
@@ -56,15 +55,16 @@ driver (refer to the previous section for more details).
 
 Next, the following steps must be taken. Firstly, it is necessary to
 find the clickable buttons with ``driver.find_elements`` methods. Use
-`documentation <https://www.selenium.dev/documentation/webdriver/elements/finders/>`__
+`documentation <https://www.selenium.dev/selenium/docs/api/py/selenium_webdriver_chrome
+/selenium.webdriver.chrome.webdriver.html#selenium.webdriver.chrome.webdriver.WebDriver.find_elements>`__
 to determine the arguments to be passed to find the desired elements.
 Usually the elements corresponding to buttons possess ``click`` method.
 In some cases it is necessary to emulate key pressing. To do this, refer
 to ``button.send_keys`` method.
 
 .. hint:: To find the ``send_keys`` argument that corresponds to the
-          desired key, refer `here <https://github.com/SeleniumHQ/
-          selenium/blob/selenium-4.2.0/py/selenium/webdriver/common/keys.py#L23>`__.
+          desired key, refer `here <https://www.selenium.dev/selenium/docs/api/py
+          /selenium_webdriver_common/selenium.webdriver.common.keys.html>`__.
 
 Example usage:
 
