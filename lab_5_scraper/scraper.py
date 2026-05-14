@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
@@ -213,24 +213,14 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    timeout = config.get_timeout()
-
-    if timeout <= 0:
-        timeout = 10 
-        
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=timeout,
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = config.get_encoding()
-        return response
-    except (requests.RequestException, ValueError):
-        response = requests.Response()
-        response.status_code = 404
-        return response
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate(),
+    )
+    response.encoding = config.get_encoding()
+    return response
 
 
 class Crawler:
@@ -261,40 +251,40 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        href = article_bs.get('href')
-        if not href:
+        href = article_bs.get("href")
+        if not href or not isinstance(href, str):
             return ''
-        if href.startswith('http'):
-            return href
-        return urljoin('https://ptj.spb.ru/', href)
-
+        base_url = self.config.get_seed_urls()[0]
+        full_url = urljoin(base_url, href)
+        if 'ptj.spb.ru' not in full_url:
+            return ""
+        article_pattern = re.compile(
+            r'(archive/\d+/.+/.+/|blog/[^/]+/?)$'
+        )
+        if article_pattern.search(full_url):
+            return full_url
+        return ""
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
-        target_count = self.config.get_num_articles()
-        seed_urls = self.get_search_urls()
-
-        for seed_url in seed_urls:
-            response = make_request(seed_url, self.config)
-            if not response or response.status_code != 200:
-                continue
-
-            soup = BeautifulSoup(response.text, 'lxml')
-            for link in soup.find_all('a'):
-                if len(self.urls) >= target_count:
-                    return
-                url = self._extract_url(link)
-                if url and "ptj.spb.ru/blog/" in url and url not in self.urls:
-
-                    article_response = make_request(url, self.config)
-                    
-                    if article_response.status_code == 200:
-                        self.urls.append(url)
-                    
-                    if len(self.urls) >= target_count:
+        for seed_url in self.config.get_seed_urls():
+            if len(self.urls) >= self.config.get_num_articles():
+                return
+            try:
+                response = make_request(seed_url, self.config)
+                if not response:
+                    continue
+                soup = BeautifulSoup(response.text, "lxml")
+                for tag in soup.find_all("a"):
+                    link = self._extract_url(tag)
+                    if link and link not in self.urls:
+                        self.urls.append(link)
+                    if len(self.urls) >= self.config.get_num_articles():
                         return
+            except (requests.RequestException, AttributeError, ValueError):
+                continue
 
 
     def get_search_urls(self) -> list:
@@ -328,7 +318,7 @@ class HTMLParser:
         self.full_url = full_url
         self.article_id = article_id
         self.config = config
-        self.article = Article(url=full_url, article_id=article_id)
+        self.article = Article(url=self.full_url, article_id=self.article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -337,14 +327,14 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        content_div = article_soup.find('div', class_='blog-content') or \
-                  article_soup.find('div', id='content')
-        if not content_div:
-            paragraphs = article_soup.find_all('p')
-        else:
-            paragraphs = content_div.find_all('p')
-        text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
-        self.article.text = '\n'.join(text_parts) if text_parts else "NOT FOUND"
+        texts = []
+        content_block = article_soup.find("div", class_="entry")
+        if content_block:
+            for p in content_block.find_all("p"):
+                text = p.get_text(strip=True)
+                if text:
+                    texts.append(text)
+        self.article.text = "\n\n".join(texts) if texts else ""
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -353,6 +343,26 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title = article_soup.find('div', class_ = "title")
+        if title is None:
+            self.article.title = ["NOT FOUND"]
+        else:
+            self.article.title = title.get_text(strip=True)
+
+        author = article_soup.find('div', class_= 'author')
+
+        if author is None:
+            self.article.author = ["NOT FOUND"]
+        else:
+            self.article.author = author.get_text(strip=True)
+
+        date = article_soup.find('div', class_ = "entry_date")
+
+        if date is None:
+            self.article.date = ["NOT FOUND"]
+        else:
+            raw_date = date.get('content')
+            self.article.date = self.unify_date_format(raw_date)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -364,6 +374,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        return datetime.datetime.fromisoformat(date_str.replace("Z", "+00:00"))
 
     def parse(self) -> Article | bool:
         """
@@ -373,11 +384,11 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         response = make_request(self.full_url, self.config)
-        if not response.ok:
-            return self.article
-        soup = BeautifulSoup(response.text, 'lxml')
-        self._fill_article_with_text(soup)
-        self._fill_article_with_meta_information(soup)
+        if not response:
+            return False
+        article_soup = BeautifulSoup(response.text, "lxml")
+        self._fill_article_with_text(article_soup)
+        self._fill_article_with_meta_information(article_soup)
         return self.article
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -406,6 +417,7 @@ def main() -> None:
         article = parser.parse()
         if article:
             to_raw(article)
+            to_meta(article)
 
 
 if __name__ == "__main__":
