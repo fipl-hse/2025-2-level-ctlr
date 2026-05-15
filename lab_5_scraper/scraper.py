@@ -2,6 +2,8 @@
 Crawler implementation.
 """
 
+# pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
+
 import datetime
 import json
 import pathlib
@@ -20,38 +22,30 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 class IncorrectSeedURLError(Exception):
     """Seed URL does not match standard pattern."""
-    pass
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
     """Number of articles out of range 1..150."""
-    pass
 
 
 class IncorrectNumberOfArticlesError(Exception):
     """Number of articles is not a positive integer."""
-    pass
 
 
 class IncorrectHeadersError(Exception):
     """Headers are not a dictionary."""
-    pass
 
 
 class IncorrectEncodingError(Exception):
     """Encoding is not a string."""
-    pass
 
 
 class IncorrectTimeoutError(Exception):
     """Timeout not in 1..60."""
-    pass
 
 
 class IncorrectVerifyError(Exception):
     """Verify certificate or headless mode is not boolean."""
-    pass
-
 
 
 class Config:
@@ -66,9 +60,16 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
-        self.path_to_config = path_to_config
-        self._validate_and_load()
-
+        self._path = path_to_config
+        self._validate_config_content()
+        config_data = self._extract_config_content()
+        self._seed_urls = config_data["seed_urls"]
+        self._num_articles = config_data["total_articles_to_find_and_parse"]
+        self._headers = config_data["headers"]
+        self._encoding = config_data["encoding"]
+        self._timeout = config_data["timeout"]
+        self._should_verify_certificate = config_data["should_verify_certificate"]
+        self._headless_mode = config_data["headless_mode"]
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -77,11 +78,11 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+        with open(self._path, 'r', encoding='utf-8') as f:
             return json.load(f)
 
 
-    def _validate_and_load(self) -> None:
+    def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
@@ -117,14 +118,6 @@ class Config:
             raise IncorrectVerifyError("should_verify_certificate must be boolean")
         if not isinstance(headless, bool):
             raise IncorrectVerifyError("headless_mode must be boolean")
-
-        self._seed_urls = seed_urls
-        self._num_articles = total
-        self._headers = headers
-        self._encoding = encoding
-        self._timeout = timeout
-        self._should_verify_certificate = verify
-        self._headless_mode = headless
 
 
     def get_seed_urls(self) -> list[str]:
@@ -224,7 +217,7 @@ class Crawler:
     """
 
     #: Url pattern
-    url_pattern: re.Pattern | str = re.compile(r'')
+    url_pattern: re.Pattern | str
 
     def __init__(self, config: Config) -> None:
         """
@@ -236,7 +229,7 @@ class Crawler:
         self.config = config
         self.urls = []
 
-    def _extract_url(self, tag: Tag) -> str:
+    def _extract_url(self, article_bs: Tag) -> str:
         """
         Find and retrieve url from HTML.
 
@@ -246,8 +239,8 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        href = tag.get('href', '')
-        return urljoin('https://www.netslova.ru', href)
+        href = article_bs.get("href", "")
+        return urljoin("https://www.netslova.ru", href)
 
     def find_articles(self) -> None:
         """
@@ -365,7 +358,7 @@ class HTMLParser:
         else:
             self.article.author = ["NOT FOUND"]
 
-    def unify_date_format(self, _: str) -> datetime.datetime:
+    def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
         Unify date format.
 
@@ -377,6 +370,7 @@ class HTMLParser:
         """
         return datetime.datetime.now()
 
+
     def parse(self) -> Article | bool:
         """
         Parse each article.
@@ -385,7 +379,7 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         response = make_request(self.full_url, self.config)
-        if response.status_code != 200:
+        if not response.ok:
             return False
         soup = BeautifulSoup(response.text, 'html.parser')
         self._fill_article_with_text(soup)
@@ -423,7 +417,10 @@ def main() -> None:
         if article and article.text:
             to_raw(article)
             to_meta(article)
-            
+            print(f"Saved article {idx}: {url}")
+
+    print(f"Done. {len(article_urls)} articles saved.")
+
 
 if __name__ == "__main__":
     main()
