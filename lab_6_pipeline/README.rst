@@ -139,12 +139,13 @@ to check if you can get it.
       fails appropriately if the latter is incorrect. Criteria:
 
       1. Dataset exists (there is a folder).
-      2. Dataset is not empty (there are files inside).
+      2. Dataset is not empty (there are files inside and files are not empty).
       3. Dataset is balanced - there are only files that follow the
          naming conventions:
 
          1. ``N_raw.txt`` where N is a valid number.
          2. Numbers of articles are from 1 to N without any slips.
+         3. The number of ``N_raw.txt`` and ``N_meta.txt`` files is the same.
 
    3. Pipeline cleans text in each file by removing punctuation and
       casting it to the lower case (no *lemmatization* or *tagging*).
@@ -202,9 +203,9 @@ to check if you can get it.
 
       1. `Example raw text
          <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
-         lab_6_pipeline/tests/test_files/1_raw.txt>`__ and `Example meta info
+         lab_6_pipeline/tests/test_files/2_raw.txt>`__ and `Example meta info
          <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
-         lab_6_pipeline/tests/test_files/1_meta.json>`__.
+         lab_6_pipeline/tests/test_files/2_meta.json>`__.
 
 Implementation tactics
 ----------------------
@@ -240,7 +241,7 @@ Stage 0. Prerequisites
 .. important:: Do not change modules external to your code, for example
                ``core_utils/article/article.py``, consider them as not available
                for installation. If you see a way to improve external modules,
-               propose them in a separate PR - mentors will review them separately
+               propose them in a separate PR — mentors will review them separately
                and give you bonuses as any improvements are appreciated.
 
 Stage 1. Introduce a corpus abstraction: ``CorpusManager``
@@ -260,7 +261,7 @@ Stage 1.1. Introduce ``CorpusManager`` abstraction
 
 The :py:class:`lab_6_pipeline.pipeline.CorpusManager` is an entity
 that knows where the dataset is placed
-and what are the available files of this dataset.
+and what the available files of this dataset are.
 
 It should be instantiated with the following instruction:
 
@@ -283,7 +284,7 @@ Stage 1.2. Implement a method for a dataset validation
 Pipeline expects that dataset is collected by scraper. It must not
 start working if dataset is invalid. The very first thing that should
 happen after :py:class:`lab_6_pipeline.pipeline.CorpusManager`
-is instantiated is a dataset validation.
+is instantiated is dataset validation.
 Implement :py:meth:`lab_6_pipeline.pipeline.CorpusManager._validate_dataset`
 method.
 
@@ -296,14 +297,10 @@ When dataset is valid, method returns ``None``. Otherwise:
 
 1. One of the following errors is thrown:
 
-   -  ``FileNotFoundError``: file does not exist;
-   -  ``NotADirectoryError``: path does not lead to directory;
+   -  ``FileNotFoundError``: path does not exist;
+   -  ``NotADirectoryError``: path does not lead to a directory;
    -  ``InconsistentDatasetError``: IDs contain slips, number of meta
       and raw files is not equal, files are empty;
-
-      -  For **mark 4**, check that dataset contains no slips in IDs of
-         raw files and files are not empty.
-
    -  ``EmptyDirectoryError``: directory is empty.
 
 2. Script immediately finishes execution.
@@ -345,7 +342,7 @@ Then we put new pair to the storage:
 
    self._storage[1] = Article(url=None, article_id=1)
 
-.. note:: The :py:class:`lab_6_pipeline.pipeline.CorpusManager` knows where are the files,
+.. note:: The :py:class:`lab_6_pipeline.pipeline.CorpusManager` knows where the files are,
           it can easily find them by id, but it is not its responsibility
           to perform actual file reads and writes.
           See ``core_utils/article/io.py`` module for article
@@ -356,7 +353,7 @@ Stage 1.4. Implement a method for retrieval of files storage
 
 The ``self._storage`` attribute is not a part of
 :py:class:`lab_6_pipeline.pipeline.CorpusManager`
-interface, therefore we need a special getter - a method that just
+interface, therefore we need a special getter — a method that just
 returns a storage value. At this stage, you need to implement
 :py:meth:`lab_6_pipeline.pipeline.CorpusManager.get_articles` method.
 
@@ -379,7 +376,7 @@ After implementation of preprocessing, your pipeline must save results
 in the files with the names following the pattern ``N_cleaned.txt``. See
 examples for a better understanding: `Raw text
 <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
-lab_6_pipeline/tests/test_files/1_raw.txt>`__ - `Desired output
+lab_6_pipeline/tests/test_files/1_raw.txt>`__ — `Desired output
 <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
 lab_6_pipeline/tests/test_files/reference_score_four.txt>`__.
 
@@ -434,7 +431,7 @@ using ``spacy-udpipe`` library and save the result in the file with the
 name following the pattern ``N_udpipe.conllu``.
 See examples for a better understanding: `Raw text
 <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
-lab_6_pipeline/tests/test_files/1_raw.txt>`__ - `Desired output
+lab_6_pipeline/tests/test_files/1_raw.txt>`__ — `Desired output
 <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
 lab_6_pipeline/tests/test_files/reference_udpipe_test.conllu>`__.
 
@@ -453,7 +450,7 @@ Stage 3.1.1 Download model from GitHub releases
 
 You are required to download the UDPipe model from `HERE
 <https://github.com/fipl-hse/2025-2-level-ctlr/releases/tag/v1.0.0>`__
-and place the model to ``lab_6_pipeline/assets/model``.
+and place the model in ``lab_6_pipeline/assets/model`` folder.
 
 Stage 3.1.2 Introduce ``UDPipeAnalyzer`` abstraction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -464,8 +461,8 @@ for processing text and outputting its linguistic features in CoNLL-U format.
 
 Notice that this class inherits from
 ``LibraryWrapper``, which defines a specific set of methods to be present
-across all wrappers: ``_bootstrap``, ``analyze``, ``to_conllu``, ``from_conllu``
-and ``get_document``, as well as ``self._analyzer`` attribute.
+across all wrappers: ``_bootstrap``, ``analyze``, ``to_conllu``, and ``from_conllu``,
+as well as ``self._analyzer`` attribute.
 In the following sections each field will be explained.
 
 First, the wrapper should be instantiated with the following instruction:
@@ -492,17 +489,6 @@ returns the resulting model, which is further stored in the protected
 ``self._analyzer`` attribute of
 :py:class:`lab_6_pipeline.pipeline.UDPipeAnalyzer` instance.
 
-.. note:: Naturally, methods of ``spacy-udpipe`` module return an instance of
-          its own abstraction ``Language``, not the instance of ``AbstractCoNLLUAnalyzer``,
-          as specified in the typing annotation of
-          :py:meth:`lab_6_pipeline.pipeline.UDPipeAnalyzer._bootstrap`.
-          However, given that the laboratory work covers more than one language analyzer,
-          it is necessary to unite all the different types of analyzer instances used.
-          For this exact reason class ``AbstractCoNLLUAnalyzer`` is defined: it does not
-          impose a special interface, as protocols of pipeline and library wrappers do,
-          but simply indicates that this object is responsible for analyzing the language
-          material. As for the interface of the analyzer object, it is responsibility
-          of corresponding library wrapper to handle it.
 
 Stage 3.2. Process text via ``UDPipeAnalyzer`` abstraction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -607,18 +593,15 @@ you are required to implement method
 Their responsibility is the opposite of that of
 :py:meth:`lab_6_pipeline.pipeline.UDPipeAnalyzer.to_conllu` method: it
 accepts article instance, derives the name of the file where their UD properties are stored,
-and converts contents to the ``CoNLLUDocument`` via ``parser`` module of the
-``spacy_conll`` library.
+and converts contents to the corresponding document type of spacy
+library `Doc <https://spacy.io/api/doc>`__
+via ``parser`` module of the ``spacy_conll`` library.
 
 .. tip:: Refer to the corresponding seminar materials
          or inspect `the official repository of the library
          <https://github.com/BramVanroy/spacy_conll/blob/master/README.md>`__
          to learn more about appropriate configuration details.
 
-.. note:: Note that ``CoNLLUDocument``, similarly to ``AbstractCoNLLUAnalyzer``,
-          is a protocol that is used to mimic the UDPipe document class of the
-          respective library and help unify the interfaces for further usage with
-          different libraries.
 
 Stage 4.2. Introduce ``POSFrequencyPipeline`` abstraction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -669,7 +652,7 @@ Once executed,
           and get UD information with the corresponding to the analyzer
           :py:meth:`core_utils.pipeline.LibraryWrapper.from_conllu` method.
 
-.. note:: It is mandatory to use :py:meth:`core_utils.article.article.Article.get_file_path`,
+.. note:: It is mandatory to use :py:meth:`core_utils.article.article.Article.get_meta_file_path`,
           :py:meth:`core_utils.article.article.Article.set_pos_info` methods and
           :py:func:`core_utils.article.io.to_meta`,
           :py:func:`core_utils.article.io.from_meta` functions.
@@ -699,7 +682,7 @@ information from ``.conllu`` files and the functionality of ``networkx`` library
 
 See examples for a better understanding: `Raw text
 <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
-lab_6_pipeline/tests/test_files/2_raw.txt>`__ - `Desired output
+lab_6_pipeline/tests/test_files/2_raw.txt>`__ — `Desired output
 <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
 lab_6_pipeline/tests/test_files/2_meta.json>`__.
 
@@ -716,7 +699,7 @@ During instantiation it must accept an instance of ``CorpusManager``,
 instance of an analyzer and a tuple of POS tags for required syntactic pattern.
 
 In this laboratory work we are interested in exploring
-verb control noun with preposition models, that is why there would be
+verb controlling a noun with preposition models, that is why there would be
 the following instantiation:
 
 .. code:: python
@@ -744,7 +727,7 @@ of varying lengths and widths.
     Thus, sentence structure is considered in terms of
     vertices (roots) and dependents (children).
 
-Before looking for a patterns, we have to create syntactic graph
+Before looking for patterns, we have to create syntactic graph
 of each sentence in the article which we will subsequently search for.
 
 Example of the graph for the sentence: Я учусь в университете.
@@ -756,16 +739,15 @@ In order to make a graph of syntactic dependencies for each sentence in the arti
 you are required to implement a
 :py:meth:`lab_6_pipeline.pipeline.PatternSearchPipeline._make_graphs` method.
 
-The method accepts
-one instance of :py:class:`core_utils.pipeline.CoNLLUDocument` as an argument.
+The method accepts one instance of spacy document as an argument.
 It is presumed that the given document object
 contains information from ``.conllu`` file
 which was obtained using :py:meth:`core_utils.pipeline.LibraryWrapper.from_conllu` method.
 
 The :py:meth:`lab_6_pipeline.pipeline.PatternSearchPipeline._make_graphs` method
 iterates through each sentence in the article and creates nodes and edges for the words
-in the sentence. Pass ``upos`` as ``label`` argument when creating node and
-``deprel`` as a ``label`` argument when creating edge.
+in the sentence. Pass ``UPOS`` as ``label`` argument when creating node and
+``DEPREL`` as a ``label`` argument when creating edge.
 Edges should connect this word with its parent using dependency relation.
 
 .. tip:: To make a graph it is mandatory to use an instance of
@@ -811,7 +793,7 @@ search for a certain pattern. If we want to further analyze information
 about the received patterns or calculate some statistics we need to use
 a more traditional way of storing information.
 
-For these aims there are
+For these aims there is a
 :py:class:`core_utils.pipeline.TreeNode` class.
 It stores information about the node of the tree.
 You have to instantiate it with the POS tag,
@@ -819,7 +801,7 @@ text and list of dependent children of your node.
 
 To add all children to this list you have to implement a
 :py:meth:`lab_6_pipeline.pipeline.PatternSearchPipeline._add_children` method.
-It accepts the current graph - an instance of
+It accepts the current graph — an instance of
 `DiGraph <https://networkx.org/documentation/stable/reference/classes/digraph.html>`__ class,
 a dictionary with matched subgraphs, ID of the root node and
 root node of the matched subgraph. It iterates through the available
@@ -855,7 +837,7 @@ with information about the pattern matches.
           by storing children with the same parent in a single root.
           For clarification you can reference
           `pattern cases <https://github.com/fipl-hse/2025-2-level-ctlr/blob/main/
-          lab_6_pipeline\tests\test_files\complex_pattern_matches.json>`__.
+          lab_6_pipeline/tests/test_files/complex_pattern_matches.json>`__.
 
 
 Stage 5.4. Implement core logic of ``PatternSearchPipeline``
@@ -885,9 +867,7 @@ Once executed,
           and get UD information with the corresponding to the analyzer
           :py:meth:`core_utils.pipeline.LibraryWrapper.from_conllu` method.
 
-.. note:: It is mandatory to use :py:meth:`core_utils.article.article.Article.get_file_path`,
-          :py:meth:`core_utils.article.article.Article.set_pos_info` method and
-          :py:func:`core_utils.article.io.to_meta` function.
+.. note:: It is mandatory to use :py:func:`core_utils.article.io.to_meta` function.
 
 .. attention:: Make sure that resulting meta files are valid: they must
                contain no more than one dictionary-like object.

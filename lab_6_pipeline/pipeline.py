@@ -7,16 +7,13 @@ import json
 import pathlib
 
 from networkx import DiGraph
+from spacy import Language
+from spacy.tokens import Doc
 
 from core_utils.article.article import Article
-from core_utils.pipeline import (
-    AbstractCoNLLUAnalyzer,
-    CoNLLUDocument,
-    LibraryWrapper,
-    PipelineProtocol,
-    TreeNode,
-    UnifiedCoNLLUDocument,
-)
+from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
+
+logger = get_child_logger(__file__)
 
 
 class CorpusManager:
@@ -79,22 +76,22 @@ class UDPipeAnalyzer(LibraryWrapper):
     """
 
     #: Analyzer
-    _analyzer: AbstractCoNLLUAnalyzer
+    _analyzer: Language
 
     def __init__(self) -> None:
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
 
-    def _bootstrap(self) -> AbstractCoNLLUAnalyzer:
+    def _bootstrap(self) -> Language:
         """
         Load and set up the UDPipe model.
 
         Returns:
-            AbstractCoNLLUAnalyzer: Analyzer instance
+            Language: Analyzer instance
         """
 
-    def analyze(self, texts: list[str]) -> list[CoNLLUDocument | str]:
+    def analyze(self, texts: list[str]) -> list[str]:
         """
         Process texts into CoNLL-U formatted markup.
 
@@ -102,7 +99,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             texts (list[str]): Collection of texts
 
         Returns:
-            list[CoNLLUDocument | str]: List of documents
+            list[str]: List of documents
         """
 
     def to_conllu(self, article: Article) -> None:
@@ -113,7 +110,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article containing information to save
         """
 
-    def from_conllu(self, article: Article) -> CoNLLUDocument:
+    def from_conllu(self, article: Article) -> Doc:
         """
         Load ConLLU content from article stored on disk.
 
@@ -121,18 +118,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article to load
 
         Returns:
-            CoNLLUDocument: Document ready for parsing
-        """
-
-    def get_document(self, doc: CoNLLUDocument) -> UnifiedCoNLLUDocument:
-        """
-        Present ConLLU document's sentence tokens as a unified structure.
-
-        Args:
-            doc (CoNLLUDocument): ConLLU document
-
-        Returns:
-            UnifiedCoNLLUDocument: Dictionary of token features within document sentences
+            Doc: Document ready for parsing
         """
 
 
@@ -184,12 +170,12 @@ class PatternSearchPipeline(PipelineProtocol):
             pos (tuple[str, ...]): Root, Dependency, Child part of speech
         """
 
-    def _make_graphs(self, doc: CoNLLUDocument) -> list[DiGraph]:
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
 
         Args:
-            doc (CoNLLUDocument): Document for patterns searching
+            doc (Doc): Document for patterns searching
 
         Returns:
             list[DiGraph]: Graphs for the sentences in the document

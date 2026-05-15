@@ -2,8 +2,8 @@
 Tests udpipe analyzer.
 """
 
-# pylint: disable=assignment-from-no-return
-import unittest
+# pylint: disable=redefined-outer-name
+from typing import Any
 
 import pytest
 
@@ -11,64 +11,74 @@ from admin_utils.test_params import PIPE_TEST_FILES_FOLDER
 from lab_6_pipeline.pipeline import UDPipeAnalyzer
 
 
-class UDPipeAnalyzerTest(unittest.TestCase):
+@pytest.fixture(scope="function")
+def udpipe_setup() -> Any:
     """
-    Tests udpipe texts analysis.
+    Setup test data and analyzer instance.
     """
+    path = PIPE_TEST_FILES_FOLDER / "reference_udpipe_test.conllu"
+    with path.open("r", encoding="utf-8") as ref:
+        conllu_reference = ref.read()
+    texts = [
+        "Красивая - мама красиво, училась в ПДД и ЖКУ"
+        + " по адресу Львовская 10 лет с почтой test ."
+    ]
+    udpipe_analyzer = UDPipeAnalyzer()
+    yield conllu_reference, texts, udpipe_analyzer
 
-    def setUp(self) -> None:
-        """
-        Define start instructions for UDPipeAnalyzerTest class.
-        """
-        path = PIPE_TEST_FILES_FOLDER / "reference_udpipe_test.conllu"
-        with path.open("r", encoding="utf-8") as ref:
-            self.conllu_reference = ref.read()
 
-        self.texts = [
-            "Красивая - мама красиво, училась в ПДД и ЖКУ"
-            " по адресу Львовская 10 лет с почтой test ."
-        ]
-        self.udpipe_analyzer = UDPipeAnalyzer()
+@pytest.mark.mark6
+@pytest.mark.mark8
+@pytest.mark.mark10
+@pytest.mark.stage_3_4_student_dataset_validation
+@pytest.mark.lab_6_pipeline
+def test_xpos_tag_replacement_in_analyzer(udpipe_setup: Any) -> None:
+    """
+    Ensure that XPOS tags are replaced with '_' in CoNLL-U format.
 
-    @pytest.mark.mark6
-    @pytest.mark.mark8
-    @pytest.mark.mark10
-    @pytest.mark.stage_3_4_student_dataset_validation
-    @pytest.mark.lab_6_pipeline
-    def test_xpos_tag_replacement_in_analyzer(self) -> None:
-        """
-        Ensure that XPOS tags are replaced with '_' in CoNLL-U format.
-        """
-        conllu_format = self.udpipe_analyzer.analyze(self.texts)
-        self.assertEqual(conllu_format[0].split("\t")[4], "_")
+    Args:
+        udpipe_setup (Any): Fixture providing reference conllu string,
+        input texts, and analyzer instance.
+    """
+    _, texts, udpipe_analyzer = udpipe_setup
+    conllu_format = udpipe_analyzer.analyze(texts)
+    assert conllu_format[0].split("\t")[4] == "_"
 
-    @pytest.mark.mark6
-    @pytest.mark.mark8
-    @pytest.mark.mark10
-    @pytest.mark.stage_3_4_student_dataset_validation
-    @pytest.mark.lab_6_pipeline
-    def test_headers_are_included(self) -> None:
-        """
-        Check id of sentence.
-        """
-        conllu_format = self.udpipe_analyzer.analyze(self.texts)[0].format()
-        header_line = conllu_format.split("\n")[0]
-        self.assertIn("sent_id", header_line)
 
-        self.assertEqual(header_line.split()[-1], "1")
+@pytest.mark.mark6
+@pytest.mark.mark8
+@pytest.mark.mark10
+@pytest.mark.stage_3_4_student_dataset_validation
+@pytest.mark.lab_6_pipeline
+def test_headers_are_included(udpipe_setup: Any) -> None:
+    """
+    Check id of sentence.
 
-    @pytest.mark.mark6
-    @pytest.mark.mark8
-    @pytest.mark.mark10
-    @pytest.mark.stage_3_4_student_dataset_validation
-    @pytest.mark.lab_6_pipeline
-    def test_analyze_method(self) -> None:
-        """
-        Ensure that reference and processed conllu are equal.
-        """
-        conllu_format = self.udpipe_analyzer.analyze(self.texts)
+    Args:
+        udpipe_setup (Any): Fixture providing reference conllu string,
+        input texts, and analyzer instance.
+    """
+    _, texts, udpipe_analyzer = udpipe_setup
+    conllu_format = udpipe_analyzer.analyze(texts)[0].format()
+    header_line = conllu_format.split("\n")[0]
+    assert "sent_id" in header_line
+    assert header_line.split()[-1] == "1"
 
-        for reference, ud_analysis in zip(
-            self.conllu_reference.splitlines(), conllu_format[0].splitlines()
-        ):
-            self.assertEqual(reference, ud_analysis)
+
+@pytest.mark.mark6
+@pytest.mark.mark8
+@pytest.mark.mark10
+@pytest.mark.stage_3_4_student_dataset_validation
+@pytest.mark.lab_6_pipeline
+def test_analyze_method(udpipe_setup: Any) -> None:
+    """
+    Ensure that reference and processed conllu are equal.
+
+    Args:
+        udpipe_setup (Any): Fixture providing reference conllu string,
+        input texts, and analyzer instance.
+    """
+    conllu_reference, texts, udpipe_analyzer = udpipe_setup
+    conllu_format = udpipe_analyzer.analyze(texts)
+    for reference, ud_analysis in zip(conllu_reference.splitlines(), conllu_format[0].splitlines()):
+        assert reference == ud_analysis

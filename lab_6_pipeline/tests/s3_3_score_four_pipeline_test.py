@@ -2,9 +2,10 @@
 Tests for TextProcessingPipeline (score 4).
 """
 
+# pylint: disable=redefined-outer-name, unused-argument
 import shutil
-import unittest
 from string import punctuation
+from typing import Any
 
 import pytest
 
@@ -14,134 +15,129 @@ from lab_6_pipeline.pipeline import CorpusManager, TextProcessingPipeline
 from lab_6_pipeline.tests.utils import AnalyzerMock, pipeline_setup, pipeline_test_files_setup
 
 
-class TextProcessingPipelineScoreFourReferenceProcess(unittest.TestCase):
+@pytest.fixture(scope="module")
+def setup_reference_processing() -> Any:
     """
-    TextProcessingPipeline for score 4 tests on reference data.
+    Setup and teardown for reference processing tests.
     """
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        """
-        Setup test files for processing.
-        """
-        pipeline_test_files_setup(meta=True)
-        article.ASSETS_PATH = TEST_PATH
-
-        corpus_manager = CorpusManager(path_to_raw_txt_data=TEST_PATH)
-        pipe = TextProcessingPipeline(corpus_manager)
-        pipe.run()
-
-    def setUp(self) -> None:
-        """
-        Define start instructions for TextProcessingPipelineScoreFourReferenceProcess class.
-        """
-        path = PIPE_TEST_FILES_FOLDER / "reference_score_four.txt"
-        with path.open("r", encoding="utf-8") as reference:
-            self.reference = reference.read()
-        path = TEST_PATH / "1_cleaned.txt"
-        with path.open("r", encoding="utf-8") as processed:
-            self.processed = processed.read()
-
-    @pytest.mark.mark4
-    @pytest.mark.stage_3_3_admin_data_processing
-    @pytest.mark.lab_6_pipeline
-    def test_reference_preprocessed_are_equal(self) -> None:
-        """
-        Ensure equal number of tokens in processed and reference texts.
-        """
-        # check number of tokens sequences
-        self.assertEqual(
-            len(self.reference.split()),
-            len(self.processed.split()),
-            msg=f"""Number of tokens sequences in reference
-        {self.reference} and processed {self.processed} texts is different""",
-        )
-
-        # check tokenization
-        self.assertEqual(
-            self.reference.split(),
-            self.processed.split(),
-            msg="Pipe does not tokenize admin text. Check how you tokenize",
-        )
-
-    @pytest.mark.mark4
-    @pytest.mark.stage_3_3_admin_data_processing
-    @pytest.mark.lab_6_pipeline
-    def test_overall_format(self) -> None:
-        """
-        Ensure that there is no punctuation or uppercase in clean text.
-        """
-        self.assertTrue(self.processed.islower(), "Cleaned text must be lowercase")
-        self.assertFalse(
-            (set(self.processed) & set(punctuation)), "Cleaned text must not have any punctuation"
-        )
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        """
-        Define final instructions for TextProcessingPipelineScoreFourReferenceProcess class.
-        """
-        shutil.rmtree(TEST_PATH)
+    pipeline_test_files_setup(meta=True)
+    article.ASSETS_PATH = TEST_PATH
+    corpus_manager = CorpusManager(path_to_raw_txt_data=TEST_PATH)
+    pipe = TextProcessingPipeline(corpus_manager)
+    pipe.run()
+    yield
+    shutil.rmtree(TEST_PATH)
 
 
-class TextProcessingPipelineScoreFourMockAnalyzer(unittest.TestCase):
+@pytest.fixture(scope="function")
+def loaded_texts(setup_reference_processing: Any) -> Any:
     """
-    Tests for TextProcessingPipeline with mocking analyzer.
+    Load reference and processed texts for assertions.
     """
-
-    @pytest.mark.mark4
-    @pytest.mark.stage_3_3_admin_data_processing
-    @pytest.mark.lab_6_pipeline
-    def test_score_four_pipeline_with_analyzer_mock_can_execute(self) -> None:
-        """
-        Ensure pipeline for score 4 does not depend on analyzer.
-        """
-        pipeline_test_files_setup(meta=True)
-        article.ASSETS_PATH = TEST_PATH
-
-        corpus_manager = CorpusManager(path_to_raw_txt_data=TEST_PATH)
-        pipe = TextProcessingPipeline(corpus_manager, AnalyzerMock())
-        self.assertIsNone(pipe.run())
-        shutil.rmtree(TEST_PATH)
+    ref_path = PIPE_TEST_FILES_FOLDER / "reference_score_four.txt"
+    with ref_path.open("r", encoding="utf-8") as ref:
+        reference = ref.read()
+    proc_path = TEST_PATH / "1_cleaned.txt"
+    with proc_path.open("r", encoding="utf-8") as proc:
+        processed = proc.read()
+    yield reference, processed
 
 
-class TextProcessingPipelineScoreFourStudentProcess(unittest.TestCase):
+@pytest.mark.mark4
+@pytest.mark.mark4
+@pytest.mark.stage_3_3_admin_data_processing
+@pytest.mark.lab_6_pipeline
+def test_reference_preprocessed_are_equal(loaded_texts: Any) -> None:
     """
-    Tests for TextProcessingPipeline on student data.
+    Ensure equal number of tokens in processed and reference texts.
+
+    Args:
+        loaded_texts (Any): Fixture providing reference and processed text strings.
     """
+    reference, processed = loaded_texts
+    assert len(reference.split()) == len(processed.split()), (
+        f"Number of tokens sequences in reference {reference} "
+        f"and processed {processed} texts is different"
+    )
+    assert (
+        reference.split() == processed.split()
+    ), "Pipe does not tokenize admin text. Check how you tokenize"
 
-    def setUp(self) -> None:
-        """
-        Define start instructions for TextProcessingPipelineScoreFourReferenceProcess class.
-        """
-        pipeline_setup()
-        CorpusManager(TEST_PATH)
-        self.punctuation_marks = [",", ".", "-", ";", ":", "!", "?", "<"]
 
-        self.articles = {}
-        for file in TEST_PATH.iterdir():
-            if file.name.endswith("_cleaned.txt"):
-                with file.open("r", encoding="utf-8") as txt:
-                    self.articles[int(file.name[:-12])] = txt.read()
+@pytest.mark.mark4
+@pytest.mark.stage_3_3_admin_data_processing
+@pytest.mark.lab_6_pipeline
+def test_overall_format(loaded_texts: Any) -> None:
+    """
+    Ensure that there is no punctuation or uppercase in clean text.
 
-    @pytest.mark.mark4
-    @pytest.mark.stage_3_4_student_dataset_validation
-    @pytest.mark.lab_6_pipeline
-    def test_clean_tokens(self) -> None:
-        """
-        Ensure there is no punctuation of uppercase in cleaned text.
-        """
-        for article_id, article_text in self.articles.items():
-            for token in article_text.split():
-                message = f"There are some punctuation " f"marks found in article {article_id}"
-                self.assertTrue(token not in self.punctuation_marks, message)
-                if not token.isalpha():
-                    continue
-                message = f"Token {token} in article " f"{article_id} is not lowercase"
-                self.assertTrue(token.islower(), msg=message)
+    Args:
+        loaded_texts (Any): Fixture providing reference and processed text strings.
+    """
+    _, processed = loaded_texts
+    assert processed.islower(), "Cleaned text must be lowercase"
+    assert not (set(processed) & set(punctuation)), "Cleaned text must not have any punctuation"
 
-    def tearDown(self) -> None:
-        """
-        Define final instructions for TextProcessingPipelineScoreFourReferenceProcess class.
-        """
-        shutil.rmtree(TEST_PATH)
+
+@pytest.fixture(scope="function")
+def pipeline_mock_env() -> Any:
+    """
+    Setup and teardown for mock analyzer pipeline tests.
+    """
+    pipeline_test_files_setup(meta=True)
+    article.ASSETS_PATH = TEST_PATH
+    yield
+    shutil.rmtree(TEST_PATH)
+
+
+@pytest.mark.mark4
+@pytest.mark.stage_3_3_admin_data_processing
+@pytest.mark.lab_6_pipeline
+def test_score_four_pipeline_with_analyzer_mock_can_execute(pipeline_mock_env: Any) -> None:
+    """
+    Ensure pipeline for score 4 does not depend on analyzer.
+
+    Args:
+        pipeline_mock_env (Any): Fixture managing test environment for mock analyzer.
+    """
+    corpus_manager = CorpusManager(path_to_raw_txt_data=TEST_PATH)
+    pipe = TextProcessingPipeline(corpus_manager, AnalyzerMock())
+    assert pipe.run() is None
+
+
+@pytest.fixture(scope="function")
+def student_cleaned_articles() -> Any:
+    """
+    Setup and teardown for student dataset validation tests.
+    """
+    pipeline_setup()
+    CorpusManager(TEST_PATH)
+    articles = {}
+    for file in TEST_PATH.iterdir():
+        if file.name.endswith("_cleaned.txt"):
+            with file.open("r", encoding="utf-8") as txt:
+                articles[int(file.name[:-12])] = txt.read()
+    yield articles
+    shutil.rmtree(TEST_PATH)
+
+
+@pytest.mark.mark4
+@pytest.mark.stage_3_4_student_dataset_validation
+@pytest.mark.lab_6_pipeline
+def test_clean_tokens(student_cleaned_articles: Any) -> None:
+    """
+    Ensure there is no punctuation of uppercase in cleaned text.
+
+    Args:
+        student_cleaned_articles (Any): Fixture providing dictionary of cleaned articles.
+    """
+    articles = student_cleaned_articles
+    punctuation_marks = [",", ".", "-", ";", ":", "!", "?", "<"]
+    for article_id, article_text in articles.items():
+        for token in article_text.split():
+            message = f"There are some punctuation marks found in article {article_id}"
+            assert token not in punctuation_marks, message
+            if not token.isalpha():
+                continue
+            message = f"Token {token} in article {article_id} is not lowercase"
+            assert token.islower(), message
