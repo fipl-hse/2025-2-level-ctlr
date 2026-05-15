@@ -10,12 +10,17 @@ from string import punctuation
 
 import spacy_udpipe
 from networkx import DiGraph
-from spacy import Language
+from spacy.language import Language
 from spacy.tokens import Doc
 
-from core_utils.article.article import Article, get_article_id_from_filepath
+from core_utils.article.article import (
+    Article,
+    ArtifactType,
+    get_article_id_from_filepath,
+    split_by_sentence,
+)
 from core_utils.article.io import from_meta, from_raw, to_cleaned
-from core_utils.constants import ASSETS_PATH
+from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import (
     AbstractCoNLLUAnalyzer,
     CoNLLUDocument,
@@ -25,7 +30,9 @@ from core_utils.pipeline import (
     UnifiedCoNLLUDocument,
 )
 
-logger = get_child_logger(__file__)
+# logger = get_child_logger(__file__)
+MODEL_PATH = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
+MODEL_NAME = "russian-syntagrus-ud-2.0-170801.udpipe"
 
 class InconsistentDatasetError(Exception):
     """
@@ -37,6 +44,8 @@ class EmptyDirectoryError(Exception):
     """
     Raised when directory is empty.
     """
+class EmptyFileError(Exception):
+    pass
 
 class CorpusManager:
     """
@@ -157,6 +166,11 @@ class TextProcessingPipeline(PipelineProtocol):
         for article in self.corpus_manager.get_articles().values():
             to_cleaned(article)
 
+            if self.analyzer:
+                conlu_sentences = self.analyzer.analyze(split_by_sentence(article.get_raw_text()))
+                if conlu_sentences:
+                    article.set_conllu_info("".join([str(sentence) for sentence in conlu_sentences]))
+                self.analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -170,6 +184,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -178,6 +193,10 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        return spacy_udpipe.load_from_path(
+            lang="ru",
+            path=str(MODEL_PATH / MODEL_NAME)
+        )
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -189,6 +208,31 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        conllu_markup_list = []
+        for sent_id, text in enumerate(texts, start=1):
+            conllu_markup = [
+                f"# sent_id = {sent_id}",
+                f"# text = {text}"
+            ]
+            doc = self._analyzer(text)
+            for token_id, token in enumerate(doc, start=1):
+                conllu_markup.append("\t".join([
+                    str(token_id), #ID
+                    token.text, #FORM
+                    token.lemma_, #LEMMA
+                    token.pos_ or "_", #UPOS
+                    token.tag_ or "_", #XPOS
+                    "|".join(morph for morph in token.morph) or "_", #FEATS
+                    "0" if token.dep_=="ROOT" else str(token.head.i + 1), #HEAD
+                    token.dep_, #DEPREL
+                    "_", #DEPS
+                    "_" if token.whitespace_ else "SpaceAfter=No" #MISK
+                ]))
+
+            conllu_markup.append("\n")
+            conllu_markup_list.append("\n".join(conllu_markup))
+
+        return conllu_markup_list
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -197,6 +241,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        with open(article.get_file_path(ArtifactType.UDPIPE_CONLLU), "w", encoding="utf-8") as f:
+            f.write(article.get_conllu_info())
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -303,9 +349,24 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
+    test_texts = [
+        "Красивая - мама красиво, училась в ПДД и ЖКУ по адресу Львовская 10 лет с почтой test . ",
+        "Я сегодня шла за картошкой в огород.",
+        "Ой, упала, вот это поворот!",
+        "Замарала пяточку, все лицо в навозе.",
+        "Ещё не успела носиком по травке поелозить."
+    ]
+
     corpus_manager = CorpusManager(ASSETS_PATH)
-    pipeline = TextProcessingPipeline(corpus_manager, None)
+    udpipe_analyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
+    # l = udpipe_analyzer.analyze(test_texts)
     pipeline.run()
+    # from pprint import pprint
+    # for sent in l:
+    #     pprint(sent)
+    #     print()
+
 
 
 if __name__ == "__main__":
