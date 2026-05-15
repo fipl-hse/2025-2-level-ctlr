@@ -60,7 +60,7 @@ class Config:
         Args:
             path_to_config (pathlib.Path): Path to configuration.
         """
-        self._path = path_to_config
+        self.path_to_config = path_to_config
         self._validate_config_content()
         config_data = self._extract_config_content()
         self._seed_urls = config_data["seed_urls"]
