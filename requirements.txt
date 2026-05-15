@@ -1,2 +1,0 @@
-networkx==3.6.1
-spacy==3.8.14
