@@ -74,14 +74,15 @@ class Config:
             path_to_config (pathlib.Path): Path to configuration.
         """
         self.path_to_config = path_to_config
+        self.config_dto = self._extract_config_content()
+        self._seed_urls = self.config_dto.seed_urls
+        self._num_articles = self.config_dto.total_articles
+        self._headers = self.config_dto.headers
+        self._encoding = self.config_dto.encoding
+        self._timeout = self.config_dto.timeout
+        self._should_verify_certificate = self.config_dto.should_verify_certificate
+        self._headless_mode = self.config_dto.headless_mode
         self._validate_config_content()
-        self._seed_urls = self._config.seed_urls
-        self._num_articles = self._config.total_articles
-        self._headers = self._config.headers
-        self._encoding = self._config.encoding
-        self._timeout = self._config.timeout
-        self._should_verify_certificate = self._config.should_verify_certificate
-        self._headless_mode = self._config.headless_mode
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -106,37 +107,35 @@ class Config:
         """
         Ensure configuration parameters are not corrupt.
         """
-        config_dto = self._extract_config_content()
-        if not isinstance(config_dto.seed_urls, list):
+        if not isinstance(self._seed_urls, list):
             raise IncorrectSeedURLError('Seed URLs must be a list')
         pattern = r'^https?://(www\.)?'
-        for url in config_dto.seed_urls:
+        for url in self._seed_urls:
             if not re.match(pattern, url):
                 raise IncorrectSeedURLError('Seed URL does not match the standard pattern')
         if (
-            not isinstance(config_dto.total_articles, int)
-            or isinstance(config_dto.total_articles, bool)
-            or config_dto.total_articles < 0
+            not isinstance(self._num_articles, int)
+            or isinstance(self._num_articles, bool)
+            or self._num_articles < 0
         ):
             raise (IncorrectNumberOfArticlesError('Number of articles is either not integer'
             'or less than 0'))
-        if config_dto.total_articles > 150:
+        if self._num_articles > 150:
             raise NumberOfArticlesOutOfRangeError('Number if articles is out of range')
-        if not isinstance(config_dto.headers, dict):
+        if not isinstance(self._headers, dict):
             raise IncorrectHeadersError('Headers are not in a form of dictionary')
-        if not isinstance(config_dto.encoding, str):
+        if not isinstance(self._encoding, str):
             raise IncorrectEncodingError('Encoding is not in a form of string')
         if (
-            not isinstance(config_dto.timeout, int)
-            or config_dto.timeout >= 60
-            or config_dto.timeout < 0
+            not isinstance(self._timeout, int)
+            or self._timeout >= 60
+            or self._timeout < 0
         ):
             raise IncorrectTimeoutError('Timeout must be a positive integer and less than 60')
-        if not isinstance(config_dto.should_verify_certificate, bool):
+        if not isinstance(self._should_verify_certificate, bool):
             raise IncorrectVerifyError('Verify certificate value must be boolean')
-        if not isinstance(config_dto.headless_mode, bool):
+        if not isinstance(self._headless_mode, bool):
             raise IncorrectVerifyError('Headless mode value must be boolean')
-        self._config = config_dto
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -259,7 +258,7 @@ class Crawler:
         if 'ptj.spb.ru' not in full_url:
             return ""
         article_pattern = re.compile(
-            r'(archive/\d+/.+/.+/|blog/[^/#?]+/?)(?:[#?].*)?$'
+            r'(archive/\d+/.+/.+/|blog/[^/]+/?)$'
         )
         if article_pattern.search(full_url):
             return full_url
@@ -366,34 +365,9 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        # title = article_soup.find("title")
-        # if title:
-        #     self.article.title = title.get_text(strip=True)
-        # else:
-        #     self.article.title = "NOT FOUND"
-
-        # author = article_soup.find('div', class_= 'author_name author_name_last')
-
-        # if author is None:
-        #     self.article.author = ["NOT FOUND"]
-        # else:
-        #     self.article.author = [author.get_text(strip=True)]
-
-        # date = article_soup.find('div', class_ = "entry_date")
-
-        # if date is None:
-        #     self.article.date = datetime.datetime.now()
-        # else:
-        #     raw_date = date.get('content')
-        #     self.article.date = self.unify_date_format(raw_date)
-        title_tag = article_soup.find('div', class_='title')
-        if not title_tag:
-            title_tag = article_soup.find('h1')
-        if not title_tag:
-            title_tag = article_soup.find('title')
-
-        if title_tag:
-            self.article.title = title_tag.get_text(strip=True)
+        title = article_soup.find(class_="title")
+        if title:
+            self.article.title = title.get_text(strip=True)
         else:
             self.article.title = "NOT FOUND"
 
@@ -403,8 +377,9 @@ class HTMLParser:
             self.article.author = ["NOT FOUND"]
         else:
             self.article.author = [author.get_text(strip=True)]
-        
+
         date = article_soup.find('div', class_ = "entry_date")
+
         if date is None:
             self.article.date = datetime.datetime.now()
         else:
