@@ -6,8 +6,10 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
+import random
 import re
 import shutil
+import time
 from urllib.parse import urljoin
 
 import requests
@@ -212,13 +214,15 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
+    a = random.randint(1, 3)
+    time.sleep(a)
     response = requests.get(
-        url,
+        url=url,
         headers=config.get_headers(),
         timeout=config.get_timeout(),
-        verify=config.get_verify_certificate(),
-    )
-    response.encoding = config.get_encoding()
+        verify=config.get_verify_certificate()
+        )
+    requests.encoding = config.get_encoding()
     return response
 
 
