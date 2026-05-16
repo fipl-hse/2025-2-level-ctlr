@@ -9,7 +9,7 @@
         "Accept-Encoding": "gzip, deflate",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-",
         "Cookie": "_ym_uid=1778232607210706445; _ym_d=1778232607; _ym_isad=1; _ym_visorc=w"},
-    "total_articles_to_find_and_parse": 27,
+    "total_articles_to_find_and_parse": 26,
     "encoding": "windows-1251",
     "timeout": 50,
     "should_verify_certificate": true,
