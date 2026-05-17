@@ -4,7 +4,7 @@ Test for CorpusManager abstraction realization.
 
 # pylint: disable=redefined-outer-name, unused-argument
 import shutil
-from typing import Any
+from typing import Generator
 
 import pytest
 
@@ -15,7 +15,7 @@ from lab_6_pipeline.tests.utils import pipeline_test_files_setup
 
 
 @pytest.fixture(scope="module")
-def basic_class_setup() -> Any:
+def basic_class_setup() -> Generator[None, None, None]:
     """
     Setup and teardown for basic test environment.
     """
@@ -26,7 +26,7 @@ def basic_class_setup() -> Any:
 
 
 @pytest.fixture(scope="function")
-def corpus_manager_basic(basic_class_setup: Any) -> Any:
+def corpus_manager_basic(basic_class_setup: None) -> Generator[CorpusManager, None, None]:
     """
     Create a CorpusManager instance for basic tests.
     """
@@ -40,12 +40,12 @@ def corpus_manager_basic(basic_class_setup: Any) -> Any:
 @pytest.mark.mark10
 @pytest.mark.stage_3_2_corpus_manager_checks
 @pytest.mark.lab_6_pipeline
-def test_corpus_manager_instantiation(corpus_manager_basic: Any) -> None:
+def test_corpus_manager_instantiation(corpus_manager_basic: CorpusManager) -> None:
     """
     Ensure that CorpusManager instances are instantiated correctly.
 
     Args:
-        corpus_manager_basic (Any): Basic CorpusManager fixture for testing.
+        corpus_manager_basic (CorpusManager): Basic CorpusManager fixture for testing.
     """
     assert hasattr(
         corpus_manager_basic, "_storage"
@@ -63,12 +63,12 @@ def test_corpus_manager_instantiation(corpus_manager_basic: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_2_corpus_manager_checks
 @pytest.mark.lab_6_pipeline
-def test_raw_files_are_found(corpus_manager_basic: Any) -> None:
+def test_raw_files_are_found(corpus_manager_basic: CorpusManager) -> None:
     """
     Ensure that CorpusManager finds all saved raw files.
 
     Args:
-        corpus_manager_basic (Any): Basic CorpusManager fixture for testing.
+        corpus_manager_basic (CorpusManager): Basic CorpusManager fixture for testing.
     """
     assert (
         1 in corpus_manager_basic.get_articles()
@@ -81,12 +81,12 @@ def test_raw_files_are_found(corpus_manager_basic: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_2_corpus_manager_checks
 @pytest.mark.lab_6_pipeline
-def test_corrupted_file_names(corpus_manager_basic: Any) -> None:
+def test_corrupted_file_names(corpus_manager_basic: CorpusManager) -> None:
     """
     Ensure that CorpusManager does not work with files with corrupted names.
 
     Args:
-        corpus_manager_basic (Any): Basic CorpusManager fixture for testing.
+        corpus_manager_basic (CorpusManager): Basic CorpusManager fixture for testing.
     """
     shutil.copyfile(PIPE_TEST_FILES_FOLDER / "1_raw.txt", TEST_PATH / "None.txt")
     new_corpus_manager = CorpusManager(path_to_raw_txt_data=TEST_PATH)
@@ -99,12 +99,12 @@ def test_corrupted_file_names(corpus_manager_basic: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_2_corpus_manager_checks
 @pytest.mark.lab_6_pipeline
-def test_article_instance_is_created(corpus_manager_basic: Any) -> None:
+def test_article_instance_is_created(corpus_manager_basic: CorpusManager) -> None:
     """
     Ensure CorpusManager creates Article instances.
 
     Args:
-        corpus_manager_basic (Any): Basic CorpusManager fixture for testing.
+        corpus_manager_basic (CorpusManager): Basic CorpusManager fixture for testing.
     """
     assert isinstance(
         corpus_manager_basic.get_articles()[1], Article
@@ -117,12 +117,12 @@ def test_article_instance_is_created(corpus_manager_basic: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_2_corpus_manager_checks
 @pytest.mark.lab_6_pipeline
-def test_article_instance_is_filled(corpus_manager_basic: Any) -> None:
+def test_article_instance_is_filled(corpus_manager_basic: CorpusManager) -> None:
     """
     Ensure CorpusManager creates Article instances with text.
 
     Args:
-        corpus_manager_basic (Any): Basic CorpusManager fixture for testing.
+        corpus_manager_basic (CorpusManager): Basic CorpusManager fixture for testing.
     """
     text = (
         "Красивая - мама красиво, училась в ПДД и "
@@ -134,7 +134,7 @@ def test_article_instance_is_filled(corpus_manager_basic: Any) -> None:
 
 
 @pytest.fixture(scope="module")
-def advanced_class_setup() -> Any:
+def advanced_class_setup() -> Generator[None, None, None]:
     """
     Setup and teardown for advanced test environment.
     """
@@ -145,7 +145,7 @@ def advanced_class_setup() -> Any:
 
 
 @pytest.fixture(scope="function")
-def corpus_manager_advanced(advanced_class_setup: Any) -> Any:
+def corpus_manager_advanced(advanced_class_setup: None) -> Generator[CorpusManager, None, None]:
     """
     Create a CorpusManager instance for advanced tests.
     """
@@ -158,12 +158,12 @@ def corpus_manager_advanced(advanced_class_setup: Any) -> Any:
 @pytest.mark.mark10
 @pytest.mark.stage_3_2_corpus_manager_checks
 @pytest.mark.lab_6_pipeline
-def test_meta_files_are_found(corpus_manager_advanced: Any) -> None:
+def test_meta_files_are_found(corpus_manager_advanced: CorpusManager) -> None:
     """
     Ensure CorpusManager finds all saved meta files.
 
     Args:
-        corpus_manager_advanced (Any): Advanced CorpusManager fixture for testing.
+        corpus_manager_advanced (CorpusManager): Advanced CorpusManager fixture for testing.
     """
     assert (
         1 in corpus_manager_advanced.get_articles()

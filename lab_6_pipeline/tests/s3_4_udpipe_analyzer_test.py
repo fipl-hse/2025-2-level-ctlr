@@ -3,7 +3,7 @@ Tests udpipe analyzer.
 """
 
 # pylint: disable=redefined-outer-name
-from typing import Any
+from typing import Generator
 
 import pytest
 
@@ -12,7 +12,7 @@ from lab_6_pipeline.pipeline import UDPipeAnalyzer
 
 
 @pytest.fixture(scope="function")
-def udpipe_setup() -> Any:
+def udpipe_setup() -> Generator[tuple[str, list[str], UDPipeAnalyzer], None, None]:
     """
     Setup test data and analyzer instance.
     """
@@ -32,12 +32,15 @@ def udpipe_setup() -> Any:
 @pytest.mark.mark10
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_xpos_tag_replacement_in_analyzer(udpipe_setup: Any) -> None:
+def test_xpos_tag_replacement_in_analyzer(
+    udpipe_setup: tuple[str, list[str], UDPipeAnalyzer],
+) -> None:
     """
     Ensure that XPOS tags are replaced with '_' in CoNLL-U format.
 
     Args:
-        udpipe_setup (Any): Fixture providing reference conllu string,
+        udpipe_setup (tuple[str, list[str], UDPipeAnalyzer]):
+        Fixture providing reference conllu string,
         input texts, and analyzer instance.
     """
     _, texts, udpipe_analyzer = udpipe_setup
@@ -50,12 +53,13 @@ def test_xpos_tag_replacement_in_analyzer(udpipe_setup: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_headers_are_included(udpipe_setup: Any) -> None:
+def test_headers_are_included(udpipe_setup: tuple[str, list[str], UDPipeAnalyzer]) -> None:
     """
     Check id of sentence.
 
     Args:
-        udpipe_setup (Any): Fixture providing reference conllu string,
+        udpipe_setup (tuple[str, list[str], UDPipeAnalyzer]):
+        Fixture providing reference conllu string,
         input texts, and analyzer instance.
     """
     _, texts, udpipe_analyzer = udpipe_setup
@@ -70,12 +74,13 @@ def test_headers_are_included(udpipe_setup: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_analyze_method(udpipe_setup: Any) -> None:
+def test_analyze_method(udpipe_setup: tuple[str, list[str], UDPipeAnalyzer]) -> None:
     """
     Ensure that reference and processed conllu are equal.
 
     Args:
-        udpipe_setup (Any): Fixture providing reference conllu string,
+        udpipe_setup (tuple[str, list[str], UDPipeAnalyzer]):
+        Fixture providing reference conllu string,
         input texts, and analyzer instance.
     """
     conllu_reference, texts, udpipe_analyzer = udpipe_setup

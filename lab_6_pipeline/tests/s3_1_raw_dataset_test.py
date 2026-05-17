@@ -6,7 +6,7 @@ Tests for validation dataset of raw texts.
 import json
 import pathlib
 import shutil
-from typing import Any
+from typing import Generator
 
 import pytest
 from quality_control.console_logging import get_child_logger
@@ -84,7 +84,7 @@ def generate_test_directory(
 
 
 @pytest.fixture(scope="module")
-def test_paths() -> Any:
+def test_paths() -> Generator[dict[str, pathlib.Path], None, None]:
     """
     Create test directories for pipeline path validation tests.
 

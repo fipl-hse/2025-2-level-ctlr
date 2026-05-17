@@ -4,6 +4,7 @@ Crawler instantiation validation.
 
 # pylint: disable=no-member, protected-access, redefined-outer-name
 import shutil
+from typing import Generator
 
 import pytest
 
@@ -24,7 +25,7 @@ def config() -> Config:
 
 
 @pytest.fixture(scope="function")
-def test_dir():
+def test_dir() -> Generator[None, None, None]:
     """
     Prepare test directory and clean up after test.
     """

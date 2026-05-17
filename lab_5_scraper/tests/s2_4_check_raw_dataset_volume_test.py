@@ -4,6 +4,7 @@ Check raw dataset volume.
 
 # pylint: disable=redefined-outer-name, unused-argument
 import shutil
+from typing import Generator
 
 import pytest
 
@@ -12,7 +13,7 @@ from lab_5_scraper.tests.utils import scraper_setup
 
 
 @pytest.fixture(scope="function")
-def dataset_setup():
+def dataset_setup() -> Generator[None, None, None]:
     """
     Prepare dataset environment and clean up after test.
     """

@@ -73,13 +73,16 @@
             "core_utils.pipeline": [
                 "PipelineProtocol",
                 "LibraryWrapper",
-                "AbstractCoNLLUAnalyzer",
-                "UnifiedCoNLLUDocument",
-                "CoNLLUDocument",
                 "TreeNode"
             ],
             "networkx": [
                 "DiGraph"
+            ],
+            "spacy": [
+                "Language"
+            ],
+            "spacy.tokens": [
+                "Doc"
             ]
         }
     },
@@ -105,5 +108,10 @@
         "\\.pkl$",
         "\\.udpipe$",
         "\\.zip$"
+    ],
+    "prohibited_modules": [
+        "collections",
+        "itertools",
+        "os"
     ]
 }
