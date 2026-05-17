@@ -7,7 +7,7 @@ import datetime
 import json
 import pathlib
 import re
-from urllib.parse import urljoin
+import shutil
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -20,7 +20,8 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 class IncorrectSeedURLError(Exception):
     """
-    Exception raised when a seed URL does not follow the expected pattern (must start with http:// or https://, optionally with www.).
+    Exception raised when a seed URL does not follow the expected pattern
+    (must start with http:// or https://, optionally with www.).
     """
 
 class NumberOfArticlesOutOfRangeError(Exception):
@@ -30,7 +31,8 @@ class NumberOfArticlesOutOfRangeError(Exception):
 
 class IncorrectNumberOfArticlesError(Exception):
     """
-    Exception raised when the total number of articles is not a positive integer (must be greater than zero).
+    Exception raised when the total number of articles is not a positive integer
+    (must be greater than zero).
     """
 
 class IncorrectHeadersError(Exception):
@@ -87,12 +89,14 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as file:
             config_data = json.load(file)
-            
+
         return ConfigDTO(
             seed_urls=config_data.get('seed_urls', []),
             headers=config_data.get('headers', {}),
             timeout=config_data.get('timeout', 5),
-            total_articles_to_find_and_parse=config_data.get('total_articles_to_find_and_parse', 10),
+            total_articles_to_find_and_parse=config_data.get(
+                'total_articles_to_find_and_parse', 10
+            ),
             encoding=config_data.get('encoding', 'utf-8'),
             should_verify_certificate=config_data.get('should_verify_certificate', True),
             headless_mode=config_data.get('headless_mode', False)
@@ -123,7 +127,7 @@ class Config:
 
     def _validate_articles_count(self, count: int) -> None:
         """Validate total number of articles."""
-        if type(count) is not int:
+        if not isinstance(count, int):
             raise IncorrectNumberOfArticlesError(
                 f"Number of articles must be an integer, got: {type(count).__name__}"
             )
@@ -233,7 +237,7 @@ class Config:
         return self._headless_mode
 
 
-def make_request(url: str, config: Config) -> requests.models.Response:
+def make_request(url: str, config: Config) -> requests.models.Response | None:
     """
     Deliver a response from a request with given configuration.
 
@@ -242,7 +246,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         config (Config): Configuration
 
     Returns:
-        requests.models.Response: A response from a request
+        requests.models.Response | None: A response from a request or None if error
     """
     try:
         response = requests.get(
@@ -296,11 +300,9 @@ class Crawler:
             if href.startswith('http'):
                 return href
 
-            elif href.startswith('/'):
+            if href.startswith('/'):
                 return f"https://proza.pishi.pro{href}"
-
-            else:
-                return f"https://proza.pishi.pro/{href}"
+            return f"https://proza.pishi.pro/{href}"
 
         return ""
 
@@ -424,7 +426,7 @@ class HTMLParser:
                 p_text = p.get_text(strip=True)
                 if len(p_text) > 30:
                     text_blocks.append(p_text)
-                    
+
         self.article.text = '\n\n'.join(text_blocks)
         print(f"Article {self.article_id}: extracted {len(self.article.text)} characters")
 
@@ -436,44 +438,61 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = None
+        self._extract_title(article_soup)
+        self._extract_author(article_soup)
+        self._extract_date(article_soup)
+        self._extract_topics(article_soup)
 
+    def _extract_title(self, article_soup: BeautifulSoup) -> None:
+        """
+        Extract article title.
+        """
+        title = None
         title_tag = article_soup.find('h1')
         if title_tag:
             title = title_tag.get_text(strip=True)
-            title = re.sub(r'\s*\([^)]*\)\s*$', '', title).strip()
-        
+            title = re.sub(r'\s*\([^)]*\)\s*$', '', str(title_tag.get_text(strip=True))).strip()
+
         if not title:
             title_tag = article_soup.find('title')
             if title_tag:
                 title = title_tag.get_text(strip=True)
-                title = re.sub(r'\s*[-|].*$', '', title).strip()
+                title = re.sub(r'\s*[-|].*$', '', str(title_tag.get_text(strip=True))).strip()
 
         if not title:
             meta_title = article_soup.find('meta', property='og:title')
             if meta_title and meta_title.get('content'):
                 title = meta_title['content']
-                title = re.sub(r'\s*[-|].*$', '', title).strip()
-                
+                title = re.sub(r'\s*[-|].*$', '', str(meta_title['content'])).strip()
+
         self.article.title = title if title else "Без заголовка"
-        
+
+    def _extract_author(self, article_soup: BeautifulSoup) -> None:
+        """
+        Extract article author.
+        """
         author = None
+
         author_tag = article_soup.find('div', class_='userinfo-title-blk')
         if author_tag:
             author_link = author_tag.find('a')
             if author_link:
-                author = author_link.get_text(strip=True)
-                
+                author = str(author_link.get_text(strip=True))
+
         if not author:
             author_meta = article_soup.find('meta', property='og:title')
             if author_meta and author_meta.get('content'):
-                content = author_meta['content']
+                content = str(author_meta['content'])
                 match = re.search(r'[-–]\s*([^|]+)', content)
                 if match:
                     author = match.group(1).strip()
-                    
+
         self.article.author = [author] if author else ["NOT FOUND"]
-        
+
+    def _extract_date(self, article_soup: BeautifulSoup) -> None:
+        """
+        Extract publication date.
+        """
         date_text = None
         other_pub_table = article_soup.find('table', class_='table')
         if other_pub_table:
@@ -482,12 +501,18 @@ class HTMLParser:
                 if len(cells) >= 2:
                     date_text = cells[1].get_text(strip=True)
                     break
-                
+
         if date_text:
             self.article.date = self.unify_date_format(date_text)
         else:
-            self.article.date = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            
+            self.article.date = datetime.datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+
+    def _extract_topics(self, article_soup: BeautifulSoup) -> None:
+        """
+        Extract article topics.
+        """
         topics = []
         breadcrumb = article_soup.find('ol', class_='breadcrumb')
         if breadcrumb:
@@ -509,7 +534,7 @@ class HTMLParser:
                     topic_text = tag_link.get_text(strip=True)
                     if topic_text:
                         topics.append(topic_text)
-                        
+
         self.article.topics = topics
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -530,7 +555,11 @@ class HTMLParser:
             'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
         }
 
-        match = re.search(r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),?\s+(\d{1,2}):(\d{2})', date_str, re.IGNORECASE)
+        match = re.search(
+            r'(\d{1,2})\s+([а-я]+)\s+(\d{4}),?\s+(\d{1,2}):(\d{2})',
+            date_str,
+            re.IGNORECASE
+        )
         if match:
             day = int(match.group(1))
             month_name = match.group(2).lower()
@@ -574,7 +603,6 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
-    import shutil
     path = pathlib.Path(base_path)
     if path.exists():
         shutil.rmtree(path)
