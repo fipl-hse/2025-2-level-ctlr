@@ -353,6 +353,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
