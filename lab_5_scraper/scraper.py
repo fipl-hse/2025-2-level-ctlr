@@ -75,6 +75,8 @@ class Config:
         """
         self.config_content = self._extract_config_content()
 
+        if not isinstance(self.config_content.seed_urls, list):
+            raise IncorrectSeedURLError('seed URLs must be a list')
         for url in self.config_content.seed_urls:
             if not isinstance(url, str) or not re.match(r"https?://(www.)?", url):
                 raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://(www.)?"')
