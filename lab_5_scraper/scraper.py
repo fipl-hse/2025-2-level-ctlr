@@ -80,9 +80,11 @@ class Config:
         for url in self.config_content.seed_urls:
             if not isinstance(url, str) or not re.match(r"https?://(www.)?", url):
                 raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://(www.)?"')
-        if not isinstance(self.config_content.total_articles, int) or self.config_content.total_articles < 0:
+        if (not isinstance(self.config_content.total_articles, int)
+            or isinstance(self.config_content.total_articles, bool)
+            or self.config_content.total_articles < 1):
             raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer or less than 0')
-        if self.config_content.total_articles < 1 or self.config_content.total_articles > 150:
+        if self.config_content.total_articles > 150:
             raise NumberOfArticlesOutOfRangeError('total number of articles is out of range (from 1 to 150)')
         if not isinstance(self.config_content.headers, dict):
             raise IncorrectHeadersError('headers are not in a form of dictionary')
