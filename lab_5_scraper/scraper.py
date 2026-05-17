@@ -325,6 +325,14 @@ class Crawler:
                     self.urls.append(full_url)
                 elif url.startswith('http'):
                     self.urls.append(url)
+    def get_search_urls(self) -> list:
+        """
+        Get seed_urls param.
+
+        Returns:
+            list: seed_urls param
+        """
+        return self.config.get_seed_urls()
 
 
 # 10
