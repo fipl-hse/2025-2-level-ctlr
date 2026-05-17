@@ -253,11 +253,15 @@ class Crawler:
         """
         Find articles.
         """
-        for seed_url in self.config.get_seed_urls():
-            if len(self.urls) >= self.config.get_num_articles():
-                return
+        to_visit = list(self.config.get_seed_urls())
+        visited = set()
+        while to_visit and len(self.urls) < self.config.get_num_articles():
+            current_url = to_visit.pop(0)
+            if current_url in visited:
+                continue
+            visited.add(current_url)
             try:
-                response = make_request(seed_url, self.config)
+                response = make_request(current_url, self.config)
                 if not response.ok:
                     continue
                 soup = BeautifulSoup(response.text, "lxml")
@@ -265,23 +269,24 @@ class Crawler:
                     href = tag.get("href", "")
                     if not href:
                         continue
-                    is_article = (
-                        "/press/" in href and
-                        "?" not in href
-                    )
-                    is_excluded = (
-                        "search" in href.lower() or
-                        "page" in href.lower() or
-                        "award" in href.lower()
-                    )
-                    if not is_article or is_excluded:
-                        continue
                     full_url = self._extract_url(tag)
-                    if full_url and full_url not in self.urls:
+                    if not full_url:
+                        continue
+                    if full_url.endswith('/') and '/press/' in full_url:
+                        if full_url not in visited:
+                            to_visit.append(full_url)
+                        continue
+                    if '/press/' not in full_url:
+                        continue
+                    if '?' in full_url:
+                        continue
+                    if any(word in full_url.lower() for word in ['search', 'page', 'award', 'english']):
+                        continue
+                    if full_url not in self.urls:
                         self.urls.append(full_url)
                         print(f"Found article {len(self.urls)}: {full_url}")
-                    if len(self.urls) >= self.config.get_num_articles():
-                        return
+                        if len(self.urls) >= self.config.get_num_articles():
+                            return
             except (requests.RequestException, AttributeError, ValueError):
                 continue
 
@@ -359,7 +364,7 @@ class HTMLParser:
             self.article.title = "NOT FOUND"
         else:
             title_text = title_tag.get_text(strip=True)
-            self.article.title = title_text.split(". Текст")[0]
+            self.article.title = title_text.split(". Text")[0]
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
