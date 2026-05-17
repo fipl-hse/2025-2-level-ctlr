@@ -330,11 +330,29 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        all_body = article_soup.find_all(["p", "blockquote"])
         texts = []
-        for p in all_body:
-            texts.append(p.text)
+
+        # Following is a complex algorythm to finally find all text in an article webpage
+        content_div = article_soup.find('div', class_='itemFullText')
+        if not content_div:
+            content_div = article_soup.find('div', class_='article-content')
+        if not content_div:
+            content_div = article_soup.find('div', itemprop='articleBody')
+        
+        if content_div:
+            for tag in content_div.find_all(['p', 'blockquote', 'div']):
+                text = tag.get_text(strip=True)
+                if text:
+                    texts.append(text)
+        else:
+            for tag in article_soup.find_all(['p', 'blockquote']):
+                text = tag.get_text(strip=True)
+                if text:
+                    texts.append(text)
+
         self.article.text = " ".join(texts)
+        print(f"Found {len(self.article.text)} characters for article {self.article_id}")
+
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -366,7 +384,8 @@ class HTMLParser:
             response = requests.get(self.full_url)
             if response.status_code != 200:
                 return False
-            article_bs = BeautifulSoup(response.text)
+            response.encoding = self.config.get_encoding()
+            article_bs = BeautifulSoup(response.text, "html.parser")
             self._fill_article_with_text(article_bs)
         except:
             return False
@@ -394,14 +413,28 @@ def main() -> None:
 
 if __name__ == "__main__":
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
+
+    print(f"CONFIG TOTAL ARTICLES: {configuration.get_num_articles()}")
+    
     prepare_environment(ASSETS_PATH)
     crawler = Crawler(config=configuration)
     crawler.find_articles()
     urls = crawler.urls
 
     article_urls = [url for url in urls if '/item/' in url]
-    for i, full_url in enumerate(article_urls, start=1):       
+
+    print(f"FOUND {len(article_urls)} article URLs")
+
+    article_urls = article_urls[:configuration.get_num_articles()]
+    print(f"WILL PROCESS {len(article_urls)} articles")
+
+    i = 1
+    for full_url in article_urls:
+        
+        print(f"Processing {i}: {full_url}")
+        
         parser = HTMLParser(full_url=full_url, article_id=i, config=configuration)
         article = parser.parse()
-        if article and article.text:
+        if article and article.text and len(article.text.strip()) >= 50:
             to_raw(article)
+            i += 1
