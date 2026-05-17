@@ -331,15 +331,19 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = article_soup.find('h1')
+        title_tag = article_soup.find("title")
         if title_tag:
-            self.article.title = title_tag.get_text(strip=True)
+            raw_title = title_tag.text.strip()
+            if '|' in raw_title:
+                self.article.title = raw_title.split('|')[-1].strip()
+            else:
+                self.article.title = raw_title
         else:
-            self.article.title = "NOT FOUND"
+            self.article.title = "NO TITLE"
 
-        author_tag = article_soup.find(class_=re.compile(r'author', re.I))
-        if author_tag:
-            self.article.author = [author_tag.get_text(strip=True)]
+        author_tag = article_soup.find("meta", attrs={"name": "author"})
+        if author_tag and author_tag.get("content"):
+            self.article.author = [author_tag.get("content").strip()]
         else:
             self.article.author = ["NOT FOUND"]
 
