@@ -17,32 +17,39 @@ from core_utils.config_dto import ConfigDTO
 
 
 class IncorrectSeedURLError(Exception):
-    """Seed URL does not match standard pattern."""
-    pass
+    """
+    Seed URL does not match standard pattern.
+    """
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    """Total number of articles is out of range from 1 to 150."""
-    pass
+    """
+    Total number of articles is out of range from 1 to 150.
+    """
 
 class IncorrectNumberOfArticlesError(Exception):
-    """Total number of articles to parse is not integer or less than 0."""
-    pass
+    """
+    Total number of articles to parse is not integer or less than 0.
+    """
 
 class IncorrectHeadersError(Exception):
-    """Headers are not in a form of dictionary."""
-    pass
+    """
+    Headers are not in a form of dictionary.
+    """
 
 class IncorrectEncodingError(Exception):
-    """Encoding must be specified as a string."""
-    pass
+    """
+    Encoding must be specified as a string.
+    """
 
 class IncorrectTimeoutError(Exception):
-    """Timeout value must be a positive integer less than 60."""
-    pass
+    """
+    Timeout value must be a positive integer less than 60.
+    """
 
 class IncorrectVerifyError(Exception):
-    """Verify certificate and headless mode values must either be True or False."""
-    pass
+    """
+    Verify certificate and headless mode values must either be True or False.
+    """
 
 class Config:
     """
@@ -227,7 +234,7 @@ class Crawler:
             return href
         
         if href.startswith("/"):
-            return "https://scrapsfromtheloft.com" + href
+            href = href[1:]
         
         return "https://scrapsfromtheloft.com/" + href
 
@@ -235,47 +242,28 @@ class Crawler:
         """
         Find articles.
         """
-        for seed_url in self.get_search_urls():
-            if len(self.urls) >= self.config.get_num_articles():
+        needed = self.config.get_num_articles()
+        
+        for seed_url in self.config.get_seed_urls():
+            if len(self.urls) >= needed:
                 break
-
-            try:
-                response = make_request(seed_url, self.config)
-            except requests.exceptions.RequestException:
+            
+            response = make_request(seed_url, self.config)
+            if not response or response.status_code != 200:
                 continue
-
-            if response.status_code != 200:
-                continue
-
-            page_soup = BeautifulSoup(response.text, "html.parser")
-
-            all_links = page_soup.find_all("a", href=True)
-
-            for link_tag in all_links:
-                if len(self.urls) >= self.config.get_num_articles():
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            all_links = soup.find_all('a')
+            
+            for link in all_links:
+                if len(self.urls) >= needed:
                     break
                 
-                href = link_tag.get("href", "")
-                if not href:
-                    continue
-
-                is_transcript = (
-                    ("/movie-transcripts/" in href) or 
-                    (href.endswith("-transcript")) or
-                    ("transcript" in href.lower() and "page" not in href.lower())
-                )
-
-                is_excluded = (
-                    "page" in href.lower() or
-                    "search" in href.lower() or
-                    href == "/movie-transcripts/"
-                )
-
-                if is_transcript and not is_excluded:
-                    full_url = self._extract_url(link_tag)
-                    if full_url and full_url not in self.urls:
-                        self.urls.append(full_url)
-                        print(f"Found article {len(self.urls)}: {full_url}")
+                article_url = self._extract_url(link)
+                
+                if article_url and article_url not in self.urls:
+                    self.urls.append(article_url)
 
     def get_search_urls(self) -> list:
         """
@@ -363,7 +351,6 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
@@ -374,16 +361,14 @@ class HTMLParser:
         """
         try:
             response = make_request(self.full_url, self.config)
-        except requests.exceptions.RequestException:
+        except requests.RequestException:
             return False
-
-        if response.status_code != 200:
-            return False
-
-        article_soup = BeautifulSoup(response.text, "html.parser")
+        
+        article_soup = BeautifulSoup(response.text, features="lxml")
+        
         self._fill_article_with_text(article_soup)
         self._fill_article_with_meta_information(article_soup)
-
+        
         return self.article
 
 
@@ -404,20 +389,22 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
-    config_path = pathlib.Path("lab_5_scraper/scraper_config.json")
-    config = Config(config_path)
-    
-    prepare_environment("tmp/articles")
+    config = Config(CRAWLER_CONFIG_PATH)
+    prepare_environment(ASSETS_PATH)
     
     crawler = Crawler(config)
     crawler.find_articles()
     
-    for article_id, url in enumerate(crawler.urls, start=1):
-        parser = HTMLParser(url, article_id, config)
+    for id, url in enumerate(crawler.urls, 1):
+        if id > config.get_num_articles():
+            break
+        
+        parser = HTMLParser(full_url=url, article_id=id, config=config)
+        
         article = parser.parse()
         if article:
-            pass
-
+            to_raw(article)
+            to_meta(article)
 
 if __name__ == "__main__":
     main()
