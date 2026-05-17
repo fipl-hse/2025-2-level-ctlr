@@ -18,10 +18,9 @@ from typing import cast
 from core_utils.constants import PROJECT_ROOT
 
 try:
-    import spacy_udpipe  # type: ignore[import-untyped]
+    import spacy_udpipe  # type: ignore
     from spacy.language import Language
-    from spacy_conll import ConllParser  # type: ignore[import-untyped]
-
+    from spacy_conll import ConllParser  # type: ignore
 except ImportError:
     print("No libraries installed. Failed to import.")
 
