@@ -4,6 +4,7 @@ Crawler implementation.
 
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
 import datetime
+import html
 import json
 import pathlib
 import random
@@ -368,7 +369,8 @@ class HTMLParser:
         """
         title = article_soup.find(class_="title")
         if title:
-            self.article.title = title.get_text(strip=True)
+            raw_title = title.get_text(strip=True)
+            self.article.title = html.unescape(raw_title)
         else:
             self.article.title = "NOT FOUND"
 
