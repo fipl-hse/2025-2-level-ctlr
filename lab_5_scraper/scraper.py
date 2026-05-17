@@ -13,7 +13,9 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
