@@ -13,8 +13,6 @@ from spacy.tokens import Doc
 from core_utils.article.article import Article
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
-logger = get_child_logger(__file__)
-
 
 class CorpusManager:
     """
