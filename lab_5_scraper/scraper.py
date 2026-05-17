@@ -16,6 +16,7 @@ from core_utils.article.article import Article
 from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+from collections import deque
 
 
 class IncorrectSeedURLError(Exception):
@@ -253,11 +254,16 @@ class Crawler:
         """
         Find articles.
         """
-        for seed_url in self.config.get_seed_urls():
-            if len(self.urls) >= self.config.get_num_articles():
-                return
+        from collections import deque
+        to_visit = deque(self.config.get_seed_urls())
+        visited = set()
+        while to_visit and len(self.urls) < self.config.get_num_articles():
+            current_url = to_visit.popleft()
+            if current_url in visited:
+                continue
+            visited.add(current_url)
             try:
-                response = make_request(seed_url, self.config)
+                response = make_request(current_url, self.config)
                 if not response.ok:
                     continue
                 soup = BeautifulSoup(response.text, "lxml")
@@ -265,23 +271,23 @@ class Crawler:
                     href = tag.get("href", "")
                     if not href:
                         continue
-                    is_article = (
-                        "/press/" in href and
-                        "?" not in href
-                    )
-                    is_excluded = (
-                        "search" in href.lower() or
-                        "page" in href.lower() or
-                        "award" in href.lower()
-                    )
-                    if not is_article or is_excluded:
-                        continue
-                    full_url = self._extract_url(tag)
-                    if full_url and full_url not in self.urls:
-                        self.urls.append(full_url)
-                        print(f"Found article {len(self.urls)}: {full_url}")
-                    if len(self.urls) >= self.config.get_num_articles():
-                        return
+                full_url = self._extract_url(tag)
+                if not full_url or full_url in visited:
+                    continue
+                if not full_url.startswith("https://old.mxat.ru/"):
+                    continue
+                if full_url.endswith("/") and "/press/" in full_url:
+                    if full_url not in visited:
+                        to_visit.append(full_url)
+                else:
+                    is_valid_article = "/press/" in full_url
+                    is_not_excluded = not any(word in full_url.lower() for word in ["search", "page", "award"])
+                    if is_valid_article and is_not_excluded:
+                        if full_url not in self.urls:
+                            self.urls.append(full_url)
+                            print(f"Found article {len(self.urls)}: {full_url}")
+                        if len(self.urls) >= self.config.get_num_articles():
+                            return
             except (requests.RequestException, AttributeError, ValueError):
                 continue
 
