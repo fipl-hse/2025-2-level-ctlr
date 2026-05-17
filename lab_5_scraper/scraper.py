@@ -234,9 +234,14 @@ class Crawler:
         if not href:
             return ""
         if href.startswith(('http://', 'https://')):
-            return href
-        from urllib.parse import urljoin
-        return urljoin("https://www.theatreofnations.ru/", href)
+            result = href
+        else:
+            from urllib.parse import urljoin
+            result = urljoin("https://www.theatreofnations.ru/", href)
+        if 'theatreofnations.ru' in result and 'www.' not in result:
+            result = result.replace('https://theatreofnations.ru', 'https://www.theatreofnations.ru')
+            result = result.replace('http://theatreofnations.ru', 'https://www.theatreofnations.ru')
+        return result
 
     def find_articles(self) -> None:
         """
