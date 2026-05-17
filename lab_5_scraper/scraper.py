@@ -480,6 +480,9 @@ class HTMLParser:
 
         if title:
             title = html.unescape(title)
+            title = title.replace('«', '"').replace('»', '"')
+            title = title.replace('–', '-').replace('—', '-')
+            title = title.replace('…', '...')
 
         if not title:
             title = "Без заголовка"
