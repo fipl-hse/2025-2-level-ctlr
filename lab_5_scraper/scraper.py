@@ -377,15 +377,13 @@ class HTMLParser:
         try:
             response = make_request(self.full_url, self.config)
             if response.status_code != 200:
-                return False
+                return self.article
             article_soup = BeautifulSoup(response.text, features="lxml")
             self._fill_article_with_text(article_soup)
             self._fill_article_with_meta_information(article_soup)
-            if not self.article.text or len(self.article.text.strip()) < 50:
-                return False
             return self.article
         except (requests.RequestException, Exception):
-            return False
+            return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
