@@ -261,6 +261,8 @@ class Crawler:
                     if (
                     #re.match("https://pravlitlug.ru/khudozhestvennaya-proza1/malaya-proza1/rasskazy1/item/", new_full_url)
                     #and
+                    '/item/' in new_full_url
+                    and
                     new_full_url not in self.urls
                     ):
                         self.urls.append(new_full_url)
@@ -400,4 +402,5 @@ if __name__ == "__main__":
     for i, full_url in enumerate(urls, start=1):       
         parser = HTMLParser(full_url=full_url, article_id=i, config=configuration)
         article = parser.parse()
-        to_raw(article)
+        if article and article.text:
+            to_raw(article)
