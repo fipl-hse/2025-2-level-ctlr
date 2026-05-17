@@ -265,7 +265,7 @@ class Crawler:
                     break
                 url = self._extract_url(link)
                 full_url = urljoin(seed_url, url)
-                if (full_url not in self.urls):
+                if full_url not in self.urls:
                     if "afisha.html" not in full_url and "isaeva" in full_url:
                         self.urls.append(full_url)
     def get_search_urls(self) -> list:
