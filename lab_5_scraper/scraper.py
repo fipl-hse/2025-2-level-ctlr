@@ -135,6 +135,9 @@ class Config:
                 raise IncorrectSeedURLError(f"Invalid seed URL format: {url}")
 
         total = config_dto.total_articles
+        if isinstance(total, bool):
+            raise IncorrectNumberOfArticlesError("Total articles must be an integer, not a boolean")
+
         if not isinstance(total, int):
             raise IncorrectNumberOfArticlesError("Total articles must be an integer")
 
@@ -151,6 +154,9 @@ class Config:
             raise IncorrectEncodingError("Encoding must be a string")
 
         timeout = config_dto.timeout
+        if isinstance(timeout, bool):
+            raise IncorrectTimeoutError("Timeout must be an integer, not a boolean")
+            
         if not isinstance(timeout, int):
             raise IncorrectTimeoutError("Timeout must be an integer")
 
