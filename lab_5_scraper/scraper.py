@@ -194,6 +194,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         verify=config.get_verify_certificate()
         )
     response.encoding = config.get_encoding()
+    print(f"Response status code: {response.status_code}")
     return response
 
 
@@ -244,20 +245,19 @@ class Crawler:
         number_of_articles = self._config.get_num_articles()
         for seed_url in seed_urls:
             if len(self.urls) >= number_of_articles:
-                    return
+                return
             try:
                 response = make_request(seed_url, self._config)
             except Exception:
                 continue
             soup = BeautifulSoup(response.text, features="lxml")
-            base_path = seed_url.replace('https://www.theatreofnations.ru/', '')
-            base_path = base_path[:base_path.rfind('/')] + '/'
             for tag in soup.find_all('a', href=True):
                 link = self._extract_url(tag)
                 if not link or link in self.urls:
                     continue
-                if base_path in link:
-                    self.urls.append(link)
+                if 'theatreofnations.ru' in link:
+                    if link not in self.urls:
+                        self.urls.append(link)
 
     def get_search_urls(self) -> list:
         """
@@ -266,7 +266,7 @@ class Crawler:
         Returns:
             list: seed_urls param
         """
-        return self.urls
+        return self._config.get_seed_urls()
     
 # 10
 
@@ -325,11 +325,6 @@ class HTMLParser:
         if content_div:
             paragraphs = content_div.find_all('p')
             texts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
-            list_items = content_div.find_all('li')
-            for li in list_items:
-                text = li.get_text(strip=True)
-                if text:
-                    texts.append(text)
             self.article.text = '\n\n'.join(texts)
         else:
             self.article.text = ""
@@ -345,7 +340,7 @@ class HTMLParser:
         if title_tag:
             raw_title = title_tag.text.strip()
             if '|' in raw_title:
-                self.article.title = raw_title.split('|')[-1].strip()
+                self.article.title = raw_title.split('|')[1].strip()
             else:
                 self.article.title = raw_title
         else:
@@ -377,12 +372,14 @@ class HTMLParser:
         """
         try:
             response = make_request(self.full_url, self.config)
-        except requests.RequestException:
+            if response.status_code != 200:
+                return False
+            article_soup = BeautifulSoup(response.text, features="lxml")
+            self._fill_article_with_text(article_soup)
+            self._fill_article_with_meta_information(article_soup)
+            return self.article
+        except (requests.RequestException, Exception):
             return False
-        article_soup = BeautifulSoup(response.text, features="lxml")
-        self._fill_article_with_text(article_soup)
-        self._fill_article_with_meta_information(article_soup)
-        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -417,7 +414,7 @@ def main() -> None:
         if article:
             to_raw(article)
             to_meta(article)
-            print(f"Saved article {idx}")
 
 if __name__ == "__main__":
     main()
+
