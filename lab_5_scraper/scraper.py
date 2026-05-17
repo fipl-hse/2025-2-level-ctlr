@@ -261,10 +261,7 @@ class Crawler:
         full_url = urljoin(base_url, href)
         if 'ptj.spb.ru' not in full_url:
             return ""
-        article_pattern = re.compile(
-            r'(archive/\d+/.+/.+/|blog/[^/]+/?)$'
-        )
-        if article_pattern.search(full_url):
+        if (full_url not in self.urls and isinstance(full_url, str)):
             return full_url
         return ""
 
@@ -280,7 +277,7 @@ class Crawler:
                 if not response:
                     continue
                 soup = BeautifulSoup(response.text, "lxml")
-                for tag in soup.find_all("a"):
+                for tag in soup.find_all("a", class_="title_link", href=True):
                     link = self._extract_url(tag)
                     if link and link not in self.urls:
                         self.urls.append(link)
