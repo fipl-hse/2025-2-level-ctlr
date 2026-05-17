@@ -267,15 +267,12 @@ class Crawler:
                         continue
                     is_article = (
                         "/press/" in href and
-                        "?" not in href and
-                        not href.endswith("/")
+                        "?" not in href
                     )
                     is_excluded = (
                         "search" in href.lower() or
                         "page" in href.lower() or
-                        "award" in href.lower() or
-                        href == "/press/" or
-                        href == "/press"
+                        "award" in href.lower()
                     )
                     if not is_article or is_excluded:
                         continue
