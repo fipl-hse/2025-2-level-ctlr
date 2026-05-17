@@ -265,26 +265,26 @@ class Crawler:
                     href = tag.get("href", "")
                     if not href:
                         continue
-                is_article = (
-                    "/press/" in href and
-                    "?" not in href and
-                    not href.endswith("/")
-                )
-                is_excluded = (
-                    "search" in href.lower() or
-                    "page" in href.lower() or
-                    "award" in href.lower() or
-                    href == "/press/" or
-                    href == "/press"
-                )
-                if not is_article or is_excluded:
-                    continue
-                full_url = self._extract_url(tag)
-                if full_url and full_url not in self.urls:
-                    self.urls.append(full_url)
-                    print(f"Found article {len(self.urls)}: {full_url}")
-                if len(self.urls) >= self.config.get_num_articles():
-                    return
+                    is_article = (
+                        "/press/" in href and
+                        "?" not in href and
+                        not href.endswith("/")
+                    )
+                    is_excluded = (
+                        "search" in href.lower() or
+                        "page" in href.lower() or
+                        "award" in href.lower() or
+                        href == "/press/" or
+                        href == "/press"
+                    )
+                    if not is_article or is_excluded:
+                        continue
+                    full_url = self._extract_url(tag)
+                    if full_url and full_url not in self.urls:
+                        self.urls.append(full_url)
+                        print(f"Found article {len(self.urls)}: {full_url}")
+                    if len(self.urls) >= self.config.get_num_articles():
+                        return
             except (requests.RequestException, AttributeError, ValueError):
                 continue
 
