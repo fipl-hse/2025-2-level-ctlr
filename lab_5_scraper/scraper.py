@@ -499,6 +499,7 @@ def main() -> None:
         if isinstance(article, Article) and article.text:
             to_raw(article)
             to_meta(article)
+            print(article.text)
 
 
 if __name__ == "__main__":
