@@ -13,7 +13,7 @@
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7"
     },
-    "total_articles_to_find_and_parse": 100,
+    "total_articles_to_find_and_parse": 20,
     "encoding": "utf-8",
     "timeout": 30,
     "should_verify_certificate": true,

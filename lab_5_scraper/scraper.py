@@ -261,6 +261,11 @@ class Crawler:
                 skip_patterns = ['/events/', '/performances/', '/posts/', '/special_projects/', '/archive/', '/contacts/', '/users/login/']
                 if any(link.endswith(pattern) for pattern in skip_patterns):
                     continue
+                try:
+                    if not make_request(link, self._config).ok:
+                        continue
+                except Exception:
+                    continue
                 self.urls.append(link)
 
     def get_search_urls(self) -> list:
