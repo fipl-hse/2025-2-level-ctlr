@@ -274,14 +274,17 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
-        self._config = config
+         self._config = config
         self.urls: list[str] = []
         self.base_url: str = ""
 
         seed_urls = self._config.get_seed_urls()
         if seed_urls:
             match = re.match(r"(https?://[^/]+)", seed_urls[0])
-            self.base_url = match.group(1) if match else ""
+            if match:
+                self.base_url = match.group(1) or ""
+            else:
+                self.base_url = ""
 
         self.url_pattern = re.compile(r"\.shtml|text_")
 
@@ -447,7 +450,9 @@ class HTMLParser:
             if datetime_value and isinstance(datetime_value, str):
                 date_str = datetime_value
             else:
-                date_str = date_tag.get_text(strip=True)
+                date_text = date_tag.get_text(strip=True)
+                if date_text:
+                    date_str = str(date_text)
         if not date_str:
             meta_date = article_soup.find("meta", {"name": "article:published_time"})
             if meta_date:
@@ -572,6 +577,10 @@ def main() -> None:
     for idx, url in enumerate(article_urls[: config.get_num_articles()], start=1):
         parser = HTMLParser(url, idx, config)
         article = parser.parse()
+
+        if isinstance(article, Article):
+            to_raw(article)
+            to_meta(article)
 
         to_raw(article)
         to_meta(article)
