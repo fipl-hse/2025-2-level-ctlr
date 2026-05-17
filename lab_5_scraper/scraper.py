@@ -203,11 +203,12 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     verify = config.get_verify_certificate()
     try:
         response = requests.get(url, headers=headers, timeout=timeout, verify=verify)
-        return response
     except requests.exceptions.Timeout:
         print("Timeout: Server didn't respond in 3s")
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
+    return response
+
 
 
 class Crawler:
@@ -246,6 +247,10 @@ class Crawler:
         Find articles.
         """
         for seed_url in self.config.get_seed_urls():
+            
+            if len(self.urls) > self.config.get_num_articles():
+                break
+            
             response = make_request(seed_url, self.config)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text)
@@ -253,7 +258,11 @@ class Crawler:
                 for link_tag in all_links: #going through tags of links located in an html page
                     new_relative_url = self._extract_url(link_tag)
                     new_full_url = urljoin(seed_url, new_relative_url)
-                    if new_full_url not in self.urls:
+                    if (
+                    #re.match("https://pravlitlug.ru/khudozhestvennaya-proza1/malaya-proza1/rasskazy1/item/", new_full_url)
+                    #and
+                    new_full_url not in self.urls
+                    ):
                         self.urls.append(new_full_url)
 
     def get_search_urls(self) -> list:
@@ -319,7 +328,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        all_body = article_soup.find_all("p")
+        all_body = article_soup.find_all(["p", "blockquote"])
         texts = []
         for p in all_body:
             texts.append(p.text)
@@ -351,9 +360,14 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
-        response = requests.get(self.full_url)
-        article_bs = BeautifulSoup(response.text)
-        self._fill_article_with_text(article_bs)
+        try:
+            response = requests.get(self.full_url)
+            if response.status_code != 200:
+                return False
+            article_bs = BeautifulSoup(response.text)
+            self._fill_article_with_text(article_bs)
+        except:
+            return False
         return self.article
 
 
@@ -364,11 +378,10 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
-    try:
-        base_path.mkdir(parents=True)
-    except FileExistsError:
+    if base_path.exists():
         shutil.rmtree(base_path)
-        base_path.mkdir(parents=True)
+    base_path.mkdir(parents=True, exist_ok=True)
+
 
 
 def main() -> None:
@@ -383,7 +396,8 @@ if __name__ == "__main__":
     crawler = Crawler(config=configuration)
     crawler.find_articles()
     urls = crawler.urls
-    for i, full_url in enumerate(urls):
+
+    for i, full_url in enumerate(urls, start=1):       
         parser = HTMLParser(full_url=full_url, article_id=i, config=configuration)
         article = parser.parse()
         to_raw(article)
