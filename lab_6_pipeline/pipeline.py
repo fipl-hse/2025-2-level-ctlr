@@ -8,8 +8,10 @@ import pathlib
 import re
 from typing import cast
 
+import networkx as nx
 import spacy_udpipe
 from networkx import DiGraph
+from networkx.algorithms.isomorphism import DiGraphMatcher
 from spacy.language import Language
 from spacy.tokens import Doc
 from spacy_conll import init_parser
@@ -19,7 +21,6 @@ from core_utils.article.article import (
     Article,
     ArtifactType,
     get_article_id_from_filepath,
-    split_by_sentence,
 )
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
@@ -159,14 +160,14 @@ class TextProcessingPipeline(PipelineProtocol):
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
-        self.corpus_manager = corpus_manager
+        self._corpus = corpus_manager
         self._analyzer = analyzer
 
     def run(self) -> None:
         """
         Perform basic preprocessing and write processed text to files.
         """
-        for article in self.corpus_manager.get_articles().values():
+        for article in self._corpus.get_articles().values():
             to_cleaned(article)
 
             if self._analyzer:
@@ -293,9 +294,8 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
-        self.corpus_manager = corpus_manager
+        self._corpus = corpus_manager
         self._analyzer = analyzer
-        self._corpus = {}
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -318,7 +318,7 @@ class POSFrequencyPipeline:
         """
         Visualize the frequencies of each part of speech.
         """
-        for article in self.corpus_manager.get_articles().values():
+        for article in self._corpus.get_articles().values():
             pos_frequencies = self._count_frequencies(article)
             article_meta = from_meta(article.get_meta_file_path())
             article_meta.set_pos_info(pos_frequencies)
@@ -343,6 +343,9 @@ class PatternSearchPipeline(PipelineProtocol):
             analyzer (LibraryWrapper): Analyzer instance
             pos (tuple[str, ...]): Root, Dependency, Child part of speech
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
+        self._node_labels = pos
 
     def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
