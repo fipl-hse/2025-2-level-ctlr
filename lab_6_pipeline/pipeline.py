@@ -6,10 +6,11 @@ Pipeline for CONLL-U formatting.
 import json
 import pathlib
 import re
-from string import punctuation
 
 import spacy_udpipe
 from networkx import DiGraph
+from spacy_conll import init_parser
+from spacy_conll.parser import ConllParser
 from spacy.language import Language
 from spacy.tokens import Doc
 
@@ -157,7 +158,7 @@ class TextProcessingPipeline(PipelineProtocol):
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
         self.corpus_manager = corpus_manager
-        self.analyzer = analyzer
+        self._analyzer = analyzer
 
     def run(self) -> None:
         """
@@ -166,11 +167,11 @@ class TextProcessingPipeline(PipelineProtocol):
         for article in self.corpus_manager.get_articles().values():
             to_cleaned(article)
 
-            if self.analyzer:
-                conlu_sentences = self.analyzer.analyze(split_by_sentence(article.get_raw_text()))
+            if self._analyzer:
+                conlu_sentences = self._analyzer.analyze(split_by_sentence(article.get_raw_text()))
                 if conlu_sentences:
                     article.set_conllu_info("".join([str(sentence) for sentence in conlu_sentences]))
-                self.analyzer.to_conllu(article)
+                self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -185,6 +186,26 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         self._analyzer = self._bootstrap()
+        self._analyzer.add_pipe(
+        "conll_formatter",
+        last=True,
+        config={
+            "conversion_maps": {"XPOS": {"": "_"}},
+            "include_headers": True,
+            "field_names": {
+                "ID": "ID",
+                "FORM": "FORM",
+                "LEMMA": "LEMMA",
+                "UPOS": "UPOS",
+                "XPOS": "XPOS",
+                "FEATS": "FEATS",
+                "HEAD": "HEAD",
+                "DEPREL": "DEPREL",
+                "DEPS": "DEPS",
+                "MISC": "MISC",
+            },
+        },)
+        self._parser = ConllParser(self._analyzer)
 
     def _bootstrap(self) -> Language:
         """
@@ -197,6 +218,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             lang="ru",
             path=str(MODEL_PATH / MODEL_NAME)
         )
+    
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -224,7 +246,7 @@ class UDPipeAnalyzer(LibraryWrapper):
                     token.tag_ or "_", #XPOS
                     "|".join(morph for morph in token.morph) or "_", #FEATS
                     "0" if token.dep_=="ROOT" else str(token.head.i + 1), #HEAD
-                    token.dep_, #DEPREL
+                    token.dep_ or "_", #DEPREL
                     "_", #DEPS
                     "_" if token.whitespace_ else "SpaceAfter=No" #MISK
                 ]))
@@ -254,6 +276,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        return self._parser.parse_conll_file_as_spacy(article)
+        # with open(article.get_file_path(ArtifactType.UDPIPE_CONLLU), "r", encoding="utf-8") as f:
+        #     return self._parser.parse_conll_text_as_spacy(f.read())
 
 
 class POSFrequencyPipeline:
@@ -269,6 +294,9 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
+        self.corpus_manager = corpus_manager
+        self._analyzer = analyzer
+        self._corpus = {}
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -361,11 +389,20 @@ def main() -> None:
     udpipe_analyzer = UDPipeAnalyzer()
     pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     # l = udpipe_analyzer.analyze(test_texts)
-    pipeline.run()
+    # pipeline.run()
+
     # from pprint import pprint
     # for sent in l:
     #     pprint(sent)
     #     print()
+
+
+    path = r"C:\Users\artem\hse\2025-2-level-ctlr\tmp\articles\1_udpipe.conllu"
+    path = r"C:\Users\artem\hse\2025-2-level-ctlr\lab_6_pipeline\tests\test_files\reference_udpipe_test.conllu"
+    article = Article(None, 2)
+    doc = udpipe_analyzer.from_conllu(path)
+
+    # print("ok")
 
 
 
