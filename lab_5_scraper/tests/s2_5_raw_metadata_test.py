@@ -6,7 +6,7 @@ Dataset validation.
 import json
 import re
 import shutil
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 from quality_control.console_logging import get_child_logger
@@ -45,7 +45,7 @@ def check_title_in_html(title: str, html: str) -> bool:
 
 
 @pytest.fixture(scope="function")
-def raw_basic_setup() -> Any:
+def raw_basic_setup() -> Generator[tuple[tuple[int, str], ...], None, None]:
     """
     Prepare raw text files dataset and clean up after test.
 
@@ -64,7 +64,7 @@ def raw_basic_setup() -> Any:
 
 
 @pytest.fixture(scope="function")
-def raw_medium_setup() -> Any:
+def raw_medium_setup() -> Generator[dict[str, Any], None, None]:
     """
     Prepare metadata files dataset and config for medium checks.
 
@@ -85,7 +85,7 @@ def raw_medium_setup() -> Any:
 
 
 @pytest.fixture(scope="function")
-def raw_advanced_setup() -> Any:
+def raw_advanced_setup() -> Generator[dict[str, Any], None, None]:
     """
     Prepare metadata files dataset, config and date pattern for advanced checks.
 
@@ -111,12 +111,13 @@ def raw_advanced_setup() -> Any:
 @pytest.mark.mark8
 @pytest.mark.mark10
 @pytest.mark.stage_2_5_dataset_validation
-def test_validate_sort_raw(raw_basic_setup: tuple) -> None:
+def test_validate_sort_raw(raw_basic_setup: tuple[tuple[int, str], ...]) -> None:
     """
     Ensure raw files numeration is homogeneous.
 
     Args:
-        raw_basic_setup (tuple): Fixture yielding tuple of (article_id, content) pairs.
+        raw_basic_setup (tuple[tuple[int, str], ...]):
+        Fixture yielding tuple of (article_id, content) pairs.
     """
     list_ids = [pair[0] for pair in raw_basic_setup]
     for i in range(1, len(list_ids) + 1):
@@ -128,12 +129,13 @@ def test_validate_sort_raw(raw_basic_setup: tuple) -> None:
 @pytest.mark.mark8
 @pytest.mark.mark10
 @pytest.mark.stage_2_5_dataset_validation
-def test_texts_are_not_empty(raw_basic_setup: tuple) -> None:
+def test_texts_are_not_empty(raw_basic_setup: tuple[tuple[int, str], ...]) -> None:
     """
     Ensure text files are not empty.
 
     Args:
-        raw_basic_setup (tuple): Fixture yielding tuple of (article_id, content) pairs.
+        raw_basic_setup (tuple[tuple[int, str], ...]):
+        Fixture yielding tuple of (article_id, content) pairs.
     """
     msg = (
         "Text with ID: %s seems to be empty (less than 5 characters). "
@@ -152,12 +154,13 @@ def test_texts_are_not_empty(raw_basic_setup: tuple) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_2_5_dataset_validation
 @pytest.mark.lab_5_scraper
-def test_folder_is_filled_with_no_duplicates(raw_basic_setup: tuple) -> None:
+def test_folder_is_filled_with_no_duplicates(raw_basic_setup: tuple[tuple[int, str], ...]) -> None:
     """
     Ensure the collected article texts are unique.
 
     Args:
-        raw_basic_setup (tuple): Fixture yielding tuple of (article_id, content) pairs.
+        raw_basic_setup (tuple[tuple[int, str], ...]):
+        Fixture yielding tuple of (article_id, content) pairs.
     """
     assert len(raw_basic_setup) == len(set(raw_basic_setup))
 

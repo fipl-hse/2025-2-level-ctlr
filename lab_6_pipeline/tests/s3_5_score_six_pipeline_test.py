@@ -4,7 +4,7 @@ Tests for processing text.
 
 # pylint: disable=redefined-outer-name, unused-argument
 import shutil
-from typing import Any
+from typing import Generator
 
 import pytest
 
@@ -15,7 +15,7 @@ from lab_6_pipeline.tests.utils import pipeline_test_files_setup
 
 
 @pytest.fixture(scope="module")
-def setup_pipeline_score_six() -> Any:
+def setup_pipeline_score_six() -> Generator[None, None, None]:
     """
     Setup and teardown for TextProcessingPipeline score 6 tests.
     """
@@ -29,7 +29,7 @@ def setup_pipeline_score_six() -> Any:
 
 
 @pytest.fixture(scope="function")
-def loaded_conllu_texts(setup_pipeline_score_six: Any) -> Any:
+def loaded_conllu_texts(setup_pipeline_score_six: None) -> Generator[tuple[str, str], None, None]:
     """
     Load reference and processed conllu texts.
     """
@@ -47,12 +47,13 @@ def loaded_conllu_texts(setup_pipeline_score_six: Any) -> Any:
 @pytest.mark.mark10
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_conllu_reference_preprocessed_are_equal(loaded_conllu_texts: Any) -> None:
+def test_conllu_reference_preprocessed_are_equal(loaded_conllu_texts: tuple[str, str]) -> None:
     """
     Ensure that reference and processed conllu files have equal number of lines.
 
     Args:
-        loaded_conllu_texts (Any): Fixture providing reference and processed conllu strings.
+        loaded_conllu_texts (tuple[str, str]):
+        Fixture providing reference and processed conllu strings.
     """
     conllu_reference, conllu_processed = loaded_conllu_texts
     special_message = (
@@ -68,12 +69,13 @@ def test_conllu_reference_preprocessed_are_equal(loaded_conllu_texts: Any) -> No
 @pytest.mark.mark10
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_conllu_tokens_are_formatted(loaded_conllu_texts: Any) -> None:
+def test_conllu_tokens_are_formatted(loaded_conllu_texts: tuple[str, str]) -> None:
     """
     Ensure that reference and processed conllu files have equal tokens and length.
 
     Args:
-        loaded_conllu_texts (Any): Fixture providing reference and processed conllu strings.
+        loaded_conllu_texts (tuple[str, str]):
+        Fixture providing reference and processed conllu strings.
     """
     _, conllu_processed = loaded_conllu_texts
     ref_tokens = [
@@ -115,12 +117,13 @@ def test_conllu_tokens_are_formatted(loaded_conllu_texts: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_empty_line_in_to_conllu_method(loaded_conllu_texts: Any) -> None:
+def test_empty_line_in_to_conllu_method(loaded_conllu_texts: tuple[str, str]) -> None:
     """
     Check number of empty lines in conllu files.
 
     Args:
-        loaded_conllu_texts (Any): Fixture providing reference and processed conllu strings.
+        loaded_conllu_texts (tuple[str, str]):
+        Fixture providing reference and processed conllu strings.
     """
     conllu_reference, conllu_processed = loaded_conllu_texts
     assert conllu_reference[-2:] == conllu_processed[-2:]

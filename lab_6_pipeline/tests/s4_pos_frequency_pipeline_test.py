@@ -5,7 +5,7 @@ Tests for POS frequency pipeline.
 # pylint: disable=no-name-in-module, duplicate-code, redefined-outer-name, unused-argument
 import json
 import shutil
-from typing import Any
+from typing import Generator
 
 import pytest
 from quality_control.console_logging import get_child_logger
@@ -25,7 +25,7 @@ logger = get_child_logger(__file__)
 
 
 @pytest.fixture(scope="module")
-def pos_pipeline_setup() -> Any:
+def pos_pipeline_setup() -> Generator[tuple[CorpusManager, dict], None, None]:
     """
     Setup and teardown for POSFrequencyPipeline tests.
     """
@@ -67,12 +67,13 @@ def pos_pipeline_setup() -> Any:
 @pytest.mark.mark10
 @pytest.mark.stage_4_pos_frequency_pipeline_checks
 @pytest.mark.lab_6_pipeline
-def test_meta_files_readable(pos_pipeline_setup: Any) -> None:
+def test_meta_files_readable(pos_pipeline_setup: tuple[CorpusManager, dict]) -> None:
     """
     Ensure meta files are not corrupt.
 
     Args:
-        pos_pipeline_setup (Any): Fixture providing corpus manager and expected frequencies.
+        pos_pipeline_setup (tuple[CorpusManager, dict]):
+        Fixture providing corpus manager and expected frequencies.
     """
     corpus_manager, _ = pos_pipeline_setup
     failed = False
@@ -92,12 +93,13 @@ def test_meta_files_readable(pos_pipeline_setup: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_4_pos_frequency_pipeline_checks
 @pytest.mark.lab_6_pipeline
-def test_frequencies_are_correct(pos_pipeline_setup: Any) -> None:
+def test_frequencies_are_correct(pos_pipeline_setup: tuple[CorpusManager, dict]) -> None:
     """
     Ensure frequencies are counted correctly.
 
     Args:
-        pos_pipeline_setup (Any): Fixture providing corpus manager and expected frequencies.
+        pos_pipeline_setup (tuple[CorpusManager, dict]):
+        Fixture providing corpus manager and expected frequencies.
     """
     corpus_manager, expected_frequencies = pos_pipeline_setup
     one_article = corpus_manager.get_articles()[1]
@@ -114,12 +116,13 @@ def test_frequencies_are_correct(pos_pipeline_setup: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_4_pos_frequency_pipeline_checks
 @pytest.mark.lab_6_pipeline
-def test_images_are_generated(pos_pipeline_setup: Any) -> None:
+def test_images_are_generated(pos_pipeline_setup: tuple[CorpusManager, dict]) -> None:
     """
     Ensure images are generated.
 
     Args:
-        pos_pipeline_setup (Any): Fixture providing corpus manager and expected frequencies.
+        pos_pipeline_setup (tuple[CorpusManager, dict]):
+        Fixture providing corpus manager and expected frequencies.
     """
     msg = (
         "POSFrequencyPipeline does not create image "
@@ -140,12 +143,13 @@ def test_images_are_generated(pos_pipeline_setup: Any) -> None:
 @pytest.mark.mark10
 @pytest.mark.stage_4_pos_frequency_pipeline_checks
 @pytest.mark.lab_6_pipeline
-def test_pos_throws_error(pos_pipeline_setup: Any) -> None:
+def test_pos_throws_error(pos_pipeline_setup: tuple[CorpusManager, dict]) -> None:
     """
     Ensure that POS pipe raises EmptyFileError.
 
     Args:
-        pos_pipeline_setup (Any): Fixture providing corpus manager and expected frequencies.
+        pos_pipeline_setup (tuple[CorpusManager, dict]):
+        Fixture providing corpus manager and expected frequencies.
     """
     with open(TEST_PATH / "1_udpipe.conllu", "w", encoding="utf-8") as file:
         file.write("")

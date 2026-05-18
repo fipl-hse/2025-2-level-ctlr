@@ -6,7 +6,7 @@ Crawler configuration validation.
 import json
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 from quality_control.console_logging import get_child_logger
@@ -38,14 +38,14 @@ class ExceptionIsNotRaised(Exception):
 
 
 def assert_raises_with_message(
-    msg: str, exception: Any, func: Any, *args: Path, **kwargs: Any
+    msg: str, exception: type[Exception], func: Any, *args: Path, **kwargs: Any
 ) -> None:
     """
     Method assertRaises counterparts with enabled messaging.
 
     Args:
         msg (str): Error message
-        exception (Any): Exception
+        exception (type[Exception]): Exception
         func (Any): Function
         *args (Path): Arguments
         **kwargs (Any): Options
@@ -61,7 +61,7 @@ def assert_raises_with_message(
 
 
 @pytest.fixture(scope="function")
-def config_data() -> Any:
+def config_data() -> Generator[dict[str, Any], None, None]:
     """
     Load reference configuration and prepare test data.
 

@@ -5,7 +5,7 @@ Tests for TextProcessingPipeline (score 4).
 # pylint: disable=redefined-outer-name, unused-argument
 import shutil
 from string import punctuation
-from typing import Any
+from typing import Generator
 
 import pytest
 
@@ -16,7 +16,7 @@ from lab_6_pipeline.tests.utils import AnalyzerMock, pipeline_setup, pipeline_te
 
 
 @pytest.fixture(scope="module")
-def setup_reference_processing() -> Any:
+def setup_reference_processing() -> Generator[None, None, None]:
     """
     Setup and teardown for reference processing tests.
     """
@@ -30,7 +30,7 @@ def setup_reference_processing() -> Any:
 
 
 @pytest.fixture(scope="function")
-def loaded_texts(setup_reference_processing: Any) -> Any:
+def loaded_texts(setup_reference_processing: None) -> Generator[tuple[str, str], None, None]:
     """
     Load reference and processed texts for assertions.
     """
@@ -47,12 +47,12 @@ def loaded_texts(setup_reference_processing: Any) -> Any:
 @pytest.mark.mark4
 @pytest.mark.stage_3_3_admin_data_processing
 @pytest.mark.lab_6_pipeline
-def test_reference_preprocessed_are_equal(loaded_texts: Any) -> None:
+def test_reference_preprocessed_are_equal(loaded_texts: tuple[str, str]) -> None:
     """
     Ensure equal number of tokens in processed and reference texts.
 
     Args:
-        loaded_texts (Any): Fixture providing reference and processed text strings.
+        loaded_texts (tuple[str, str]): Fixture providing reference and processed text strings.
     """
     reference, processed = loaded_texts
     assert len(reference.split()) == len(processed.split()), (
@@ -67,12 +67,12 @@ def test_reference_preprocessed_are_equal(loaded_texts: Any) -> None:
 @pytest.mark.mark4
 @pytest.mark.stage_3_3_admin_data_processing
 @pytest.mark.lab_6_pipeline
-def test_overall_format(loaded_texts: Any) -> None:
+def test_overall_format(loaded_texts: tuple[str, str]) -> None:
     """
     Ensure that there is no punctuation or uppercase in clean text.
 
     Args:
-        loaded_texts (Any): Fixture providing reference and processed text strings.
+        loaded_texts (tuple[str, str]): Fixture providing reference and processed text strings.
     """
     _, processed = loaded_texts
     assert processed.islower(), "Cleaned text must be lowercase"
@@ -80,7 +80,7 @@ def test_overall_format(loaded_texts: Any) -> None:
 
 
 @pytest.fixture(scope="function")
-def pipeline_mock_env() -> Any:
+def pipeline_mock_env() -> Generator[None, None, None]:
     """
     Setup and teardown for mock analyzer pipeline tests.
     """
@@ -93,12 +93,12 @@ def pipeline_mock_env() -> Any:
 @pytest.mark.mark4
 @pytest.mark.stage_3_3_admin_data_processing
 @pytest.mark.lab_6_pipeline
-def test_score_four_pipeline_with_analyzer_mock_can_execute(pipeline_mock_env: Any) -> None:
+def test_score_four_pipeline_with_analyzer_mock_can_execute(pipeline_mock_env: None) -> None:
     """
     Ensure pipeline for score 4 does not depend on analyzer.
 
     Args:
-        pipeline_mock_env (Any): Fixture managing test environment for mock analyzer.
+        pipeline_mock_env (None): Fixture managing test environment for mock analyzer.
     """
     corpus_manager = CorpusManager(path_to_raw_txt_data=TEST_PATH)
     pipe = TextProcessingPipeline(corpus_manager, AnalyzerMock())
@@ -106,7 +106,7 @@ def test_score_four_pipeline_with_analyzer_mock_can_execute(pipeline_mock_env: A
 
 
 @pytest.fixture(scope="function")
-def student_cleaned_articles() -> Any:
+def student_cleaned_articles() -> Generator[dict[int, str], None, None]:
     """
     Setup and teardown for student dataset validation tests.
     """
@@ -124,12 +124,12 @@ def student_cleaned_articles() -> Any:
 @pytest.mark.mark4
 @pytest.mark.stage_3_4_student_dataset_validation
 @pytest.mark.lab_6_pipeline
-def test_clean_tokens(student_cleaned_articles: Any) -> None:
+def test_clean_tokens(student_cleaned_articles: dict[int, str]) -> None:
     """
     Ensure there is no punctuation of uppercase in cleaned text.
 
     Args:
-        student_cleaned_articles (Any): Fixture providing dictionary of cleaned articles.
+        student_cleaned_articles (dict[int, str]): Fixture providing dictionary of cleaned articles.
     """
     articles = student_cleaned_articles
     punctuation_marks = [",", ".", "-", ";", ":", "!", "?", "<"]

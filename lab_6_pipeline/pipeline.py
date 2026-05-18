@@ -31,6 +31,7 @@ from core_utils.pipeline import (
     UnifiedCoNLLUDocument,
 )
 
+<<<<<<< HEAD
 # logger = get_child_logger(__file__)
 MODEL_PATH = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
 MODEL_NAME = "russian-syntagrus-ud-2.0-170801.udpipe"
@@ -47,6 +48,8 @@ class EmptyDirectoryError(Exception):
     """
 class EmptyFileError(Exception):
     pass
+=======
+>>>>>>> upstream
 
 class CorpusManager:
     """
