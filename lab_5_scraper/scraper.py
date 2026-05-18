@@ -2,6 +2,7 @@
 Crawler implementation.
 """
 
+import datetime
 import json
 import pathlib
 import re
@@ -221,6 +222,9 @@ class Crawler:
     Crawler implementation.
     """
 
+    #: Url pattern
+    url_pattern: re.Pattern | str
+
     def __init__(self, config: Config) -> None:
         """
         Initialize an instance of the Crawler class.
@@ -373,11 +377,22 @@ class HTMLParser:
             full_title = title_tag.get_text(strip=True)
             if '. ' in full_title:
                 parts = full_title.split('. ', 1)  
-                self.article.author = parts[0]
+                self.article.author = [parts[0]]
                 self.article.title = parts[1]       
             else:
                 self.article.title = full_title
                 self.article.author = ['NOT FOUND']
+    
+    def unify_date_format(self, date_str: str) -> datetime.datetime:
+        """
+        Unify date format.
+
+        Args:
+            date_str (str): Date in text format
+
+        Returns:
+            datetime.datetime: Datetime object
+        """
 
     def parse(self) -> Union[Article, bool]:
         """
@@ -435,6 +450,5 @@ def main() -> None:
             to_raw(article)
             to_meta(article)
 
-#добавляю пустую строчку внизу. комментарий для того, чтобы загрузить на гит
 if __name__ == "__main__":
     main()
