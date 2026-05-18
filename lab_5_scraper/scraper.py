@@ -467,11 +467,11 @@ class HTMLParser:
         if not title:
             title_tag = article_soup.find('title')
             if title_tag:
-                title = str(title_tag.get_text(strip=True))
+                title = str(title_tag.get_text(strip = True))
                 title = re.sub(r'\s*[-|].*$', '', title).strip()
 
         if not title:
-            meta_title = article_soup.find('meta', property='og:title')
+            meta_title = article_soup.find('meta', property = 'og:title')
             if meta_title:
                 content = meta_title.get('content')
                 if content:
