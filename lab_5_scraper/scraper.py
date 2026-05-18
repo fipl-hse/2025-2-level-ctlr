@@ -259,8 +259,6 @@ class Crawler:
                     new_relative_url = self._extract_url(link_tag)
                     new_full_url = urljoin(seed_url, new_relative_url)
                     if (
-                    #re.match("https://pravlitlug.ru/khudozhestvennaya-proza1/malaya-proza1/rasskazy1/item/", new_full_url)
-                    #and
                     '/item/' in new_full_url
                     and
                     new_full_url not in self.urls
@@ -333,19 +331,19 @@ class HTMLParser:
         texts = []
 
         # Following is a complex algorythm to finally find all text in an article webpage
-        content_div = article_soup.find('div', class_='itemFullText')
+        content_div = article_soup.find("div", class_="itemFullText")
         if not content_div:
-            content_div = article_soup.find('div', class_='article-content')
+            content_div = article_soup.find("div", class_="article-content")
         if not content_div:
-            content_div = article_soup.find('div', itemprop='articleBody')
+            content_div = article_soup.find("div", itemprop="articleBody")
         
         if content_div:
-            for tag in content_div.find_all(['p', 'blockquote', 'div']):
+            for tag in content_div.find_all(["p", "blockquote", "div"]):
                 text = tag.get_text(strip=True)
                 if text:
                     texts.append(text)
         else:
-            for tag in article_soup.find_all(['p', 'blockquote']):
+            for tag in article_soup.find_all(["p", "blockquote"]):
                 text = tag.get_text(strip=True)
                 if text:
                     texts.append(text)
@@ -367,6 +365,11 @@ class HTMLParser:
         title_content = title_tag["content"] if title_tag else "NOT FOUND"
         self.article.title = title_content
 
+        finding_date_tag = article_soup.find("div", class_="itemHeader")
+        date_tag = finding_date_tag.find("span", class_="itemDateCreated")
+        date_str = date_tag.get_text() if date_tag else "NOT FOUND"
+        self.article.date = self.unify_date_format(date_str)
+
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
         Unify date format.
@@ -377,6 +380,25 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        # Example: "Вторник, 26 мая 2015 07:20"
+        months_map = {
+        'января': 'январь',
+        'февраля': 'февраль',
+        'марта': 'март',
+        'апреля': 'апрель',
+        'мая': 'май',
+        'июня': 'июнь',
+        'июля': 'июль',
+        'августа': 'август',
+        'сентября': 'сентябрь',
+        'октября': 'октябрь',
+        'ноября': 'ноябрь',
+        'декабря': 'декабрь'
+        }
+        for gen, nom in months_map.items():
+            date_str = date_str.replace(gen, nom)
+        parsed_date = datetime.strptime(date_str, "%A, %d %B %Y %H:%M")
+        return parsed_date
 
     def parse(self) -> Article | bool:
         """
