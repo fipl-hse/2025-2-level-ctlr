@@ -91,7 +91,7 @@ class Config:
         Returns:
             ConfigDTO: Config values
         """
-        with open(self.path_to_config) as file:
+        with open(self.path_to_config, encoding="utf-8") as file:
             config_data = json.load(file)
         configuration = ConfigDTO(**config_data)
         return configuration
@@ -118,7 +118,7 @@ class Config:
         if not isinstance(config_content.encoding, str):
             raise IncorrectEncodingError()
         timeout = config_content.timeout
-        if not (isinstance(timeout, int) and timeout < 60 and timeout >= 0):
+        if not isinstance(timeout, int) or timeout >= 60 or timeout < 0:
             raise IncorrectTimeoutError()
         if not (
             isinstance(config_content.should_verify_certificate, bool)
@@ -204,12 +204,11 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     headers = config.get_headers()
     timeout = config.get_timeout()
     verify = config.get_verify_certificate()
-    try:
-        response = requests.get(url, headers=headers, timeout=timeout, verify=verify)
-    except requests.exceptions.Timeout:
-        print("Timeout: Server didn't respond in 3s")
-    except requests.exceptions.RequestException as e:
-        print(f"Request failed: {e}")
+    response = requests.get(url, headers=headers, timeout=timeout, verify=verify)
+    # except requests.exceptions.Timeout:
+    #     print("Timeout: Server didn't respond in 3s")
+    # except requests.exceptions.RequestException as e:
+    #     print(f"Request failed: {e}")
     return response
 
 
@@ -242,7 +241,7 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        relative_link = article_bs.get("href")
+        relative_link = str(article_bs.get("href"))
         return relative_link
 
     def find_articles(self) -> None:
@@ -255,7 +254,7 @@ class Crawler:
             response = make_request(seed_url, self.config)
             if response and response.status_code == 200:
                 soup = BeautifulSoup(response.text)
-                all_links = soup.find_all("a") 
+                all_links = soup.find_all("a")
                 for link_tag in all_links: #going through tags of links located in an html page
                     new_relative_url = self._extract_url(link_tag)
                     new_full_url = urljoin(seed_url, new_relative_url)
@@ -293,6 +292,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config) #for mypy
 
     def find_articles(self) -> None:
         """
@@ -360,7 +360,7 @@ class HTMLParser:
         self.article.author = author_content.split(", ")
 
         title_tag = article_soup.find("meta", attrs={"name": "og:title"})
-        title_content = title_tag["content"] if title_tag else "NOT FOUND"
+        title_content = str(title_tag["content"] if title_tag else "NOT FOUND")
         self.article.title = title_content
 
         finding_date_tag = article_soup.find("div", class_="itemHeader")
@@ -415,14 +415,14 @@ class HTMLParser:
             Article | bool: Article instance, False in case of request error
         """
         try:
-            response = requests.get(self.full_url)
+            response = make_request(self.full_url, self.config)
             if response.status_code != 200:
                 return False
             response.encoding = self.config.get_encoding()
             article_bs = BeautifulSoup(response.text, "html.parser")
             self._fill_article_with_text(article_bs)
             self._fill_article_with_meta_information(article_bs)
-        except:
+        except(requests.RequestException, AttributeError, KeyError, ValueError, TypeError):
             return False
         return self.article
 
@@ -458,7 +458,7 @@ def main() -> None:
         print(f"Processing {i}: {full_url}")
         parser = HTMLParser(full_url=full_url, article_id=i, config=configuration)
         article = parser.parse()
-        if article and article.text and len(article.text.strip()) >= 50:
+        if isinstance(article, Article) and article.text and len(article.text.strip()) >= 50:
             to_raw(article)
             to_meta(article)
             i += 1
