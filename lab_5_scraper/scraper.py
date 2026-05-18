@@ -235,7 +235,7 @@ class Crawler:
             if not response.ok:
                 continue
             soup = BeautifulSoup(response.content, 'lxml')
-            for link in soup.find_all('a', href='True'):
+            for link in soup.find_all('a', href=True):
                 url = self._extract_url(link)
                 if url and url not in self.urls:
                     self.urls.append(url)
