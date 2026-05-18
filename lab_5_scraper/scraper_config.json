@@ -1,14 +1,12 @@
 {
-    "seed_urls": ["https://ptj.spb.ru/blog/",
-        "https://ptj.spb.ru/archive/"
-        ],
+    "seed_urls": ["https://ptj.spb.ru/blog/page/2/"],
     "headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
         "Accept": "*/*",
         "Accept-Language": "en,ru;q=0.9,en-US;q=0.8"},
-    "total_articles_to_find_and_parse": 20,
+    "total_articles_to_find_and_parse": 1,
     "encoding": "utf-8",
-    "timeout": 10,
+    "timeout": 15,
     "should_verify_certificate": true,
     "headless_mode": true
 }
