@@ -351,8 +351,6 @@ class HTMLParser:
                     texts.append(text)
 
         self.article.text = " ".join(texts)
-        print(f"Found {len(self.article.text)} characters for article {self.article_id}")
-
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -361,6 +359,13 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        author_tag = article_soup.find("meta", attrs={"name": "author"})
+        author_content = author_tag["content"] if author_tag else "NOT FOUND"
+        self.article.author = author_content.split(", ")
+
+        title_tag = article_soup.find("meta", attrs={"name": "og:title"})
+        title_content = title_tag["content"] if title_tag else "NOT FOUND"
+        self.article.title = title_content
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -387,6 +392,7 @@ class HTMLParser:
             response.encoding = self.config.get_encoding()
             article_bs = BeautifulSoup(response.text, "html.parser")
             self._fill_article_with_text(article_bs)
+            self._fill_article_with_meta_information(article_bs)
         except:
             return False
         return self.article
@@ -437,4 +443,5 @@ if __name__ == "__main__":
         article = parser.parse()
         if article and article.text and len(article.text.strip()) >= 50:
             to_raw(article)
+            to_meta(article)
             i += 1
