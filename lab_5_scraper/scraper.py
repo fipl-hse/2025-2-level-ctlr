@@ -277,7 +277,7 @@ class Crawler:
                     if not found_new:
                         break
                     page += 1
-                except Exception:  # pylint: disable=broad-except
+                except Exception: 
                     break
 
 
@@ -371,7 +371,6 @@ class HTMLParser:
             page_title = article_soup.find('title')
             self.article.title = page_title.get_text(strip=True).split('/')[0].strip() if page_title else ''
 
-        # Author
         author_tag = (
             article_soup.find('span', class_='author')
             or article_soup.find('a', rel='author')
@@ -386,7 +385,6 @@ class HTMLParser:
             else:
                 self.article.author = ['NOT FOUND']
 
-        # Date
         date_tag = (
             article_soup.find('time', class_='entry-date')
             or article_soup.find('time', class_='published')
@@ -401,7 +399,6 @@ class HTMLParser:
             else:
                 self.article.date = datetime.datetime(2000, 1, 1, 0, 0, 0)
 
-        # Topics
         topics: list[str] = []
         tags_container = (
             article_soup.find('div', class_='entry-tags')
