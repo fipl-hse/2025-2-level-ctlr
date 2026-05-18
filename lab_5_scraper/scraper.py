@@ -243,7 +243,7 @@ class Config:
         return self._headless_mode
 
 
-def make_request(url: str, config: Config) -> requests.models.Response | None:
+def make_request(url: str, config: Config) -> requests.models.Response:
     """
     Deliver a response from a request with given configuration.
 
@@ -252,7 +252,7 @@ def make_request(url: str, config: Config) -> requests.models.Response | None:
         config (Config): Configuration
 
     Returns:
-        requests.models.Response | None: A response from a request or None if error
+        requests.models.Response: A response from a request or None if error
     """
     try:
         response = requests.get(
@@ -261,10 +261,12 @@ def make_request(url: str, config: Config) -> requests.models.Response | None:
             timeout=config.get_timeout(),
             verify=config.get_verify_certificate()
         )
-    except requests.RequestException:
-        return None
+    except requests.RequestException as e:
+        raise ConnectionError(f"Failed to fetch {url}: {e}") from e
 
     response.encoding = config.get_encoding()
+    if response.status_code != 200:
+        raise ConnectionError(f"HTTP {response.status_code} for {url}")
     return response
 
 
@@ -274,7 +276,7 @@ class Crawler:
     """
 
     #: Url pattern
-    url_pattern: re.Pattern | str = re.compile(r'fantastika/\d+')
+    url_pattern: re.Pattern | str
 
     def __init__(self, config: Config) -> None:
         """
@@ -322,9 +324,10 @@ class Crawler:
             if len(self.urls) >= needed:
                 break
 
-            response = make_request(seed_url, self.config)
-            if not response or response.status_code != 200:
-                continue
+            try:
+                response = make_request(seed_url, self.config)
+            except ConnectionError:
+                continue 
 
             soup = BeautifulSoup(response.content, 'html.parser')
             all_links = soup.find_all('a')
@@ -609,8 +612,9 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
-        response = make_request(self.full_url, self.config)
-        if not response or response.status_code != 200:
+        try:
+            response = make_request(self.full_url, self.config)
+        except ConnectionError:
             return False
 
         soup = BeautifulSoup(response.content, 'html.parser')
