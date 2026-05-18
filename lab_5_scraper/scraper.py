@@ -344,7 +344,10 @@ class HTMLParser:
 
         if dd_tags:
             for dd in dd_tags:
-                text_content += dd.get_text(strip=True) + '\n'
+                dd_text = dd.get_text(separator='\n', strip=True)
+                if len(dd_text) > 200:
+                    text_content += dd_text + '\n'
+                    break
         
         if not text_content.strip():
             if pre_tags:
@@ -370,7 +373,7 @@ class HTMLParser:
             full_title = title_tag.get_text(strip=True)
             if '. ' in full_title:
                 parts = full_title.split('. ', 1)  
-                self.article.author = [parts[0]]
+                self.article.author = parts[0]
                 self.article.title = parts[1]       
             else:
                 self.article.title = full_title
