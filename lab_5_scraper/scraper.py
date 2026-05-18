@@ -315,6 +315,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config) 
 
     def find_articles(self) -> None:
         """
@@ -387,7 +388,8 @@ class HTMLParser:
             self.article.date = datetime.datetime.now()
         else:
             raw_date = date.get('content')
-            self.article.date = self.unify_date_format(raw_date)
+            if isinstance(raw_date, str):
+                self.article.date = self.unify_date_format(raw_date)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -443,7 +445,7 @@ def main() -> None:
     for idx, url in enumerate(crawler.urls[:configuration.get_num_articles()], start=1):
         parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
         article = parser.parse()
-        if article:
+        if isinstance(article, Article):
             to_raw(article)
             to_meta(article)
 
