@@ -252,7 +252,7 @@ class Crawler:
                 break
             
             response = make_request(seed_url, self.config)
-            if response.status_code == 200:
+            if response and response.status_code == 200:
                 soup = BeautifulSoup(response.text)
                 all_links = soup.find_all("a") 
                 for link_tag in all_links: #going through tags of links located in an html page
@@ -365,10 +365,16 @@ class HTMLParser:
         title_content = title_tag["content"] if title_tag else "NOT FOUND"
         self.article.title = title_content
 
-        finding_date_tag = article_soup.find("div", class_="itemHeader")
-        date_tag = finding_date_tag.find("span", class_="itemDateCreated")
-        date_str = date_tag.get_text() if date_tag else "NOT FOUND"
-        self.article.date = self.unify_date_format(date_str)
+        # finding_date_tag = article_soup.find("div", class_="itemHeader")
+        # if finding_date_tag:
+        #     date_tag = finding_date_tag.find("span", class_="itemDateCreated")
+        #     if date_tag:
+        #         date_str = date_tag.get_text()
+        #         self.article.date = self.unify_date_format(date_str)
+        #     else:
+        #         self.article.date = datetime.datetime.now()
+        # else:
+        #     self.article.date = datetime.datetime.now()
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -380,25 +386,25 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        # Example: "Вторник, 26 мая 2015 07:20"
-        months_map = {
-        'января': 'январь',
-        'февраля': 'февраль',
-        'марта': 'март',
-        'апреля': 'апрель',
-        'мая': 'май',
-        'июня': 'июнь',
-        'июля': 'июль',
-        'августа': 'август',
-        'сентября': 'сентябрь',
-        'октября': 'октябрь',
-        'ноября': 'ноябрь',
-        'декабря': 'декабрь'
-        }
-        for gen, nom in months_map.items():
-            date_str = date_str.replace(gen, nom)
-        parsed_date = datetime.strptime(date_str, "%A, %d %B %Y %H:%M")
-        return parsed_date
+        # # Example: "Вторник, 26 мая 2015 07:20"
+        # months_map = {
+        # 'января': 'январь',
+        # 'февраля': 'февраль',
+        # 'марта': 'март',
+        # 'апреля': 'апрель',
+        # 'мая': 'май',
+        # 'июня': 'июнь',
+        # 'июля': 'июль',
+        # 'августа': 'август',
+        # 'сентября': 'сентябрь',
+        # 'октября': 'октябрь',
+        # 'ноября': 'ноябрь',
+        # 'декабря': 'декабрь'
+        # }
+        # for gen, nom in months_map.items():
+        #     date_str = date_str.replace(gen, nom)
+        # parsed_date = datetime.datetime.strptime(date_str, "%A, %d %B %Y %H:%M")
+        # return parsed_date
 
     def parse(self) -> Article | bool:
         """
@@ -415,6 +421,7 @@ class HTMLParser:
             article_bs = BeautifulSoup(response.text, "html.parser")
             self._fill_article_with_text(article_bs)
             self._fill_article_with_meta_information(article_bs)
+
         except:
             return False
         return self.article
