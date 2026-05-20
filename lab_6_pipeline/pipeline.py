@@ -12,6 +12,18 @@ from spacy.tokens import Doc
 
 from core_utils.article.article import Article
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
+from core_utils.constants import ASSETS_PATH
+
+class EmptyDirectoryError(Exception):
+    """
+    Raised when directory is empty.
+    """
+
+
+class InconsistentDatasetError(Exception):
+    """
+    Raised when the dataset has structural issues (missing files, gaps, etc.).
+    """
 
 
 class CorpusManager:
@@ -26,16 +38,93 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
+        self.path_to_raw_txt_data = path_to_raw_txt_data
+        self._validate_dataset()
+        self._storage = self._scan_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        if not self.path_to_raw_txt_data:
+            raise FileNotFoundError(
+                "Path does not exist."
+            )
+
+        if not self.path_to_raw_txt_data.is_dir:
+            raise NotADirectoryError(
+                "Path does not lead to a directory."
+            )
+
+        files = list(self.path_to_raw_txt_data.iterdir())
+        if not files:
+            raise EmptyDirectoryError(
+                "Directory is empty."
+                )
+
+        raw_files = {}
+        meta_files = {}
+        for file in files:
+            name = file.name
+            if name.endswith("_raw.txt"):
+                id_str = name.replace("_raw.txt", "")
+                id = int(id_str)
+                raw_files[id] = file
+            if name.endswith("_meta.json"):
+                id_str = name.replace("_meta.json", "")
+                id = int(id_str)
+                meta_files[id] = file
+        if not raw_files:
+            raise InconsistentDatasetError(
+                "Dataset contains no raw files."
+            )
+        if not meta_files:
+            raise InconsistentDatasetError(
+                "Dataset contains no meta files."
+            )
+
+        raw_ids = set(raw_files.keys())
+        meta_ids = set(meta_files.keys())
+        if raw_ids != meta_ids:
+            raise InconsistentDatasetError(
+                "Raw and meta ids are unequal."
+            )
+
+        if raw_ids != set(range(1, max(raw_ids) + 1)):
+            raise InconsistentDatasetError(
+                "IDs contain slips."
+            )
+        
+        for file in raw_files.values():
+            if not file:
+                raise InconsistentDatasetError(
+                    f"Raw file {file.name} is empty"
+                )
+        for file in meta_files.values():
+            if not file:
+                raise InconsistentDatasetError(
+                    f"Meta file {file.name} is empty"
+                )
+        return None
+
 
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry.
         """
+        for file in self.path_to_raw_txt_data.iterdir():
+            if file.name.endswith("_raw.txt"):
+                id_str = file.name.replace("_raw.txt", "")
+                id = int(id_str)
+                self._storage[id] = Article(url=None, article_id=id)
+        for file in self.path_to_raw_txt_data.iterdir():
+            if file.name.endswith("_meta.json"):
+                id_str = file.name.replace("_meta.json", "")
+                id = int(id_str)
+                self._storage[id] = Article(url=None, article_id=id)
+        return None
+
+
 
     def get_articles(self) -> dict:
         """
@@ -44,6 +133,7 @@ class CorpusManager:
         Returns:
             dict: Storage params
         """
+        return self._storage
 
 
 class TextProcessingPipeline(PipelineProtocol):
@@ -213,6 +303,7 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
+    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
 
 
 if __name__ == "__main__":
