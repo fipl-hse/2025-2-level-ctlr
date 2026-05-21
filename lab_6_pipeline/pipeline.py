@@ -165,7 +165,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        pass
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -177,7 +176,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        pass
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -186,7 +184,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
-        pass
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -198,7 +195,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        pass
 
 
 class POSFrequencyPipeline:
@@ -227,13 +223,11 @@ class POSFrequencyPipeline:
         Returns:
             dict[str, int]: POS frequencies
         """
-        pass
 
     def run(self) -> None:
         """
         Visualize the frequencies of each part of speech.
         """
-        pass
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -266,7 +260,6 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             list[DiGraph]: Graphs for the sentences in the document
         """
-        pass
 
     def _add_children(
         self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
@@ -280,7 +273,6 @@ class PatternSearchPipeline(PipelineProtocol):
             node_id (int): ID of root node of the match
             tree_node (TreeNode): Root node of the match
         """
-        pass
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
@@ -292,13 +284,11 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
-        pass
 
     def run(self) -> None:
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
-        pass
 
 
 def main() -> None:
