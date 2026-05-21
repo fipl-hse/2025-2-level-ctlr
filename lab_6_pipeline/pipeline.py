@@ -7,7 +7,7 @@ import json
 import pathlib
 import re
 
-from networkx import DiGraph
+#from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
 
@@ -19,12 +19,10 @@ from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 class InconsistentDatasetError(Exception):
     """Raised when dataset has inconsistencies."""
-    pass
 
 
 class EmptyDirectoryError(Exception):
     """Raised when directory is empty."""
-    pass
 
 class CorpusManager:
     """
