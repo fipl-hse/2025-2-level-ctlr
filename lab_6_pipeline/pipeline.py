@@ -7,7 +7,7 @@ import json
 import pathlib
 import re
 
-#from networkx import DiGraph
+from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
 
