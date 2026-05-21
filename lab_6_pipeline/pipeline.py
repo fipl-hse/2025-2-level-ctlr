@@ -13,6 +13,22 @@ from spacy.tokens import Doc
 from core_utils.article.article import Article
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
+class FileNotFoundError(Exception):
+    """
+    Path does not exist
+    """
+class NotADirectoryError(Exception):
+    """
+    Path does not lead to a directory
+    """
+class InconsistentDatasetError(Exception):
+    """
+    IDs contain slips, number of meta and raw files is not equal, files are empty
+    """
+class EmptyDirectoryError(Exception):
+    """
+    Directory is empty
+    """
 
 class CorpusManager:
     """
@@ -26,11 +42,20 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
+        self.path_to_raw_txt_data = path_to_raw_txt_data
+        self._validate_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        if not self.path_to_raw_txt_data.exist():
+            raise FileNotFoundError()
+        if not self.path_to_raw_txt_data.is_dir():
+            raise NotADirectoryError()
+        files = self.path_to_raw_txt_data.iterdir()
+        if not files:
+            raise EmptyDirectoryError()
 
     def _scan_dataset(self) -> None:
         """
