@@ -14,6 +14,14 @@ from core_utils.article.article import Article
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 
+class EmptyDirectoryError(Exception):
+    """Raised when dataset directory is empty."""
+
+
+class InconsistentDatasetError(Exception):
+    """Raised when dataset has structural inconsistencies."""
+
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -26,16 +34,63 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
+        self._storage: Dict[int, Article] = {}
+        self._path = path_to_raw_txt_data
+        self._validate_dataset()
+        self._scan_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        if not self._path.exists():
+            raise FileNotFoundError(f"Path does not exist: {self._path}")
+        if not self._path.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {self._path}")
+
+        files = list(self._path.glob("*.txt"))
+        if not files:
+            raise EmptyDirectoryError(f"Directory is empty: {self._path}")
+
+        raw_files = {}
+        meta_files = set()
+        for file in self._path.glob("*.txt"):
+            name = file.stem
+            if name.endswith("_raw"):
+                try:
+                    idx = int(name.split("_")[0])
+                    raw_files[idx] = file
+                except ValueError:
+                    continue
+            elif name.endswith("_meta"):
+                idx = int(name.split("_")[0])
+                raw_files[idx] = file
+        if not raw_files:
+            raise InconsistentDatasetError("No raw files found")
+
+        for idx in raw_files:
+            if idx not in meta_files:
+                raise InconsistentDatasetError(f"Missing meta file for article {idx}")
+
+        for file in raw_files.values():
+            if file.stat().st_size == 0:
+                raise InconsistentDatasetError(f"Raw file is empty: {file}")
+
+        ids = sorted(raw_files.keys())
+        expected = list(range(1, len(ids) + 1))
+        if ids != expected:
+            raise InconsistentDatasetError(
+                f"Article IDs are not consecutive: {ids}, expected {expected}"
+            )
+
 
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry.
         """
+        for file in self._path.glob("*_raw.txt"):
+            article_id = int(file.stem.split("_")[0])
+            self._storage[article_id] = Article(url=None, article_id=article_id)
 
     def get_articles(self) -> dict:
         """
@@ -44,6 +99,7 @@ class CorpusManager:
         Returns:
             dict: Storage params
         """
+        return self._storage
 
 
 class TextProcessingPipeline(PipelineProtocol):
@@ -61,11 +117,21 @@ class TextProcessingPipeline(PipelineProtocol):
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
+        self._corpus = corpus_manager
 
     def run(self) -> None:
         """
         Perform basic preprocessing and write processed text to files.
         """
+        for article_id, article in self._corpus.get_articles().items():
+            from_raw(article)
+            raw_text = article.text
+            if not raw_text:
+                continue
+            cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
+            cleaned_text = cleaned_text.lower()
+            article.set_cleaned(cleaned_text)
+            to_cleaned(article, ASSETS_PATH)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -80,6 +146,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -88,6 +155,11 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        if not MODEL_PATH.exists():
+            raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
+        nlp = spacy_udpipe.load(str(MODEL_PATH))
+        init_parser(nlp, "conllu")
+        return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -99,6 +171,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        results = []
+        for text in texts:
+            doc = self._analyzer(text)
+            conllu = doc._.conllu
+            results.append(conllu)
+        return results
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -107,6 +185,11 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        conllu_info = article.get_conllu_info()
+        if not conllu_info:
+            return
+        out_path = ASSETS_PATH / f"{article.get_article_id()}_udpipe.conllu"
+        out_path.write_text(conllu_info, encoding="utf-8")
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -118,6 +201,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        pass
 
 
 class POSFrequencyPipeline:
@@ -133,6 +217,8 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -149,6 +235,20 @@ class POSFrequencyPipeline:
         """
         Visualize the frequencies of each part of speech.
         """
+        for article_id, article in self._corpus.get_articles().items():
+            from_raw(article)
+            raw_text = article.text
+            if not raw_text:
+                continue
+
+            cleaned = re.sub(r'[^\w\s]', '', raw_text)
+            cleaned = cleaned.lower()
+            cleaned_path = ASSETS_PATH / f"{article_id}_cleaned.txt"
+            cleaned_path.write_text(cleaned, encoding="utf-8")
+
+            conllu = self._analyzer.analyze([raw_text])[0]
+            article.set_conllu_info(conllu)
+            self._analyzer.to_conllu(article)
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -213,6 +313,10 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
+    corpus = CorpusManager(ASSETS_PATH)
+    analyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus, analyzer)
+    pipeline.run()
 
 
 if __name__ == "__main__":
