@@ -294,28 +294,23 @@ class Crawler:
 
     def find_articles(self) -> None:
         """
-        Find articles.
+        Find articlesss.
         """
+        seed_urls = self.config.get_seed_urls()
         required_count = self.config.get_num_articles()
-        queue = list(self.config.get_seed_urls())
-        visited = set()
 
-        while queue and len(self.urls) < required_count:
-            current_url = queue.pop(0)
+        for seed_url in seed_urls:
+            if len(self.urls) >= required_count:
+                break
 
-            if current_url in visited:
-                continue
-
-            visited.add(current_url)
-
-            match = re.match(r'(https?://[^/]+)', current_url)
+            match = re.match(r'(https?://[^/]+)', seed_url)
             if match:
                 self.base_url = match.group(1)
             else:
                 continue
 
             try:
-                response = make_request(current_url, self.config)
+                response = make_request(seed_url, self.config)
             except requests.RequestException:
                 continue
 
@@ -326,7 +321,7 @@ class Crawler:
 
             for link in soup.find_all('a', href=True):
                 href = link.get('href', '')
-
+                
                 if href.startswith('/'):
                     full_url = self.base_url + href
                 elif href.startswith('http'):
@@ -334,12 +329,11 @@ class Crawler:
                 else:
                     continue
 
-                if self.url_pattern.search(full_url):
-                    if full_url not in self.urls and len(self.urls) < required_count:
+                if '.shtml' in full_url and 'indexdate' not in full_url:
+                    if full_url not in self.urls:
                         self.urls.append(full_url)
-                elif '/a/' in full_url or '/b/' in full_url or '/c/' in full_url:
-                    if full_url not in visited and full_url not in queue:
-                        queue.append(full_url)
+                        if len(self.urls) >= required_count:
+                            break
 
     def get_search_urls(self) -> list:
         """
