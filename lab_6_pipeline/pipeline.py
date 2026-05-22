@@ -50,52 +50,41 @@ class CorpusManager:
         Validate folder with assets.
         """
         path = self.path_to_raw_txt_data
- 
+
         if not path.exists():
             raise FileNotFoundError(f"Path does not exist: {path}")
- 
+
         if not path.is_dir():
             raise NotADirectoryError(f"Path is not a directory: {path}")
- 
+
         all_files = list(path.iterdir())
- 
+
         if not all_files:
             raise EmptyDirectoryError(f"Directory is empty: {path}")
- 
+
         raw_ids = []
-        meta_ids = []
- 
+
         for file in all_files:
             if file.suffix == ".txt" and file.stem.endswith("_raw"):
                 article_id = file.stem.split("_")[0]
                 if article_id.isdigit():
                     raw_ids.append(int(article_id))
-            elif file.suffix == ".json" and file.stem.endswith("_meta"):
-                article_id = file.stem.split("_")[0]
-                if article_id.isdigit():
-                    meta_ids.append(int(article_id))
- 
+
         if not raw_ids:
             raise EmptyDirectoryError(f"No raw files found in: {path}")
- 
-        if len(raw_ids) != len(meta_ids):
-            raise InconsistentDatasetError(
-                f"Number of raw files ({len(raw_ids)}) does not match "
-                f"number of meta files ({len(meta_ids)})"
-            )
- 
+
         raw_ids_sorted = sorted(raw_ids)
         expected_ids = list(range(1, len(raw_ids) + 1))
- 
+
         if raw_ids_sorted != expected_ids:
             raise InconsistentDatasetError(
                 f"Article IDs are not consecutive: {raw_ids_sorted}"
             )
- 
+
         for article_id in raw_ids_sorted:
             raw_file = path / f"{article_id}_raw.txt"
             if raw_file.stat().st_size == 0:
-                raise InconsistentDatasetError(f"File is empty: {raw_file}")
+                raise EmptyFileError(f"File is empty: {raw_file}")
 
     def _scan_dataset(self) -> None:
         """
