@@ -260,9 +260,6 @@ class Crawler:
     Crawler implementation.
     """
 
-    #: Url pattern
-    url_pattern: re.Pattern | str
-
     def __init__(self, config: Config) -> None:
         """
         Initialize an instance of the Crawler class.
@@ -275,15 +272,6 @@ class Crawler:
         self.base_url: str = ""
 
     def _extract_url(self, article_bs: Tag) -> str:
-        """
-        Find and retrieve url from HTML.
-
-        Args:
-            article_bs (bs4.Tag): Tag instance
-
-        Returns:
-            str: Url from HTML
-        """
         return ""
 
     def find_articles(self) -> None:
@@ -297,6 +285,7 @@ class Crawler:
             if len(self.urls) >= required_count:
                 break
 
+            # Получаем базовый URL
             match = re.match(r'(https?://[^/]+)', seed_url)
             if match:
                 self.base_url = match.group(1)
@@ -312,34 +301,28 @@ class Crawler:
                 continue
 
             soup = BeautifulSoup(response.text, 'html.parser')
-
+            
+            # Собираем ВСЕ ссылки со страницы
             for link in soup.find_all('a', href=True):
                 if len(self.urls) >= required_count:
                     break
-                
+                    
                 href = link.get('href', '')
-
+                
+                # Формируем полный URL
                 if href.startswith('/'):
                     full_url = self.base_url + href
                 elif href.startswith('http'):
                     full_url = href
                 else:
                     continue
-
-                if ('text_' in full_url and 
-                    'indexdate' not in full_url and 
-                    'long.shtml' not in full_url):
                 
+                # Проверяем, что это статья (содержит text_ и .shtml)
+                if 'text_' in full_url and full_url.endswith('.shtml'):
                     if full_url not in self.urls:
                         self.urls.append(full_url)
 
     def get_search_urls(self) -> list:
-        """
-        Get seed_urls param.
-
-        Returns:
-            list: seed_urls param
-        """
         return self.config.get_seed_urls()
 
 
