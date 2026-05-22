@@ -14,6 +14,18 @@ from core_utils.article.article import Article
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 
+class InconsistentDatasetError(Exception):
+    """
+    Raised when IDs contain slips, number of meta and raw files is not equal, files are empty.
+    """
+
+
+class EmptyDirectoryError(Exception):
+    """
+    Raised when directory is empty.
+    """
+
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -26,11 +38,42 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
+        self.path = path_to_raw_txt_data
+        self._storage = {}
+        self._validate_dataset()
+        self._scan_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        if not self.path.exists():
+            raise FileNotFoundError('File does not exist.')
+        if not self.path.is_dir():
+            raise NotADirectoryError('The path does not lead to a directory.')
+        if not any(self.path.iterdir()):
+            raise EmptyDirectoryError('The directory is empty.')
+
+        raw_files = [
+            raw.name for raw in self.path.iterdir() if raw.name.endswith('_raw.txt')
+            ]
+        meta_files = [
+            meta.name for meta in self.path.iterdir() if meta.name.endswith('_meta.json')
+            ]
+        if len(raw_files) != len(meta_files):
+            raise InconsistentDatasetError('Numbers of raw and meta files are not equal.')
+        for file_id in range(1, len(raw_files)+1):
+            if not any(f'{str(file_id)}_raw.txt' == raw for raw in raw_files):
+                raise InconsistentDatasetError('Raw IDs contain slips.')
+        for meta_id in range(1, len(meta_files)+1):
+            if not any(f'{str(meta_id)}_meta.json' == meta for meta in meta_files):
+                raise InconsistentDatasetError('Meta IDs contain slips.')
+        if any(
+            True for filepath in self.path.iterdir()
+            if filepath.stat().st_size == 0
+            and (filepath.name.endswith('_raw.txt') or filepath.name.endswith('_meta.json'))
+            ):
+            raise InconsistentDatasetError('The file is empty.')
 
     def _scan_dataset(self) -> None:
         """
