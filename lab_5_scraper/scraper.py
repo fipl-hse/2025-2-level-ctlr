@@ -289,19 +289,25 @@ class Crawler:
         """
         seed_urls = self.config.get_seed_urls()
         required_count = self.config.get_num_articles()
+        queue = list(seed_urls)  # Очередь для обхода
+        visited = set()
 
-        for seed_url in seed_urls:
-            if len(self.urls) >= required_count:
-                break
+        while queue and len(self.urls) < required_count:
+            current_url = queue.pop(0)
 
-            match = re.match(r'(https?://[^/]+)', seed_url)
+            if current_url in visited:
+                continue
+
+            visited.add(current_url)
+
+            match = re.match(r'(https?://[^/]+)', current_url)
             if match:
                 self.base_url = match.group(1)
             else:
                 continue
 
             try:
-                response = make_request(seed_url, self.config)
+                response = make_request(current_url, self.config)
             except requests.RequestException:
                 continue
 
@@ -311,9 +317,6 @@ class Crawler:
             soup = BeautifulSoup(response.text, 'html.parser')
 
             for link in soup.find_all('a', href=True):
-                if len(self.urls) >= required_count:
-                    break
-                    
                 href = link.get('href', '')
 
                 if href.startswith('/'):
@@ -323,18 +326,14 @@ class Crawler:
                 else:
                     continue
 
+            # Это статья
                 if full_url.endswith('.shtml') and 'indexdate' not in full_url:
                     if full_url not in self.urls:
                         self.urls.append(full_url)
-
-    def get_search_urls(self) -> list:
-        """
-        Get seed_urls param.
-
-        Returns:
-            list: seed_urls param
-        """
-        return self.config.get_seed_urls()
+            # Это страница пагинации (добавляем в очередь)
+                elif 'index_' in full_url and full_url.endswith('.shtml'):
+                    if full_url not in visited and full_url not in queue:
+                        queue.append(full_url)
 
 
 # 10
