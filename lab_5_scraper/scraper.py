@@ -289,7 +289,7 @@ class Crawler:
         """
         seed_urls = self.config.get_seed_urls()
         required_count = self.config.get_num_articles()
-        queue = list(seed_urls)  # Очередь для обхода
+        queue = list(seed_urls)
         visited = set()
 
         while queue and len(self.urls) < required_count:
@@ -326,16 +326,21 @@ class Crawler:
                 else:
                     continue
 
-            # Это статья
                 if full_url.endswith('.shtml') and 'indexdate' not in full_url:
                     if full_url not in self.urls:
                         self.urls.append(full_url)
-            # Это страница пагинации (добавляем в очередь)
                 elif 'index_' in full_url and full_url.endswith('.shtml'):
                     if full_url not in visited and full_url not in queue:
                         queue.append(full_url)
 
+    def get_search_urls(self) -> list:
+        """
+        Get seed_urls param.
 
+        Returns:
+            list: seed_urls param
+        """
+    return self.config.get_seed_urls()
 # 10
 
 
