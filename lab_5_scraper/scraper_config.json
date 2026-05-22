@@ -6,6 +6,7 @@
         "https://lit.lib.ru/g/",
         "https://lit.lib.ru/d/",
         "https://lit.lib.ru/e/",
+        "https://lit.lib.ru/zh/",
         "https://lit.lib.ru/z/",
         "https://lit.lib.ru/i/",
         "https://lit.lib.ru/k/",
@@ -20,12 +21,14 @@
         "https://lit.lib.ru/u/",
         "https://lit.lib.ru/f/",
         "https://lit.lib.ru/h/",
-        "https://lit.lib.ru/c/"
+        "https://lit.lib.ru/c/",
+        "https://lit.lib.ru/ch/",
+        "https://lit.lib.ru/sh/"
     ],
     "headers": {"User-Agent": "Mozilla/5.0"},
     "total_articles_to_find_and_parse": 100,
     "encoding": "utf-8",
-    "timeout": 10,
+    "timeout": 15,
     "should_verify_certificate": true,
     "headless_mode": false
 }
