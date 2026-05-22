@@ -80,6 +80,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        
 
     def _bootstrap(self) -> Language:
         """
