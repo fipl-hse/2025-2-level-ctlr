@@ -296,7 +296,7 @@ class Crawler:
         for seed_url in seed_urls:
             if len(self.urls) >= required_count:
                 break
-L
+
             match = re.match(r'(https?://[^/]+)', seed_url)
             if match:
                 self.base_url = match.group(1)
@@ -312,11 +312,11 @@ L
                 continue
 
             soup = BeautifulSoup(response.text, 'html.parser')
- 
+
             for link in soup.find_all('a', href=True):
                 if len(self.urls) >= required_count:
                     break
-                    
+                
                 href = link.get('href', '')
 
                 if href.startswith('/'):
@@ -325,11 +325,11 @@ L
                     full_url = href
                 else:
                     continue
- 
+
                 if (full_url.startswith(self.base_url) and 
                     'indexdate.shtml' not in full_url and 
                     full_url.endswith('.shtml')):
-                    
+                
                     if full_url not in self.urls:
                         self.urls.append(full_url)
 
