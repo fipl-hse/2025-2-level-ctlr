@@ -449,6 +449,9 @@ class HTMLParser:
 
         if date_str:
             self.article.date = self.unify_date_format(date_str)
+        else:
+            self.article.date = datetime.datetime.now()
+
 
         topics = []
         keywords_tag = article_soup.find('meta', {'name': 'keywords'})
