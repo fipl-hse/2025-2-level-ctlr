@@ -27,6 +27,7 @@ class CorpusManager:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
 
+
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
