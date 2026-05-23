@@ -9,6 +9,13 @@ from core_utils.article.article import Article
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
     from spacy.language import Language
     from spacy.tokens import Doc
 except ImportError:
