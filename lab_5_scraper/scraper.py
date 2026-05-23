@@ -341,7 +341,7 @@ class Crawler:
             list: seed_urls param
         """
         return self.config.get_seed_urls()
-# 10
+# 100
 
 
 class CrawlerRecursive(Crawler):
