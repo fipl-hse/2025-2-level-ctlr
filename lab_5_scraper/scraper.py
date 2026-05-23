@@ -550,7 +550,7 @@ def main() -> None:
         parser = HTMLParser(url, idx, config)
         article = parser.parse()
         
-        if isinstance(result, Article):
+        if isinstance(article, Article):
             to_raw(article)
             to_meta(article) 
 
