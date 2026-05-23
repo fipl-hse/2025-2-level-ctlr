@@ -51,7 +51,8 @@ class CorpusManager:
         Validate folder with assets.
         """
         if not self.path_to_raw_txt_data.exists():
-            raise FileNotFoundError("File does not exist")
+            self.path_to_raw_txt_data.mkdir(parents=True, exist_ok=True)
+            return
 
         if not self.path_to_raw_txt_data.is_dir():
             raise NotADirectoryError("Path does not lead to directory")
@@ -62,26 +63,22 @@ class CorpusManager:
         for file_path in self.path_to_raw_txt_data.iterdir():
             if file_path.is_dir():
                 continue
-
+            
             name = file_path.stem
             suffix = file_path.suffix
-
+            
             parts = name.split('_')
-            if len(parts) != 2:
+            if len(parts) != 2 or not parts[0].isdigit():
                 continue
-
-            if not parts[0].isdigit():
-                continue
-
+            
+            file_id = int(parts[0])
+            
+            if not file_path.stat().st_size:
+                raise InconsistentDatasetError(f"File is empty: {file_path.name}")
+            
             if parts[1] == 'raw' and suffix == '.txt':
-                file_id = int(parts[0])
-                if not file_path.stat().st_size:
-                    raise InconsistentDatasetError(f"File is empty: {file_path.name}")
                 raw_ids.append(file_id)
             elif parts[1] == 'meta' and suffix == '.json':
-                file_id = int(parts[0])
-                if not file_path.stat().st_size:
-                    raise InconsistentDatasetError(f"File is empty: {file_path.name}")
                 meta_ids.append(file_id)
 
         if not raw_ids and not meta_ids:
@@ -103,7 +100,9 @@ class CorpusManager:
         """
         for file_path in self.path_to_raw_txt_data.glob("*_raw.txt"):
             article_id = int(file_path.stem.split("_")[0])
-            self._storage[article_id] = Article(url=None, article_id=article_id)
+            article = Article(url=None, article_id=article_id)
+            from_raw(file_path, article)
+            self._storage[article_id] = article
 
     def get_articles(self) -> dict:
         """
@@ -137,6 +136,7 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         Perform basic preprocessing and write processed text to files.
         """
+        self._corpus.path_to_raw_txt_data.mkdir(parents=True, exist_ok=True)
         for article in self._corpus.get_articles().values():
             to_cleaned(article)
 
