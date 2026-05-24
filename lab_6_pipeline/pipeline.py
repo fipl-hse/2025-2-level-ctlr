@@ -127,7 +127,7 @@ class CorpusManager:
             if file_name.endswith('_raw.txt'):
                 try:
                     article_id = int(file_name.split('_')[0])
-                    self._storage[article_id] = Article(url = None, article_id = article_id)
+                    self._storage[article_id] = Article(url=None, article_id=article_id)
                 except ValueError:
                     continue
 
@@ -165,8 +165,9 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles = self._corpus.get_articles()
 
-        for _, article in articles.items():
-            raw_text = from_raw(article)
+        for article_id, article in articles.items():
+            raw_file_path = self._corpus.path_to_raw_txt_data / f"{article_id}_raw.txt"
+            raw_text = from_raw(raw_file_path)
             
             cleaned_text = re.sub(r'[^\w\s-]', '', raw_text)
             cleaned_text = cleaned_text.lower()
@@ -175,7 +176,7 @@ class TextProcessingPipeline(PipelineProtocol):
             to_cleaned(article)
 
             if self._analyzer is not None:
-                sentences = [s.strip() for s in cleaned_text.split('\n') if s.strip()]
+                sentences = [s.strip() for s in re.split(r'[.!?]+', cleaned_text) if s.strip()]
                 if sentences:
                     conllu_results = self._analyzer.analyze(sentences)
                     full_conllu = '\n'.join(conllu_results)
@@ -206,7 +207,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         import ssl
         import certifi
-        import urllib.request
 
         ssl_context = ssl.create_default_context(cafile=certifi.where())
 
@@ -233,7 +233,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         results = []
         for text in texts:
             doc = self._analyzer(text)
-            if hasattr(doc._, 'conll'):
+            if doc._.has_extension('conll'):
                 results.append(doc._.conll)
             else:
                 results.append("")
@@ -249,8 +249,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         conllu_info = article.get_conllu_info()
         if conllu_info:
-            file_path = article.get_file_path()
-            conllu_path = file_path.parent / f"{article.get_article_id()}_udpipe.conllu"
+            from core_utils.constants import ASSETS_PATH
+            conllu_path = ASSETS_PATH / f"{article.get_article_id()}_udpipe.conllu"
             with open(conllu_path, 'w', encoding='utf-8') as f:
                 f.write(conllu_info)
 
