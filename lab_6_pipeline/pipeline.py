@@ -3,33 +3,21 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
-import json
-import pathlib
-import re
-from typing import cast
 
-import networkx as nx
-import spacy_udpipe
-from networkx import DiGraph
-from networkx.algorithms.isomorphism import DiGraphMatcher
-from spacy.language import Language
-from spacy.tokens import Doc
-from spacy_conll import init_parser
-from spacy_conll.parser import ConllParser
+import pathlib
+
 
 from core_utils.article.article import (
     Article,
-    ArtifactType,
     get_article_id_from_filepath,
 )
-from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
+from core_utils.article.io import from_meta, from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import (
     LibraryWrapper,
     PipelineProtocol,
     TreeNode,
 )
-from core_utils.visualizer import visualize
 
 
 class EmptyDirectoryError(Exception):
@@ -157,7 +145,7 @@ class CorpusManager:
         for raw_file_path in self.path_to_raw_txt_data.glob("*_raw.txt"):
             article_id = get_article_id_from_filepath(raw_file_path)
             self._storage[article_id] = from_raw(raw_file_path, self._storage[article_id])
-        return None
+
 
 
     def get_articles(self) -> dict:
@@ -194,13 +182,12 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles = self._corpus.get_articles()
         for article in articles.values():
-            raw_text = from_raw(article)
-            raw_text = raw_text.lower()
-            cleaned = to_cleaned(raw_text)
-            translator = str.maketrans('', '', r'!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~')
-            cleaned = cleaned.translate(translator)
+            raw_text = article.text
+            punctuation = r'!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
+            translator = str.maketrans('', '', punctuation)
+            cleaned = raw_text.lower().translate(translator)
             cleaned = ' '.join(cleaned.split())
-            article.set_cleaned(cleaned)
+            article._cleaned = cleaned
             to_cleaned(article)
 
 
