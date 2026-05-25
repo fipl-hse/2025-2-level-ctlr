@@ -17,7 +17,7 @@ def main() -> None:
     """
     Entrypoint for a seminar's listing
     """
-    article_url = "https://mnogo-smysla.ru/smysl-filma/vo-vsjom-vinovat-enot-objasnenie-smysla-filma-i-koncovki/"
+    article_url = "https://bold-vest.ru/articles/1888-maiak-dlia-mnogix-pokolenii"
     response = requests.get(article_url)
 
     # 1. Creating instance of soup
@@ -55,7 +55,7 @@ def main() -> None:
     print(" ".join(texts))
 
     # 7. Find any link by tag and get its attributes
-    seed_url = "https://mnogo-smysla.ru/category/smysl-filma/"
+    seed_url = "https://bold-vest.ru/articles/rubric/obrazovanie"
     response = requests.get(seed_url)
     soup = BeautifulSoup(response.text, features="lxml")
 

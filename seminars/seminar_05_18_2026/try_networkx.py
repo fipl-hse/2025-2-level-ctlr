@@ -9,7 +9,6 @@ Make sure to install the library in your working environment!
 """
 
 try:
-    import matplotlib.pyplot as plt
     import networkx as nx
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
@@ -60,12 +59,7 @@ def simple_graph_task() -> nx.DiGraph:
         nx.DiGraph: graph as in [/images/task_1_simple_graph.png]
     """
     # YOUR CODE GOES HERE
-    simple_graph = nx.DiGraph()
-    for node in [1, 2, 3, 4, 5]:
-        simple_graph.add_node(node)
-    for from_vertex, to_vertex in [(1, 2), (2, 3), (2, 4), (4, 5)]:
-        simple_graph.add_edge(from_vertex, to_vertex)
-    return simple_graph
+
 
 def family_graph_example() -> nx.DiGraph:
     """
@@ -202,17 +196,15 @@ def main() -> None:
         3: {},
     }
 
-    simple_graph = simple_graph_task()
-    assert nx.to_dict_of_dicts(simple_graph) == {
-        2: {3: {}, 4: {}},
-        3: {},
-        4: {5: {}},
-        5: {},
-        1: {2: {}},
-        }
-    #nx.draw(G=simple_graph, with_labels=True, 
-            #pos=nx.spring_layout(G=simple_graph, seed=42))
-    #plt.show()
+    # simple_graph = simple_graph_task()
+    # assert nx.to_dict_of_dicts(simple_graph) == {
+    #     2: {3: {}, 4: {}},
+    #     3: {},
+    #     4: {5: {}},
+    #     5: {},
+    #     1: {2: {}},
+    # }
+
     # 2. Hard graphs
     family_graph_sample = family_graph_example()
     assert nx.to_dict_of_dicts(family_graph_sample) == {
