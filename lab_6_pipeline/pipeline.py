@@ -30,11 +30,20 @@ except ImportError:
 
 
 class InconsistentDatasetError(Exception):
-    """Raised when dataset has inconsistencies."""
+    """
+    Raised when dataset has inconsistencies.
+    """
 
 
 class EmptyDirectoryError(Exception):
-    """Raised when directory is empty."""
+    """
+    Raised when directory is empty.
+    """
+
+class EmptyFileError(Exception):
+    """
+    Raised when file is empty.
+    """
 
 class CorpusManager:
     """
