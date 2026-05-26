@@ -11,13 +11,9 @@ import sys
 from typing import Dict, List, Optional
 
 import spacy_udpipe
-
-# pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks
 from spacy import Language
 from spacy_conll import init_parser
 
-from core_utils.article.article import Article
-from core_utils.article.io import from_raw
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper
 
@@ -32,6 +28,21 @@ class EmptyDirectoryError(Exception):
 
 class InconsistentDatasetError(Exception):
     """Raised when dataset has structural inconsistencies."""
+
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
+    from spacy.language import Language
+    from spacy.tokens import Doc
+except ImportError:
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 
 
 class CorpusManager:
