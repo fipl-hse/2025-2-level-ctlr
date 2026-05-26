@@ -24,50 +24,6 @@ class EmptyFileError(Exception):
     """Raised when file is empty (stub for mark 4)."""
 
 
-class UDPipeAnalyzer(LibraryWrapper):
-    """Stub for UDPipeAnalyzer (not used in mark 4)."""
-
-    def __init__(self) -> None:
-        self._analyzer = self._bootstrap()
-
-    def _bootstrap(self):
-        return None
-
-    def analyze(self, texts: List[str]) -> List[str]:
-        return [""] * len(texts)
-
-    def to_conllu(self, article: Article) -> None:
-        pass
-
-    def from_conllu(self, article: Article) -> None:
-        pass
-
-
-class POSFrequencyPipeline:
-    """Stub for POSFrequencyPipeline (not used in mark 4)."""
-
-    def __init__(self, corpus_manager: CorpusManager, analyzer: LibraryWrapper) -> None:
-        self._corpus = corpus_manager
-        self._analyzer = analyzer
-
-    def run(self) -> None:
-        pass
-
-
-class PatternSearchPipeline(PipelineProtocol):
-    """Stub for PatternSearchPipeline (not used in mark 4)."""
-
-    def __init__(
-        self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
-    ) -> None:
-        self._corpus = corpus_manager
-        self._analyzer = analyzer
-        self._node_labels = pos
-
-    def run(self) -> None:
-        pass
-
-
 class CorpusManager:
     """Work with articles and store them."""
 
@@ -145,6 +101,51 @@ class TextProcessingPipeline:
 
             article.set_cleaned(cleaned_text)
             to_cleaned(article, ASSETS_PATH)
+
+
+# Заглушки для классов, требуемых тестами (должны быть после определения CorpusManager)
+class UDPipeAnalyzer(LibraryWrapper):
+    """Stub for UDPipeAnalyzer (not used in mark 4)."""
+
+    def __init__(self) -> None:
+        self._analyzer = self._bootstrap()
+
+    def _bootstrap(self):
+        return None
+
+    def analyze(self, texts: List[str]) -> List[str]:
+        return [""] * len(texts)
+
+    def to_conllu(self, article: Article) -> None:
+        pass
+
+    def from_conllu(self, article: Article) -> None:
+        pass
+
+
+class POSFrequencyPipeline:
+    """Stub for POSFrequencyPipeline (not used in mark 4)."""
+
+    def __init__(self, corpus_manager: CorpusManager, analyzer: LibraryWrapper) -> None:
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
+
+    def run(self) -> None:
+        pass
+
+
+class PatternSearchPipeline(PipelineProtocol):
+    """Stub for PatternSearchPipeline (not used in mark 4)."""
+
+    def __init__(
+        self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
+    ) -> None:
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
+        self._node_labels = pos
+
+    def run(self) -> None:
+        pass
 
 
 def main() -> None:
