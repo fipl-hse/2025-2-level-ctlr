@@ -143,7 +143,7 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         articles = self._corpus.get_articles()
-        for article in articles.items():
+        for article in articles.values():
             from_raw(article.get_raw_text_path(), article)
             raw_text = article.text
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
