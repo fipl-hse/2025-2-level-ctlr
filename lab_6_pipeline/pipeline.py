@@ -7,7 +7,6 @@ import re
 from typing import Dict, List, Optional
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_cleaned
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
@@ -114,7 +113,6 @@ class CorpusManager:
             except ValueError:
                 continue
             article = Article(url=None, article_id=idx)
-            # Загружаем текст вручную
             article.text = file.read_text(encoding='utf-8')
             self._storage[idx] = article
 
@@ -125,8 +123,9 @@ class CorpusManager:
 class TextProcessingPipeline:
     """Preprocess text: lowercase, remove punctuation (mark 4)."""
 
-    def __init__(self, corpus_manager: CorpusManager) -> None:
+    def __init__(self, corpus_manager: CorpusManager, analyzer: Optional[LibraryWrapper] = None) -> None:
         self._corpus = corpus_manager
+        self._analyzer = analyzer  # not used, but for compatibility with tests
 
     def run(self) -> None:
         for article_id, article in self._corpus.get_articles().items():
@@ -137,8 +136,8 @@ class TextProcessingPipeline:
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
             cleaned_text = cleaned_text.lower()
 
-            article.set_cleaned(cleaned_text)
-            to_cleaned(article, ASSETS_PATH)
+            cleaned_path = ASSETS_PATH / f"{article_id}_cleaned.txt"
+            cleaned_path.write_text(cleaned_text, encoding='utf-8')
 
 
 def main() -> None:
@@ -149,4 +148,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    
