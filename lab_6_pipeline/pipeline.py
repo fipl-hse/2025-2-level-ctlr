@@ -1,6 +1,7 @@
 """
 Pipeline for CONLL-U formatting.
 """
+
 import pathlib
 import re
 from typing import Dict
@@ -16,6 +17,11 @@ class EmptyDirectoryError(Exception):
 
 class InconsistentDatasetError(Exception):
     """Raised when dataset has structural inconsistencies."""
+
+
+class EmptyFileError(Exception):
+    """Raised when a file is empty (stub for mark 4)."""
+    pass
 
 
 class CorpusManager:
@@ -38,29 +44,25 @@ class CorpusManager:
         if not files:
             raise EmptyDirectoryError(f"Directory is empty: {self._path}")
 
-        raw_files = {}
-        meta_files = set()
-        for file in self._path.glob("*.txt"):
-            name = file.stem
-            if name.endswith("_raw"):
-                idx = int(name.split("_")[0])
-                raw_files[idx] = file
-            elif name.endswith("_meta"):
-                idx = int(name.split("_")[0])
-                meta_files.add(idx)
+        # Проверяем только raw файлы, мета-файлы не требуем для mark 4
+        raw_files = []
+        for file in self._path.glob("*_raw.txt"):
+            try:
+                idx = int(file.stem.split("_")[0])
+                raw_files.append(idx)
+            except ValueError:
+                continue
 
         if not raw_files:
             raise InconsistentDatasetError("No raw files found")
 
-        for idx in raw_files:
-            if idx not in meta_files:
-                raise InconsistentDatasetError(f"Missing meta file for article {idx}")
-
-        for file in raw_files.values():
+        # Проверяем, что файлы не пусты
+        for file in self._path.glob("*_raw.txt"):
             if file.stat().st_size == 0:
                 raise InconsistentDatasetError(f"Raw file is empty: {file}")
 
-        ids = sorted(raw_files.keys())
+        # Проверяем, что номера идут подряд без пропусков
+        ids = sorted(raw_files)
         expected = list(range(1, len(ids) + 1))
         if ids != expected:
             raise InconsistentDatasetError(f"Article IDs not consecutive: {ids}")
@@ -97,6 +99,31 @@ class TextProcessingPipeline:
             to_cleaned(article, ASSETS_PATH)
 
 
+# Stub classes for higher marks (required for imports in tests)
+class UDPipeAnalyzer:
+    """Stub for UDPipeAnalyzer (not used in mark 4)."""
+    def __init__(self) -> None:
+        pass
+
+    def analyze(self, texts):
+        return [""] * len(texts)
+
+    def to_conllu(self, article):
+        pass
+
+    def from_conllu(self, article):
+        pass
+
+
+class PatternSearchPipeline:
+    """Stub for PatternSearchPipeline (not used in mark 4)."""
+    def __init__(self, corpus_manager, analyzer, pos):
+        pass
+
+    def run(self):
+        pass
+
+
 def main() -> None:
     """Entrypoint for pipeline module."""
     corpus_manager = CorpusManager(ASSETS_PATH)
@@ -106,3 +133,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    
