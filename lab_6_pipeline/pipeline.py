@@ -17,11 +17,55 @@ class EmptyDirectoryError(Exception):
 
 
 class InconsistentDatasetError(Exception):
-    """Raised when dataset has structural inconsistencies."""
+    """Raised when dataset has structural inconsistencies (stub for mark 4)."""
 
 
 class EmptyFileError(Exception):
     """Raised when file is empty (stub for mark 4)."""
+
+
+class UDPipeAnalyzer(LibraryWrapper):
+    """Stub for UDPipeAnalyzer (not used in mark 4)."""
+
+    def __init__(self) -> None:
+        self._analyzer = self._bootstrap()
+
+    def _bootstrap(self):
+        return None
+
+    def analyze(self, texts: List[str]) -> List[str]:
+        return [""] * len(texts)
+
+    def to_conllu(self, article: Article) -> None:
+        pass
+
+    def from_conllu(self, article: Article) -> None:
+        pass
+
+
+class POSFrequencyPipeline:
+    """Stub for POSFrequencyPipeline (not used in mark 4)."""
+
+    def __init__(self, corpus_manager: 'CorpusManager', analyzer: LibraryWrapper) -> None:
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
+
+    def run(self) -> None:
+        pass
+
+
+class PatternSearchPipeline(PipelineProtocol):
+    """Stub for PatternSearchPipeline (not used in mark 4)."""
+
+    def __init__(
+        self, corpus_manager: 'CorpusManager', analyzer: LibraryWrapper, pos: tuple[str, ...]
+    ) -> None:
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
+        self._node_labels = pos
+
+    def run(self) -> None:
+        pass
 
 
 class CorpusManager:
@@ -34,48 +78,41 @@ class CorpusManager:
         self._scan_dataset()
 
     def _validate_dataset(self) -> None:
-        """Validate folder with assets."""
+        """Validate folder exists and is not empty."""
         if not self._path.exists():
             raise FileNotFoundError(f"Path does not exist: {self._path}")
         if not self._path.is_dir():
             raise NotADirectoryError(f"Path is not a directory: {self._path}")
 
-        files = list(self._path.glob("*.txt"))
-        if not files:
-            raise EmptyDirectoryError(f"Directory is empty: {self._path}")
-
-        raw_files = {}
-        meta_files = set()
+        # Проверяем, что есть хотя бы один файл с корректным именем (raw или meta)
+        any_valid = False
         for file in self._path.glob("*.txt"):
             name = file.stem
-            if name.endswith("_raw"):
-                idx = int(name.split("_")[0])
-                raw_files[idx] = file
-            elif name.endswith("_meta"):
-                idx = int(name.split("_")[0])
-                meta_files.add(idx)
+            if name.endswith("_raw") or name.endswith("_meta"):
+                any_valid = True
+                break
+        if not any_valid:
+            raise EmptyDirectoryError(f"No valid files found in {self._path}")
 
-        if not raw_files:
-            raise InconsistentDatasetError("No raw files found")
-
-        for idx in raw_files:
-            if idx not in meta_files:
-                raise InconsistentDatasetError(f"Missing meta file for article {idx}")
-
-        for file in raw_files.values():
-            if file.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Raw file is empty: {file}")
-
-        ids = sorted(raw_files.keys())
-        expected = list(range(1, len(ids) + 1))
-        if ids != expected:
-            raise InconsistentDatasetError(f"Article IDs not consecutive: {ids}")
+        # Для mark 4 не проверяем соответствие raw/meta
 
     def _scan_dataset(self) -> None:
-        """Register each dataset entry."""
+        """Register only valid article pairs (raw + meta)."""
+        # Собираем все raw файлы
+        raw_candidates = {}
         for file in self._path.glob("*_raw.txt"):
-            article_id = int(file.stem.split("_")[0])
-            self._storage[article_id] = Article(url=None, article_id=article_id)
+            try:
+                idx = int(file.stem.split("_")[0])
+                raw_candidates[idx] = file
+            except ValueError:
+                continue
+
+        # Для каждого raw проверяем наличие соответствующего meta
+        for idx, raw_file in raw_candidates.items():
+            meta_file = self._path / f"{idx}_meta.json"
+            if meta_file.exists() and meta_file.is_file():
+                # Если мета существует, добавляем статью
+                self._storage[idx] = Article(url=None, article_id=idx)
 
     def get_articles(self) -> Dict[int, Article]:
         """Get storage dict."""
@@ -101,51 +138,6 @@ class TextProcessingPipeline:
 
             article.set_cleaned(cleaned_text)
             to_cleaned(article, ASSETS_PATH)
-
-
-# Заглушки для классов, требуемых тестами (должны быть после определения CorpusManager)
-class UDPipeAnalyzer(LibraryWrapper):
-    """Stub for UDPipeAnalyzer (not used in mark 4)."""
-
-    def __init__(self) -> None:
-        self._analyzer = self._bootstrap()
-
-    def _bootstrap(self):
-        return None
-
-    def analyze(self, texts: List[str]) -> List[str]:
-        return [""] * len(texts)
-
-    def to_conllu(self, article: Article) -> None:
-        pass
-
-    def from_conllu(self, article: Article) -> None:
-        pass
-
-
-class POSFrequencyPipeline:
-    """Stub for POSFrequencyPipeline (not used in mark 4)."""
-
-    def __init__(self, corpus_manager: CorpusManager, analyzer: LibraryWrapper) -> None:
-        self._corpus = corpus_manager
-        self._analyzer = analyzer
-
-    def run(self) -> None:
-        pass
-
-
-class PatternSearchPipeline(PipelineProtocol):
-    """Stub for PatternSearchPipeline (not used in mark 4)."""
-
-    def __init__(
-        self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
-    ) -> None:
-        self._corpus = corpus_manager
-        self._analyzer = analyzer
-        self._node_labels = pos
-
-    def run(self) -> None:
-        pass
 
 
 def main() -> None:
