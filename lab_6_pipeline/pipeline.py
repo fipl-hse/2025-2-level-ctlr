@@ -17,7 +17,7 @@ class EmptyDirectoryError(Exception):
 
 
 class InconsistentDatasetError(Exception):
-    """Raised when dataset has structural inconsistencies (stub for mark 4)."""
+    """Raised when dataset has structural inconsistencies."""
 
 
 class EmptyFileError(Exception):
@@ -78,40 +78,56 @@ class CorpusManager:
         self._scan_dataset()
 
     def _validate_dataset(self) -> None:
-        """Validate folder exists and is not empty."""
+        """Validate folder exists, not empty, and contains consistent raw+meta pairs."""
         if not self._path.exists():
             raise FileNotFoundError(f"Path does not exist: {self._path}")
         if not self._path.is_dir():
             raise NotADirectoryError(f"Path is not a directory: {self._path}")
 
-        # Проверяем, что есть хотя бы один файл с корректным именем (raw или meta)
-        any_valid = False
+        raw_files = {}
+        meta_files = set()
         for file in self._path.glob("*.txt"):
             name = file.stem
-            if name.endswith("_raw") or name.endswith("_meta"):
-                any_valid = True
-                break
-        if not any_valid:
-            raise EmptyDirectoryError(f"No valid files found in {self._path}")
+            if name.endswith("_raw"):
+                try:
+                    idx = int(name.split("_")[0])
+                    raw_files[idx] = file
+                except ValueError:
+                    continue
+            elif name.endswith("_meta"):
+                try:
+                    idx = int(name.split("_")[0])
+                    meta_files.add(idx)
+                except ValueError:
+                    continue
 
-        # Для mark 4 не проверяем соответствие raw/meta
+        if not raw_files:
+            raise EmptyDirectoryError(f"No valid raw files found in {self._path}")
+
+        missing_meta = [idx for idx in raw_files if idx not in meta_files]
+        if missing_meta:
+            raise InconsistentDatasetError(f"Missing meta files for articles: {missing_meta}")
+
+        for idx, file in raw_files.items():
+            if file.stat().st_size == 0:
+                raise InconsistentDatasetError(f"Raw file {file.name} is empty")
+
+        ids = sorted(raw_files.keys())
+        expected = list(range(1, len(ids) + 1))
+        if ids != expected:
+            raise InconsistentDatasetError(f"Article IDs not consecutive: {ids}")
 
     def _scan_dataset(self) -> None:
-        """Register only valid article pairs (raw + meta)."""
-        # Собираем все raw файлы
-        raw_candidates = {}
+        """Register each valid article (raw + meta)."""
         for file in self._path.glob("*_raw.txt"):
+            name = file.stem
             try:
-                idx = int(file.stem.split("_")[0])
-                raw_candidates[idx] = file
+                idx = int(name.split("_")[0])
             except ValueError:
                 continue
-
-        # Для каждого raw проверяем наличие соответствующего meta
-        for idx, raw_file in raw_candidates.items():
-            meta_file = self._path / f"{idx}_meta.json"
-            if meta_file.exists() and meta_file.is_file():
-                # Если мета существует, добавляем статью
+            # Проверяем, что мета-файл существует (дублируем, но надёжнее)
+            meta_path = self._path / f"{idx}_meta.json"
+            if meta_path.exists() and meta_path.is_file():
                 self._storage[idx] = Article(url=None, article_id=idx)
 
     def get_articles(self) -> Dict[int, Article]:
