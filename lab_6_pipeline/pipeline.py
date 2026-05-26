@@ -7,7 +7,7 @@ import re
 from typing import Dict, List, Optional
 
 from core_utils.article.article import Article
-from core_utils.article.io import from_raw, to_cleaned
+from core_utils.article.io import to_cleaned
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
@@ -78,7 +78,7 @@ class CorpusManager:
         self._scan_dataset()
 
     def _validate_dataset(self) -> None:
-        """Validate folder exists, not empty, and contains consistent raw+meta pairs."""
+        """Validate folder exists, not empty, raw files non-empty and IDs consecutive."""
         if not self._path.exists():
             raise FileNotFoundError(f"Path does not exist: {self._path}")
         if not self._path.is_dir():
@@ -106,21 +106,19 @@ class CorpusManager:
             raise InconsistentDatasetError(f"Article IDs not consecutive: {ids}")
 
     def _scan_dataset(self) -> None:
-        """Register each valid article (raw + meta)."""
+        """Register each valid raw file and load text."""
         for file in self._path.glob("*_raw.txt"):
             name = file.stem
             try:
                 idx = int(name.split("_")[0])
             except ValueError:
                 continue
-            # Создаём статью
             article = Article(url=None, article_id=idx)
-            # Загружаем текст из raw-файла
-            from_raw(article)   # теперь article.text заполнен
+            # Загружаем текст вручную
+            article.text = file.read_text(encoding='utf-8')
             self._storage[idx] = article
-            
+
     def get_articles(self) -> Dict[int, Article]:
-        """Get storage dict."""
         return self._storage
 
 
@@ -131,9 +129,7 @@ class TextProcessingPipeline:
         self._corpus = corpus_manager
 
     def run(self) -> None:
-        """Perform cleaning and save cleaned text."""
         for article_id, article in self._corpus.get_articles().items():
-            from_raw(article)
             raw_text = article.text
             if not raw_text:
                 continue
@@ -146,7 +142,6 @@ class TextProcessingPipeline:
 
 
 def main() -> None:
-    """Entrypoint for pipeline module."""
     corpus_manager = CorpusManager(ASSETS_PATH)
     pipeline = TextProcessingPipeline(corpus_manager)
     pipeline.run()
@@ -154,3 +149,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    
