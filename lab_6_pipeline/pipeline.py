@@ -125,7 +125,7 @@ class TextProcessingPipeline:
 
     def __init__(self, corpus_manager: CorpusManager, analyzer: Optional[LibraryWrapper] = None) -> None:
         self._corpus = corpus_manager
-        self._analyzer = analyzer  # not used, but for compatibility with tests
+        self._analyzer = analyzer
 
     def run(self) -> None:
         for article_id, article in self._corpus.get_articles().items():
@@ -136,7 +136,8 @@ class TextProcessingPipeline:
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
             cleaned_text = cleaned_text.lower()
 
-            cleaned_path = ASSETS_PATH / f"{article_id}_cleaned.txt"
+            # Сохраняем в ту же папку, где лежат raw-файлы
+            cleaned_path = self._corpus._path / f"{article_id}_cleaned.txt"
             cleaned_path.write_text(cleaned_text, encoding='utf-8')
 
 
