@@ -1,25 +1,13 @@
 """
 Pipeline for CONLL-U formatting.
 """
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 import pathlib
 import re
-import sys
-from typing import Dict, List, Optional
+from typing import Dict
 
-import spacy_udpipe
-from spacy import Language
-from spacy_conll import init_parser
-
+from core_utils.article.article import Article
+from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH
-from core_utils.pipeline import LibraryWrapper
-
-MODEL_PATH = (
-    Path(__file__).parent / "assets" / "model" / "russian-gsd-ud-2.5-191206.udpipe"
-)
 
 
 class EmptyDirectoryError(Exception):
@@ -28,21 +16,6 @@ class EmptyDirectoryError(Exception):
 
 class InconsistentDatasetError(Exception):
     """Raised when dataset has structural inconsistencies."""
-
-try:
-    from networkx import DiGraph
-    from networkx.algorithms.isomorphism import DiGraphMatcher
-except ImportError:
-    DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
-
-try:
-    from spacy.language import Language
-    from spacy.tokens import Doc
-except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    print("No libraries installed. Failed to import.")
 
 
 class CorpusManager:
@@ -66,7 +39,7 @@ class CorpusManager:
         """
         Validate folder with assets.
         """
-        if not self._path.exists():
+         if not self._path.exists():
             raise FileNotFoundError(f"Path does not exist: {self._path}")
         if not self._path.is_dir():
             raise NotADirectoryError(f"Path is not a directory: {self._path}")
@@ -136,7 +109,6 @@ class TextProcessingPipeline(PipelineProtocol):
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
         self._corpus = corpus_manager
-        self._analyzer = analyzer
 
     def run(self) -> None:
         """
@@ -150,13 +122,9 @@ class TextProcessingPipeline(PipelineProtocol):
 
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
             cleaned_text = cleaned_text.lower()
-            cleaned_path = ASSETS_PATH / f"{article_id}_cleaned.txt"
-            cleaned_path.write_text(cleaned_text, encoding="utf-8")
 
-            if self._analyzer:
-                conllu = self._analyzer.analyze([raw_text])[0]
-                article.set_conllu_info(conllu)
-                self._analyzer.to_conllu(article)
+            article.set_cleaned(cleaned_text)
+            to_cleaned(article, ASSETS_PATH)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -169,7 +137,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
-        self._analyzer = self._bootstrap()
+
 
     def _bootstrap(self) -> Language:
         """
@@ -178,11 +146,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        if not MODEL_PATH.exists():
-            raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
-        nlp = spacy_udpipe.load(str(MODEL_PATH))
-        init_parser(nlp, "conllu")
-        return nlp
+
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -194,11 +158,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        results = []
-        for text in texts:
-            doc = self._analyzer(text)
-            results.append(doc._.conllu)
-        return results
+
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -207,11 +167,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
-        conllu_info = article.get_conllu_info()
-        if not conllu_info:
-            return
-        out_path = ASSETS_PATH / f"{article.get_article_id()}_udpipe.conllu"
-        out_path.write_text(conllu_info, encoding="utf-8")
+
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -223,7 +179,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        pass
+
 
 
 class POSFrequencyPipeline:
@@ -239,8 +195,7 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
-        self._corpus = corpus_manager
-        self._analyzer = analyzer
+
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -257,20 +212,7 @@ class POSFrequencyPipeline:
         """
         Visualize the frequencies of each part of speech.
         """
-        for article_id, article in self._corpus.get_articles().items():
-            from_raw(article)
-            raw_text = article.text
-            if not raw_text:
-                continue
 
-            cleaned = re.sub(r'[^\w\s]', '', raw_text)
-            cleaned = cleaned.lower()
-            cleaned_path = ASSETS_PATH / f"{article_id}_cleaned.txt"
-            cleaned_path.write_text(cleaned, encoding="utf-8")
-
-            conllu = self._analyzer.analyze([raw_text])[0]
-            article.set_conllu_info(conllu)
-            self._analyzer.to_conllu(article)
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -336,8 +278,7 @@ def main() -> None:
     Entrypoint for pipeline module.
     """
     corpus_manager = CorpusManager(ASSETS_PATH)
-    analyzer = UDPipeAnalyzer()
-    pipeline = TextProcessingPipeline(corpus_manager, analyzer)
+    pipeline = TextProcessingPipeline(corpus_manager)
     pipeline.run()
 
 
