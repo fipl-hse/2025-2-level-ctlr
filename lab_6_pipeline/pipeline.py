@@ -4,8 +4,11 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
+import string
 
 from core_utils.article.article import Article
+from core_utils.article.io import to_cleaned
+from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
@@ -24,6 +27,17 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 
+class InconsistentDatasetError(Exception):
+    """
+    Exception raised when dataset has inconsistencies.
+    """
+
+class EmptyDirectoryError(Exception):
+    """
+    Exception raised when directory is empty.
+    """
+
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -36,17 +50,65 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
+        self.path_to_raw_txt_data = pathlib.Path(path_to_raw_txt_data)
+        self._storage = {}
+        self._validate_dataset()
+        self._scan_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        path = self.path_to_raw_txt_data
+        if not path.exists():
+            raise FileNotFoundError("Path does not exist.")
+        if not path.is_dir():
+            raise NotADirectoryError("Path does not lead to a directory.")
+        files = [file for file in path.iterdir() if file.is_file()]
+        if not files:
+            raise EmptyDirectoryError("Directory is empty.")
+
+        txt_files = {}
+        meta_files = {}
+
+        for file in files:
+            parts = file.stem.split("_")
+            if not parts or not parts[0].isdigit():
+                continue
+            article_id = int(parts[0])
+            if file.name.endswith("_raw.txt"):
+                if file.stat().st_size == 0:
+                    raise InconsistentDatasetError("Dataset contains empty text files.")
+                txt_files[article_id] = file 
+            elif file.name.endswith("_meta.json"):
+                meta_files[article_id] = file
+        if not txt_files:
+            raise InconsistentDatasetError("Dataset does not contain valid .txt files.")
+
+        if txt_files.keys() != meta_files.keys():
+            raise InconsistentDatasetError("Number of meta and raw files is not equal.")
 
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry.
         """
-
+        for file in self.path_to_raw_txt_data.iterdir():
+            if not file.is_file():
+                continue
+            if file.suffix != ".txt":
+                continue
+            parts = file.stem.split("_")
+            if not parts[0].isdigit():
+                continue
+            article_id = int(parts[0])
+            article = Article(
+                url=None,
+                article_id=article_id
+            )
+            with open(file, "r", encoding="utf-8") as txt_file:
+                article.text = txt_file.read()
+            self._storage[article_id] = article
+    
     def get_articles(self) -> dict:
         """
         Get storage params.
@@ -54,6 +116,7 @@ class CorpusManager:
         Returns:
             dict: Storage params
         """
+        return self._storage
 
 
 class TextProcessingPipeline(PipelineProtocol):
@@ -71,11 +134,21 @@ class TextProcessingPipeline(PipelineProtocol):
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
+        self._corpus = corpus_manager
+        self.analyzer = analyzer
 
     def run(self) -> None:
         """
         Perform basic preprocessing and write processed text to files.
         """
+        articles = self._corpus.get_articles()
+
+        for article_id, article in articles.items():
+            raw_text = article.text
+            cleaned_text = raw_text.lower()
+            cleaned_text = cleaned_text.translate(str.maketrans("", "", string.punctuation))
+            article.cleaned = cleaned_text
+            to_cleaned(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -223,7 +296,9 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-
+    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
+    pipeline = TextProcessingPipeline(corpus_manager)
+    pipeline.run()
 
 if __name__ == "__main__":
     main()
