@@ -78,6 +78,8 @@ class CorpusManager:
         meta_files = {}
 
         for file in files:
+            if not (file.name.endswith("_raw.txt") or file.name.endswith("_meta.json")):
+                continue
             parts = file.stem.split("_")
             if not parts or not parts[0].isdigit():
                 continue
@@ -91,14 +93,11 @@ class CorpusManager:
             elif file.name.endswith("_meta.json"):
                 meta_files[article_id] = file
 
-        if not txt_files and not meta_files:
-            raise EmptyDirectoryError("Directory is empty or contains no valid dataset files.")
-
         if not txt_files:
             raise InconsistentDatasetError("Dataset does not contain valid .txt files.")
 
         if txt_files.keys() != meta_files.keys():
-            raise InconsistentDatasetError("Number of meta and raw files is not equal.")
+            raise InconsistentDatasetError("Number of meta and raw files is not equal or IDs mismatch.")
 
     def _scan_dataset(self) -> None:
         """
