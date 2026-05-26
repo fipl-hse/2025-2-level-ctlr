@@ -1,17 +1,29 @@
 """
 Pipeline for CONLL-U formatting.
 """
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import pathlib
+import re
+import sys
+from typing import Dict, List, Optional
+
+import spacy_udpipe
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks
-import json
-import pathlib
-
-from networkx import DiGraph
 from spacy import Language
-from spacy.tokens import Doc
+from spacy_conll import init_parser
 
 from core_utils.article.article import Article
-from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
+from core_utils.article.io import from_raw
+from core_utils.constants import ASSETS_PATH
+from core_utils.pipeline import LibraryWrapper
+
+MODEL_PATH = (
+    Path(__file__).parent / "assets" / "model" / "russian-gsd-ud-2.5-191206.udpipe"
+)
 
 
 class EmptyDirectoryError(Exception):
@@ -57,14 +69,12 @@ class CorpusManager:
         for file in self._path.glob("*.txt"):
             name = file.stem
             if name.endswith("_raw"):
-                try:
-                    idx = int(name.split("_")[0])
-                    raw_files[idx] = file
-                except ValueError:
-                    continue
-            elif name.endswith("_meta"):
                 idx = int(name.split("_")[0])
                 raw_files[idx] = file
+            elif name.endswith("_meta"):
+                idx = int(name.split("_")[0])
+                meta_files.add(idx)
+
         if not raw_files:
             raise InconsistentDatasetError("No raw files found")
 
@@ -79,10 +89,7 @@ class CorpusManager:
         ids = sorted(raw_files.keys())
         expected = list(range(1, len(ids) + 1))
         if ids != expected:
-            raise InconsistentDatasetError(
-                f"Article IDs are not consecutive: {ids}, expected {expected}"
-            )
-
+            raise InconsistentDatasetError(f"Article IDs not consecutive: {ids}")
 
     def _scan_dataset(self) -> None:
         """
@@ -118,6 +125,7 @@ class TextProcessingPipeline(PipelineProtocol):
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
         self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def run(self) -> None:
         """
@@ -128,10 +136,16 @@ class TextProcessingPipeline(PipelineProtocol):
             raw_text = article.text
             if not raw_text:
                 continue
+
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
             cleaned_text = cleaned_text.lower()
-            article.set_cleaned(cleaned_text)
-            to_cleaned(article, ASSETS_PATH)
+            cleaned_path = ASSETS_PATH / f"{article_id}_cleaned.txt"
+            cleaned_path.write_text(cleaned_text, encoding="utf-8")
+
+            if self._analyzer:
+                conllu = self._analyzer.analyze([raw_text])[0]
+                article.set_conllu_info(conllu)
+                self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -139,8 +153,6 @@ class UDPipeAnalyzer(LibraryWrapper):
     Wrapper for udpipe library.
     """
 
-    #: Analyzer
-    _analyzer: Language
 
     def __init__(self) -> None:
         """
@@ -174,8 +186,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         results = []
         for text in texts:
             doc = self._analyzer(text)
-            conllu = doc._.conllu
-            results.append(conllu)
+            results.append(doc._.conllu)
         return results
 
     def to_conllu(self, article: Article) -> None:
@@ -313,9 +324,9 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-    corpus = CorpusManager(ASSETS_PATH)
+    corpus_manager = CorpusManager(ASSETS_PATH)
     analyzer = UDPipeAnalyzer()
-    pipeline = TextProcessingPipeline(corpus, analyzer)
+    pipeline = TextProcessingPipeline(corpus_manager, analyzer)
     pipeline.run()
 
 
