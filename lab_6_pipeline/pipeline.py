@@ -113,11 +113,12 @@ class CorpusManager:
                 idx = int(name.split("_")[0])
             except ValueError:
                 continue
-            # Проверяем, что мета-файл существует (дублируем, но надёжнее)
-            meta_path = self._path / f"{idx}_meta.json"
-            if meta_path.exists() and meta_path.is_file():
-                self._storage[idx] = Article(url=None, article_id=idx)
-
+            # Создаём статью
+            article = Article(url=None, article_id=idx)
+            # Загружаем текст из raw-файла
+            from_raw(article)   # теперь article.text заполнен
+            self._storage[idx] = article
+            
     def get_articles(self) -> Dict[int, Article]:
         """Get storage dict."""
         return self._storage
