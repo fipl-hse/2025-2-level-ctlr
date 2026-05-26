@@ -178,6 +178,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        res = []
 
     def to_conllu(self, article: Article) -> None:
         """
