@@ -78,29 +78,25 @@ class CorpusManager:
         meta_files = {}
 
         for file in files:
-            is_raw = file.name.endswith("_raw.txt")
-            is_meta = file.name.endswith("_meta.json")
-            if not (is_raw or is_meta):
-                continue
-            id_part = file.name.split("_")[0]
-            if not id_part.isdigit():
-                continue
-                
-            article_id = int(id_part)
+            if file.name.endswith("_raw.txt"):
+                id_part = file.name.split("_")[0]
+                if id_part.isdigit():
+                    article_id = int(id_part)
+                    if file.stat().st_size == 0:
+                        raise InconsistentDatasetError("Dataset contains empty text files.")
+                    txt_files[article_id] = file
+            elif file.name.endswith("_meta.json"):
+                id_part = file.name.split("_")[0]
+                if id_part.isdigit():
+                    article_id = int(id_part)
+                    meta_files[article_id] = file
 
-            if is_raw:
-                if file.stat().st_size == 0:
-                    raise InconsistentDatasetError("Dataset contains empty text files.")
-                txt_files[article_id] = file 
-            elif is_meta:
-                meta_files[article_id] = file
-
-        if not txt_files and not meta_files:
-            raise EmptyDirectoryError("Directory contains no valid dataset files.")
         if not txt_files:
             raise InconsistentDatasetError("Dataset does not contain valid .txt files.")
-        if txt_files.keys() != meta_files.keys():
+
+        if meta_files and txt_files.keys() != meta_files.keys():
             raise InconsistentDatasetError("Balance is broken: uneven numbers of meta and text files.")
+
         id_seq = list(range(1, len(txt_files) + 1))
         if sorted(txt_files.keys()) != id_seq:
             raise InconsistentDatasetError("Raw file IDs contain gaps or are not sequential.")
@@ -112,10 +108,10 @@ class CorpusManager:
         for file in self.path_to_raw_txt_data.iterdir():
             if not file.is_file():
                 continue
-            if file.suffix != ".txt":
+            if not file.name.endswith("_raw.txt"):
                 continue
             parts = file.stem.split("_")
-            if not parts[0].isdigit():
+            if not parts or not parts[0].isdigit():
                 continue
             article_id = int(parts[0])
             article = Article(
