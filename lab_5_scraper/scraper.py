@@ -365,13 +365,7 @@ class HTMLParser:
         author_tag = article_soup.find('a', href=lambda x: x and '/avtor/' in x)
         self.article.author = [author_tag.get_text(strip=True)] if author_tag else ["NOT FOUND"]
         self.article.url = self.full_url
-        next_tag = article_soup.find('a', href='/editor/next')
-        if next_tag:
-            next_href = next_tag.get('href')
-            self.article.next_url = 'https://proza.ru' + next_href if next_href.startswith('/') else next_href
-        else:
-            self.article.next_url = ""
-
+        
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
         Unify date format.
