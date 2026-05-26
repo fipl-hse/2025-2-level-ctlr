@@ -6,7 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-from core_utils.article.article import Article, ArtifactType
+from core_utils.article.article import Article
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
@@ -22,12 +22,10 @@ try:
     from spacy.language import Language
     from spacy.tokens import Doc
     import spacy_udpipe
-    import spacy_conll
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
     spacy_udpipe = None
-    spacy_conll = None
     print("No libraries installed. Failed to import.")
 
 
@@ -145,7 +143,7 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         articles = self._corpus.get_articles()
-        for article_id, article in articles.items():
+        for article in articles.items():
             from_raw(article.get_raw_text_path(), article)
             raw_text = article.text
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
@@ -221,7 +219,6 @@ class UDPipeAnalyzer(LibraryWrapper):
                         head = token.head.i - sent.start + 1
                         deprel = token.dep_ if token.dep_ else "_"
                     deps = "_"
-                    misc = "_"
                     conllu_lines.append(
                         f"{token_id}\t{word}\t{lemma}\t{upos}\t{xpos}\t"
                         f"{morph}\t{head}\t{deprel}\t{deps}\t"
