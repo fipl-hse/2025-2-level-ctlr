@@ -85,28 +85,16 @@ class CorpusManager:
             raise NotADirectoryError(f"Path is not a directory: {self._path}")
 
         raw_files = {}
-        meta_files = set()
-        for file in self._path.glob("*.txt"):
+        for file in self._path.glob("*_raw.txt"):
             name = file.stem
-            if name.endswith("_raw"):
-                try:
-                    idx = int(name.split("_")[0])
-                    raw_files[idx] = file
-                except ValueError:
-                    continue
-            elif name.endswith("_meta"):
-                try:
-                    idx = int(name.split("_")[0])
-                    meta_files.add(idx)
-                except ValueError:
-                    continue
+            try:
+                idx = int(name.split("_")[0])
+                raw_files[idx] = file
+            except ValueError:
+                continue
 
         if not raw_files:
             raise EmptyDirectoryError(f"No valid raw files found in {self._path}")
-
-        missing_meta = [idx for idx in raw_files if idx not in meta_files]
-        if missing_meta:
-            raise InconsistentDatasetError(f"Missing meta files for articles: {missing_meta}")
 
         for idx, file in raw_files.items():
             if file.stat().st_size == 0:
