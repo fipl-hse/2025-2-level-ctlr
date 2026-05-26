@@ -69,7 +69,7 @@ class CorpusManager:
             raise FileNotFoundError("Path does not exist.")
         if not path.is_dir():
             raise NotADirectoryError("Path does not lead to a directory.")
-
+        
         files = [file for file in path.iterdir() if file.is_file()]
         if not files:
             raise EmptyDirectoryError("Directory is empty.")
@@ -80,10 +80,11 @@ class CorpusManager:
         for file in files:
             if not (file.name.endswith("_raw.txt") or file.name.endswith("_meta.json")):
                 continue
+
             parts = file.stem.split("_")
             if not parts or not parts[0].isdigit():
                 continue
-
+                
             article_id = int(parts[0])
 
             if file.name.endswith("_raw.txt"):
@@ -92,6 +93,9 @@ class CorpusManager:
                 txt_files[article_id] = file 
             elif file.name.endswith("_meta.json"):
                 meta_files[article_id] = file
+
+        if not txt_files and not meta_files:
+            raise EmptyDirectoryError("Directory contains no valid dataset files.")
 
         if not txt_files:
             raise InconsistentDatasetError("Dataset does not contain valid .txt files.")
