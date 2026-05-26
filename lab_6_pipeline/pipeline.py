@@ -6,7 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-from core_utils.article.article import Article
+from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
@@ -21,9 +21,13 @@ except ImportError:
 try:
     from spacy.language import Language
     from spacy.tokens import Doc
+    import spacy_udpipe
+    import spacy_conll
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
+    spacy_udpipe = None
+    spacy_conll = None
     print("No libraries installed. Failed to import.")
 
 
@@ -142,15 +146,18 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles = self._corpus.get_articles()
         for article_id, article in articles.items():
-            raw_path = self._corpus.path_to_raw_txt_data / f"{article_id}_raw.txt"
-            with open(raw_path, 'r', encoding='utf-8') as f:
-                raw_text = f.read()
-            article.text = raw_text
+            from_raw(article.get_raw_text_path(), article)
+            raw_text = article.text
             cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
             cleaned_text = cleaned_text.lower()
-            cleaned_path = self._corpus.path_to_raw_txt_data / f"{article_id}_cleaned.txt"
-            with open(cleaned_path, 'w', encoding='utf-8') as f:
-                f.write(cleaned_text)
+            article.text = cleaned_text
+            to_cleaned(article)
+            article.text = raw_text
+            if self._analyzer is not None:
+                conllu_results = self._analyzer.analyze([raw_text])
+                if conllu_results:
+                    article.set_conllu_info(conllu_results[0])
+                    self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -165,6 +172,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         super().__init__()
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -173,6 +181,11 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        model_path = pathlib.Path(__file__).parent / "assets" / "model" / "ru.udpipe"
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model not found at {model_path}")
+        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+        return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -184,6 +197,38 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        results = []
+        for text in texts:
+            doc = self._analyzer(text)
+            conllu_lines = []
+            for sent_id, sent in enumerate(doc.sents, 1):
+                conllu_lines.append(f"# sent_id = {sent_id}")
+                conllu_lines.append(f"# text = {sent.text}")
+                for token in sent:
+                    token_id = token.i - sent.start + 1
+                    word = token.text
+                    lemma = token.lemma_ if token.lemma_ else "_"
+                    upos = token.pos_
+                    xpos = "_"
+                    if token.morph and str(token.morph) != "":
+                        morph = str(token.morph).replace("|", "|").replace(" ", "|")
+                    else:
+                        morph = "_"
+                    if token.head == token:
+                        head = 0
+                        deprel = "root"
+                    else:
+                        head = token.head.i - sent.start + 1
+                        deprel = token.dep_ if token.dep_ else "_"
+                    deps = "_"
+                    misc = "_"
+                    conllu_lines.append(
+                        f"{token_id}\t{word}\t{lemma}\t{upos}\t{xpos}\t"
+                        f"{morph}\t{head}\t{deprel}\t{deps}\t"
+                    )
+                conllu_lines.append("")
+            results.append("\n".join(conllu_lines) + "\n")
+        return results
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -192,6 +237,14 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        conllu_info = article.get_conllu_info()
+        if conllu_info:
+            article_id = article.article_id
+            articles_dir = pathlib.Path(__file__).parent.parent / "test_tmp"
+            articles_dir.mkdir(parents=True, exist_ok=True)
+            file_path = articles_dir / f"{article_id}_udpipe.conllu"
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(conllu_info)
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -203,6 +256,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        raise NotImplementedError("from_conllu not implemented for mark 6")
 
 
 class POSFrequencyPipeline:
@@ -268,6 +322,7 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             list[DiGraph]: Graphs for the sentences in the document
         """
+        return []
 
     def _add_children(
         self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
@@ -292,6 +347,7 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
+        return {}
 
     def run(self) -> None:
         """
@@ -304,9 +360,10 @@ def main() -> None:
     Entrypoint for pipeline module.
     """
     corpus_manager = CorpusManager(ASSETS_PATH)
-    text_pipeline = TextProcessingPipeline(corpus_manager)
+    udpipe_analyzer = UDPipeAnalyzer()
+    text_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     text_pipeline.run()
-
+    print("Pipeline execution completed successfully")
 
 if __name__ == "__main__":
     main()
