@@ -78,15 +78,10 @@ class CorpusManager:
         meta_files = {}
 
         for file in files:
-            if not (file.name.endswith("_raw.txt") or file.name.endswith("_meta.json")):
+            name_tokens = file.stem.split("_")
+            if len(name_tokens) != 2 or not name_tokens[0].isdigit():
                 continue
-
-            parts = file.stem.split("_")
-            if not parts or not parts[0].isdigit():
-                continue
-                
-            article_id = int(parts[0])
-
+            article_id = int(name_tokens[0])
             if file.name.endswith("_raw.txt"):
                 if file.stat().st_size == 0:
                     raise InconsistentDatasetError("Dataset contains empty text files.")
@@ -96,12 +91,13 @@ class CorpusManager:
 
         if not txt_files and not meta_files:
             raise EmptyDirectoryError("Directory contains no valid dataset files.")
-
         if not txt_files:
             raise InconsistentDatasetError("Dataset does not contain valid .txt files.")
-
         if txt_files.keys() != meta_files.keys():
-            raise InconsistentDatasetError("Number of meta and raw files is not equal or IDs mismatch.")
+            raise InconsistentDatasetError("Balance is broken: uneven numbers of meta and text files.")
+        num_sequence = list(range(1, len(txt_files) + 1))
+        if sorted(txt_files.keys()) != num_sequence:
+            raise InconsistentDatasetError("Raw file IDs contain gaps or are not sequential.")
 
     def _scan_dataset(self) -> None:
         """
