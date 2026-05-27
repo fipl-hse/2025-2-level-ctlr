@@ -85,29 +85,24 @@ class CorpusManager:
                 continue
             file_name = file_path.name
             raw_match = re.match(r'^(\d+)_raw\.txt$', file_name)
-            if raw_match:
-                article_id = int(raw_match.group(1))
-                raw_files[article_id] = file_path
             meta_match = re.match(r'^(\d+)_meta\.json$', file_name)
-            if meta_match:
-                article_id = int(meta_match.group(1))
-                meta_files[article_id] = file_path
+            if raw_match:
+                raw_files[int(raw_match.group(1))] = file_path
+            elif meta_match:
+                meta_files[int(meta_match.group(1))] = file_path
         if not raw_files:
             raise InconsistentDatasetError("No raw files found in directory")
         raw_ids = sorted(raw_files.keys())
-        if raw_ids[0] != 1:
-            raise InconsistentDatasetError(f"First article ID must be 1, got {raw_ids[0]}")
-        if len(raw_ids) != len(set(raw_ids)):
-            raise InconsistentDatasetError("Duplicate article IDs found")
+        if raw_ids[0] != 1 or len(raw_ids) != len(set(raw_ids)):
+            raise InconsistentDatasetError("Invalid article IDs")
         missing_meta = [aid for aid in raw_ids if aid not in meta_files]
         if missing_meta:
             raise InconsistentDatasetError(f"Missing meta files for IDs: {missing_meta}")
-        for article_id, raw_path in raw_files.items():
-            if raw_path.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Raw file {article_id}_raw.txt is empty")
-        for article_id, meta_path in meta_files.items():
-            if meta_path.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Meta file {article_id}_meta.json is empty")
+        for aid in raw_ids:
+            if raw_files[aid].stat().st_size == 0:
+                raise InconsistentDatasetError(f"Raw file {aid}_raw.txt is empty")
+            if aid in meta_files and meta_files[aid].stat().st_size == 0:
+                raise InconsistentDatasetError(f"Meta file {aid}_meta.json is empty")
 
     def _scan_dataset(self) -> None:
         """
@@ -214,30 +209,16 @@ class UDPipeAnalyzer(LibraryWrapper):
         for text in texts:
             doc = self._analyzer(text)
             conllu_lines = []
-            for sent_id, sent in enumerate(doc.sents, 1):
-                conllu_lines.append(f"# sent_id = {sent_id}")
+            for sent in doc.sents:
+                conllu_lines.append(f"# sent_id = {len(conllu_lines)//2 + 1}")
                 conllu_lines.append(f"# text = {sent.text}")
-                for token in sent:
-                    token_id = token.i - sent.start + 1
-                    word = token.text
-                    lemma = token.lemma_ if token.lemma_ else "_"
-                    upos = token.pos_
-                    xpos = "_"
-                    if token.morph and str(token.morph) != "":
-                        morph = str(token.morph).replace("|", "|").replace(" ", "|")
-                    else:
-                        morph = "_"
-                    if token.head == token:
-                        head = 0
-                        deprel = "root"
-                    else:
-                        head = token.head.i - sent.start + 1
-                        deprel = token.dep_ if token.dep_ else "_"
-                    deps = "_"
-                    conllu_lines.append(
-                        f"{token_id}\t{word}\t{lemma}\t{upos}\t{xpos}\t"
-                        f"{morph}\t{head}\t{deprel}\t{deps}\t"
-                    )
+                for t in sent:
+                    tid = t.i - sent.start + 1
+                    lemma = t.lemma_ if t.lemma_ else "_"
+                    morph = str(t.morph).replace(" ", "|") if t.morph and str(t.morph) else "_"
+                    head = 0 if t.head == t else t.head.i - sent.start + 1
+                    deprel = "root" if t.head == t else (t.dep_ if t.dep_ else "_")
+                    conllu_lines.append(f"{tid}\t{t.text}\t{lemma}\t{t.pos_}\t_\t{morph}\t{head}\t{deprel}\t_\t")
                 conllu_lines.append("")
             results.append("\n".join(conllu_lines) + "\n")
         return results
@@ -287,11 +268,11 @@ class UDPipeAnalyzer(LibraryWrapper):
                 pos_tags.append(parts[3])
         nlp = spacy.blank("ru")
         text = " ".join(words)
-        doc = nlp(text) # type: ignore
+        doc = nlp(text)
         for i, token in enumerate(doc):
             if i < len(pos_tags):
                 token.pos_ = pos_tags[i]
-        return doc
+        return doc # type: ignore
 
 
 class POSFrequencyPipeline:
@@ -337,7 +318,7 @@ class POSFrequencyPipeline:
             pos_frequencies = self._count_frequencies(article)
             article.set_pos_info(pos_frequencies)
             to_meta(article)
-            image_path = (article.get_file_path(ArtifactType.UDPIPE_CONLLU).parent / 
+            image_path = (article.get_file_path(ArtifactType.UDPIPE_CONLLU).parent /
                           f"{article.article_id}_image.png")
             visualize(article=article, path_to_save=image_path)
 
@@ -362,7 +343,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]: # pylint: disable=unused-argument
         """
         Make graphs for a document.
 
@@ -387,7 +368,7 @@ class PatternSearchPipeline(PipelineProtocol):
             tree_node (TreeNode): Root node of the match
         """
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
+    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]: # pylint: disable=unused-argument
         """
         Search for the required pattern.
 
