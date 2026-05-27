@@ -96,11 +96,13 @@ class CorpusManager:
         if raw_ids[0] != 1 or len(raw_ids) != len(set(raw_ids)):
             raise InconsistentDatasetError("Invalid article IDs")
         for aid in raw_ids:
-            if aid not in meta_files:
-                raise InconsistentDatasetError(f"Missing meta file for ID: {aid}")
-            if raw_files[aid].stat().st_size == 0:
-                raise InconsistentDatasetError(f"Raw file {aid}_raw.txt is empty")
-            if meta_files[aid].stat().st_size == 0:
+            if (aid not in meta_files or
+                raw_files[aid].stat().st_size == 0 or
+                meta_files[aid].stat().st_size == 0):
+                if aid not in meta_files:
+                    raise InconsistentDatasetError(f"Missing meta file for ID: {aid}")
+                if raw_files[aid].stat().st_size == 0:
+                    raise InconsistentDatasetError(f"Raw file {aid}_raw.txt is empty")
                 raise InconsistentDatasetError(f"Meta file {aid}_meta.json is empty")
 
     def _scan_dataset(self) -> None:
