@@ -7,8 +7,8 @@ import json
 import pathlib
 import re
 
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
 import spacy_udpipe
 from networkx import DiGraph
 from networkx.algorithms.isomorphism import DiGraphMatcher
@@ -19,7 +19,6 @@ from spacy_conll.parser import ConllParser
 from core_utils.article.article import (
     Article,
     ArtifactType,
-    get_article_id_from_filepath,
 )
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
@@ -85,24 +84,16 @@ class CorpusManager:
         found_meta = []
         for raw_path in self.path_to_raw_txt_data.glob("*_raw.txt"):
             raw_name = raw_path.name
-            if not raw_path.stat().st_size:
+            if not raw_path.stat().st_size or not re.match(r"\d*_raw\.txt", raw_name):
                 raise InconsistentDatasetError(
-                    f"File is empty: {raw_name}"
-                )
-            if not re.match(r"\d*_raw\.txt", raw_name):
-                raise InconsistentDatasetError(
-                    f"File name is corrupted: {raw_name}"
+                    f"File is empty or corrupted: {raw_name}"
                 )
             found_raw.append(int(raw_name.split("_")[0]))
         for meta_path in self.path_to_raw_txt_data.glob("*_meta.json"):
             meta_name = meta_path.name
-            if not meta_path.stat().st_size:
+            if not meta_path.stat().st_size or not re.match(r"\d*_meta\.json", meta_name):
                 raise InconsistentDatasetError(
-                    f"File is empty: {meta_name}"
-                )
-            if not re.match(r"\d*_meta\.json", meta_name):
-                raise InconsistentDatasetError(
-                    f"File name is corrupted: {meta_name}"
+                    f"File is empty or corrupted: {meta_name}"
                 )
             found_meta.append(int(meta_name.split("_")[0]))
 
@@ -180,7 +171,7 @@ class TextProcessingPipeline(PipelineProtocol):
                 conllu_formatted = self._analyzer.analyze([article.get_raw_text()])
                 if conllu_formatted:
                     article.set_conllu_info(
-                        "\n".join(conllu_text for conllu_text in conllu_formatted)
+                        "\n".join(conllu_text for conllu_text in conllu_formatted) + "\n"
                     )
                 self._analyzer.to_conllu(article)
 
@@ -232,7 +223,8 @@ class UDPipeAnalyzer(LibraryWrapper):
                 },
             },
         )
-
+        if not isinstance(model, Language):
+            raise TypeError
         return model
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -268,11 +260,16 @@ class UDPipeAnalyzer(LibraryWrapper):
             Doc: Document ready for parsing
         """
         article_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+        if not article_path.exists():
+            raise FileNotFoundError(f"File not found: {article_path}")
         if article_path.stat().st_size == 0:
             raise EmptyFileError(f"{article.article_id} conllu is empty")
-        return self._parser.parse_conll_file_as_spacy(
-            article_path, input_encoding=("utf-8")
-        )
+        with open(article_path, "r", encoding="utf-8") as f:
+            conllu_text = f.read()
+        conllu_doc = self._parser.parse_conll_text_as_spacy(conllu_text.strip())
+        if not isinstance(conllu_doc, Doc):
+            raise TypeError
+        return conllu_doc
 
 
 
@@ -397,27 +394,6 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
-        target_graph = nx.DiGraph()
-        for i in range(len(self._node_labels)):
-            target_graph.add_node(i, label=self._node_labels[i])
-        for from_vertex, to_vertex in zip(range(len(self._node_labels)), range(len(self._node_labels))[1:]):
-            target_graph.add_edge(from_vertex, to_vertex)
-        nx.draw_spring(target_graph, with_labels=True)
-        plt.savefig("graph_test.png")
-
-        pattern_matches_dict = {}
-        for doc_id, doc_graph in enumerate(doc_graphs, start=1):
-            matcher = DiGraphMatcher(
-                doc_graph,
-                target_graph,
-                node_match=lambda node_1, node_2: node_1["label"] == node_2["label"],
-            )
-            matched_graphs = []
-            for match in matcher.subgraph_isomorphisms_iter():
-                for doc_node_id in match:
-                    print(doc_node_id)
-
-        return {}
 
 
 
@@ -425,11 +401,11 @@ class PatternSearchPipeline(PipelineProtocol):
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
-        for article in self._corpus.get_articles().values():
-            graphs = self._make_graphs(self._analyzer.from_conllu(article))
-            patterns = self._find_pattern(graphs)
-            article.set_patterns_info(patterns) #pass
-            to_meta(article)
+        # for article in self._corpus.get_articles().values():
+        #     graphs = self._make_graphs(self._analyzer.from_conllu(article))
+        #     patterns = self._find_pattern(graphs)
+        #     article.set_patterns_info(patterns) #pass
+        #     to_meta(article)
 
 
 def main() -> None:
@@ -448,13 +424,17 @@ def main() -> None:
     corpus_manager = CorpusManager(ASSETS_PATH)
     udpipe_analyzer = UDPipeAnalyzer()
     pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
-    # pipeline.run()
-    # pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
-    # pos_pipeline.run()
-    pattern_searcher = PatternSearchPipeline(corpus_manager, udpipe_analyzer, ("VERB", "NOUN", "ADP"))
-    doc = udpipe_analyzer._analyzer("Я учусь в университете.")
-    pattern_searcher._find_pattern([pattern_searcher._make_graphs(doc)[0]])
-    graph = []
+    pipeline.run()
+    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+    pos_pipeline.run()
+    # pattern_searcher = PatternSearchPipeline(
+    #     corpus_manager,
+    #     udpipe_analyzer,
+    #     ("VERB", "NOUN", "ADP")
+    # )
+    # doc = udpipe_analyzer._analyzer("Я учусь в университете.")
+    # pattern_searcher._find_pattern([pattern_searcher._make_graphs(doc)[0]])
+    # graph = []
     # nx.draw_spring(graph, with_labels=True)
     # print(nx.to_dict_of_dicts(graph))
     # plt.savefig("graph_test.png")
