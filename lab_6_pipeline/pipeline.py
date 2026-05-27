@@ -9,6 +9,7 @@ import re
 import matplotlib.pyplot as plt
 import networkx as nx
 import spacy_udpipe
+
 try:
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
