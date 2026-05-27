@@ -2,13 +2,12 @@
 Pipeline for CONLL-U formatting.
 """
 
-# pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks
-import json
+# pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
-import spacy_udpipe
-
 from collections import Counter
+
+import spacy_udpipe
 from spacy_conll import init_parser
 from networkx import DiGraph
 from spacy import Language
@@ -34,6 +33,21 @@ class EmptyDirectoryError(Exception):
 class EmptyFileError(Exception):
     """file is empty"""
     pass
+
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
+    from spacy.language import Language
+    from spacy.tokens import Doc
+except ImportError:
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 
 
 class CorpusManager:
