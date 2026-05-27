@@ -21,9 +21,11 @@ except ImportError:
 try:
     from spacy.language import Language
     from spacy.tokens import Doc
+    import spacy_udpipe
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
+    spacy_udpipe = None
     print("No libraries installed. Failed to import.")
 
 
@@ -185,6 +187,12 @@ class TextProcessingPipeline(PipelineProtocol):
             cleaned_text = cleaned_text.strip()
             to_cleaned(article_obj, cleaned_text)
 
+            if self._analyzer is not None:
+                conllu_results = self._analyzer.analyze([cleaned_text])
+                if conllu_results:
+                    article_obj.set_conllu_info(conllu_results[0])
+                    self._analyzer.to_conllu(article_obj)
+
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -198,6 +206,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -206,6 +215,18 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        if spacy_udpipe is None:
+            raise ImportError("spacy_udpipe is not installed")
+        
+        spacy_udpipe.download("ru")
+        nlp = spacy_udpipe.load("ru")
+        
+        if "conll_formatter" not in nlp.pipe_names:
+            nlp.add_pipe("conll_formatter", last=True)
+        
+        nlp.max_length = 2000000
+        
+        return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -217,6 +238,30 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        results = []
+        for text in texts:
+            doc = self._analyzer(text)
+            conllu = doc._.conllu
+            lines = conllu.split('\n')
+            processed_lines = []
+            
+            for line in lines:
+                if line.startswith('#'):
+                    processed_lines.append(line)
+                elif line.strip() and not line.startswith('#'):
+                    parts = line.split('\t')
+                    if len(parts) >= 5:
+                        parts[3] = '_'
+                        parts[4] = '_'
+                        processed_lines.append('\t'.join(parts))
+                    else:
+                        processed_lines.append(line)
+                else:
+                    processed_lines.append(line)
+            
+            results.append('\n'.join(processed_lines))
+        
+        return results
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -225,6 +270,11 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        conllu_info = article.get_conllu_info()
+        if conllu_info:
+            conllu_path = article.get_file_path().parent / f"{article.article_id}_udpipe.conllu"
+            with open(conllu_path, 'w', encoding='utf-8') as f:
+                f.write(conllu_info)
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -236,6 +286,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        conllu_path = article.get_file_path().parent / f"{article.article_id}_udpipe.conllu"
+        if conllu_path.exists():
+            with open(conllu_path, 'r', encoding='utf-8') as f:
+                conllu_content = f.read()
+            return self._analyzer(conllu_content)
+        return None
 
 
 class POSFrequencyPipeline:
@@ -333,7 +389,8 @@ def main() -> None:
     """
     from core_utils.constants import ASSETS_PATH
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
-    pipeline = TextProcessingPipeline(corpus_manager)
+    analyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus_manager, analyzer)
     pipeline.run()
 
 
