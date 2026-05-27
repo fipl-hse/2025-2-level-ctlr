@@ -39,7 +39,6 @@ from core_utils.pipeline import (
 )
 from core_utils.visualizer import visualize
 
-
 MODEL_PATH = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
 MODEL_NAME = "russian-syntagrus-ud-2.0-170801.udpipe"
 
