@@ -5,7 +5,6 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
-from collections import Counter
 
 import spacy_udpipe
 from spacy_conll import init_parser
@@ -275,10 +274,14 @@ class POSFrequencyPipeline:
             dict[str, int]: POS frequencies
         """
         doc = self._analyzer.from_conllu(article)
-        pos_tags = []
+        pos_freq = {}
         for token in doc:
-            pos_tags.append(token.pos_)
-        return dict(Counter(pos_tags))
+            pos = token.pos_
+            if pos in pos_freq:
+                pos_freq[pos] += 1
+            else:
+                pos_freq[pos] = 1
+        return pos_freq
 
     def run(self) -> None:
         """
