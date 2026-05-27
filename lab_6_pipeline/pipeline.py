@@ -58,8 +58,6 @@ class EmptyFileError(Exception):
     """
 
 
-
-
 class CorpusManager:
     """
     Work with articles and store them.
@@ -124,15 +122,16 @@ class CorpusManager:
             raise InconsistentDatasetError(
                 "Number of meta and raw files is not equal"
             )
-        if len(found_raw) != sorted(found_raw)[-1]:
-            raise InconsistentDatasetError(
-                "Raw file IDs contain slips"
-            )
-        if len(found_meta) != sorted(found_meta)[-1]:
-            raise InconsistentDatasetError(
-                "Meta file IDs contain slips"
-            )
-
+        for id_raw, file_id in enumerate(sorted(found_raw), start=1):
+            if id_raw != file_id:
+                raise InconsistentDatasetError(
+                    "Raw file IDs contain slips"
+                )
+        for id_meta, file_id in enumerate(sorted(found_meta), start=1):
+            if id_meta != file_id:
+                raise InconsistentDatasetError(
+                    "Meta file IDs contain slips"
+                )
 
     def _scan_dataset(self) -> None:
         """
@@ -141,7 +140,6 @@ class CorpusManager:
         for raw_file_path in self.path_to_raw_txt_data.glob("*_raw.txt"):
             article = from_raw(raw_file_path)
             self._storage[article.article_id] = article
-
 
     def get_articles(self) -> dict:
         """
@@ -283,7 +281,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         return conllu_doc
 
 
-
 class POSFrequencyPipeline:
     """
     Count frequencies of each POS in articles, update meta info and produce graphic report.
@@ -315,7 +312,6 @@ class POSFrequencyPipeline:
         for token in doc:
             frequencies[token.pos_] = frequencies.get(token.pos_, 0) + 1
         return frequencies
-
 
     def run(self) -> None:
         """
@@ -383,10 +379,12 @@ class PatternSearchPipeline(PipelineProtocol):
         return graph_lst
 
     def _make_target_graph(self) -> nx.DiGraph:
-        """_summary_ ДОПИСАТЬ ДОКСТРИНГ
+        """
+        Used in _find_pattern function to create nx.DiGraph instance,
+        using self._node_labels values.
 
         Returns:
-            nx.DiGraph: _description_
+            nx.DiGraph: Instance with self._node_labels as nodes.
         """
         target_graph = nx.DiGraph()
         for i, label in enumerate(self._node_labels):
@@ -458,13 +456,14 @@ class PatternSearchPipeline(PipelineProtocol):
         return graph_mathces
 
     def _unpack_tree(self, tree_node: TreeNode) -> dict:
-        """_summary_ ДОПИСАТЬ ДОКСТРИНГ
+        """
+        Unpacks TreeNode instance to dict
 
         Args:
-            tree_node (_type_): _description_
+            tree_node (TreeNode): Filled instance of TreeNode.
 
         Returns:
-            dict: _description_
+            dict: A dictionary whose keys are attributes of input TreeNode instance.
         """
         return {
             "upos": tree_node.upos,
@@ -490,15 +489,6 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-    # test_texts = [
-    #     "Красивая - мама красиво, \
-    #      училась в ПДД и ЖКУ по адресу Львовская 10 лет с почтой test . ",
-    #     "Я сегодня шла за картошкой в огород.",
-    #     "Ой, упала, вот это поворот!",
-    #     "Замарала пяточку, все лицо в навозе.",
-    #     "Ещё не успела носиком по травке поелозить."
-    # ]
-
     corpus_manager = CorpusManager(ASSETS_PATH)
     udpipe_analyzer = UDPipeAnalyzer()
     pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
@@ -511,41 +501,6 @@ def main() -> None:
         ("VERB", "NOUN", "ADP")
     )
     pattern_searcher.run()
-    # graph = pattern_searcher._make_target_graph()
-    # nx.draw(graph, with_labels=True)
-    # plt.show()
-    # test_dict = {
-    #     1: {"label": "VERB"},
-    #     2: {"label": "NOUN"},
-    #     3: {"label": "ADP"},
-    #     4: {"label": "POS"},
-    #     5: {"label": "X"},
-    #     6: {"label": "NOUN"},
-    #     7: {"label": "NOUN"},
-    #     8: {"label": "ADP"}
-    # }
-    # test_graph = nx.DiGraph()
-    # for name, features in test_dict.items():
-    #     test_graph.add_node(name, label=features["label"])
-    # test_graph.add_edge(1, 2)
-    # test_graph.add_edge(2, 3)
-    # test_graph.add_edge(1, 6)
-    # test_graph.add_edge(6, 3)
-    # test_graph.add_edge(1, 7)
-    # test_graph.add_edge(7, 8)
-    # nx.draw(test_graph, with_labels=True)
-    # plt.show()
-
-    # print(pattern_searcher._find_pattern([test_graph]))
-
-    # doc = udpipe_analyzer._analyzer("Я учусь в университете.")
-    # pattern_searcher._find_pattern([pattern_searcher._make_graphs(doc)[0]])
-    # graph = []
-    # nx.draw_spring(graph, with_labels=True)
-    # print(nx.to_dict_of_dicts(graph))
-    # plt.savefig("graph_test.png")
-
-
 
 
 if __name__ == "__main__":
