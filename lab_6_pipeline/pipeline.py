@@ -6,6 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 
 from core_utils.article.article import Article
+from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
@@ -24,6 +25,30 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 
+class FileNotFoundError(Exception):
+    """
+    Path does not exist.
+    """
+
+
+class NotADirectoryError(Exception):
+    """
+    Path does not lead to a directory.
+    """
+
+
+class InconsistentDatasetError(Exception):
+    """
+    IDs contain slips, number of meta and raw files is not equal, or files are empty.
+    """
+
+
+class EmptyDirectoryError(Exception):
+    """
+    Directory is empty.
+    """
+
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -36,11 +61,17 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
+        self.path_to_raw_txt_data = path_to_raw_txt_data
+        self._storage = {}
+        self._validate_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        if not pathlib.Path.exists(self.path_to_raw_txt_data):
+            raise FileNotFoundError
+        if not 
 
     def _scan_dataset(self) -> None:
         """
@@ -223,6 +254,7 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
+    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
 
 
 if __name__ == "__main__":
