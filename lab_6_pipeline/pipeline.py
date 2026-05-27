@@ -9,10 +9,20 @@ import re
 import matplotlib.pyplot as plt
 import networkx as nx
 import spacy_udpipe
-from networkx import DiGraph
-from networkx.algorithms.isomorphism import DiGraphMatcher
-from spacy.language import Language
-from spacy.tokens import Doc, Token
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
+    from spacy.language import Language
+    from spacy.tokens import Doc, Token
+except ImportError:
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import (
@@ -28,7 +38,6 @@ from core_utils.pipeline import (
 )
 from core_utils.visualizer import visualize
 
-# logger = get_child_logger(__file__)
 MODEL_PATH = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
 MODEL_NAME = "russian-syntagrus-ud-2.0-170801.udpipe"
 
@@ -47,20 +56,7 @@ class EmptyFileError(Exception):
     Raised when file is empty
     """
 
-try:
-    from networkx import DiGraph
-    from networkx.algorithms.isomorphism import DiGraphMatcher
-except ImportError:
-    DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
 
-try:
-    from spacy.language import Language
-    from spacy.tokens import Doc
-except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    print("No libraries installed. Failed to import.")
 
 
 class CorpusManager:
