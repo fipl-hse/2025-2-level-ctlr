@@ -6,15 +6,14 @@ Pipeline for CONLL-U formatting.
 import json
 import pathlib
 import re
-from typing import cast
 
 import networkx as nx
+import matplotlib.pyplot as plt
 import spacy_udpipe
 from networkx import DiGraph
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from spacy.language import Language
-from spacy.tokens import Doc
-from spacy_conll import init_parser
+from spacy.tokens import Doc, Token
 from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import (
@@ -64,7 +63,7 @@ class CorpusManager:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
         self.path_to_raw_txt_data = path_to_raw_txt_data
-        self._storage: dict[int, Article] = {}
+        self._storage = {}
         self._validate_dataset()
         self._scan_dataset()
 
@@ -82,45 +81,52 @@ class CorpusManager:
                 "Path does not lead to directory"
             )
 
-        found_files: dict[str, list] = {}
-        for file_path in self.path_to_raw_txt_data.iterdir():
-            file_name = file_path.name
+        found_raw = []
+        found_meta = []
+        for raw_path in self.path_to_raw_txt_data.glob("*_raw.txt"):
+            raw_name = raw_path.name
+            if not raw_path.stat().st_size:
+                raise InconsistentDatasetError(
+                    f"File is empty: {raw_name}"
+                )
+            if not re.match(r"\d*_raw\.txt", raw_name):
+                raise InconsistentDatasetError(
+                    f"File name is corrupted: {raw_name}"
+                )
+            found_raw.append(int(raw_name.split("_")[0]))
+        for meta_path in self.path_to_raw_txt_data.glob("*_meta.json"):
+            meta_name = meta_path.name
+            if not meta_path.stat().st_size:
+                raise InconsistentDatasetError(
+                    f"File is empty: {meta_name}"
+                )
+            if not re.match(r"\d*_meta\.json", meta_name):
+                raise InconsistentDatasetError(
+                    f"File name is corrupted: {meta_name}"
+                )
+            found_meta.append(int(meta_name.split("_")[0]))
 
-            if re.match(
-                r"\d*_raw\.txt|\d*_meta\.json|\d*_cleaned.txt|\d*_udpipe.conllu|d*_image.png",
-                file_name
-                ):
-                if not file_path.stat().st_size:
-                    raise InconsistentDatasetError(
-                        f"File is empty: {file_name}"
-                    )
-                file_id, file_type = file_name.split("_")
-                found_files.setdefault(file_type, []).append(int(file_id))
-
-        if not found_files:
+        if not found_meta or not found_raw:
             raise EmptyDirectoryError(
                 "Directory is empty"
             )
-
-        raw_ids = found_files.get("raw.txt")
-        meta_ids = found_files.get("meta.json")
-        if not raw_ids:
+        if not found_raw:
             raise InconsistentDatasetError(
                 "Dataset contains no raw files"
             )
-        if not meta_ids:
+        if not found_meta:
             raise InconsistentDatasetError(
                 "Dataset contains no meta files"
             )
-        if len(meta_ids) != len(raw_ids):
+        if len(found_meta) != len(found_raw):
             raise InconsistentDatasetError(
                 "Number of meta and raw files is not equal"
             )
-        if len(raw_ids) != sorted(raw_ids)[-1]:
+        if len(found_raw) != sorted(found_raw)[-1]:
             raise InconsistentDatasetError(
                 "Raw file IDs contain slips"
             )
-        if len(meta_ids) != sorted(meta_ids)[-1]:
+        if len(found_meta) != sorted(found_meta)[-1]:
             raise InconsistentDatasetError(
                 "Meta file IDs contain slips"
             )
@@ -130,15 +136,12 @@ class CorpusManager:
         """
         Register each dataset entry.
         """
-        for meta_file_path in self.path_to_raw_txt_data.glob("*_meta.json"):
-            article_id = get_article_id_from_filepath(meta_file_path)
-            self._storage[article_id] = from_meta(meta_file_path, Article(None, article_id))
         for raw_file_path in self.path_to_raw_txt_data.glob("*_raw.txt"):
-            article_id = get_article_id_from_filepath(raw_file_path)
-            self._storage[article_id] = from_raw(raw_file_path, self._storage[article_id])
+            article = from_raw(raw_file_path)
+            self._storage[article.article_id] = article
 
 
-    def get_articles(self) -> dict[int, Article]:
+    def get_articles(self) -> dict:
         """
         Get storage params.
 
@@ -203,24 +206,16 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model = cast(
-            Language,
-            spacy_udpipe.load_from_path(
+        model = spacy_udpipe.load_from_path(
                 lang="ru",
                 path=str(MODEL_PATH / MODEL_NAME)
             )
-        )
         model.add_pipe(
             "conll_formatter",
             last=True,
             config={
                 "conversion_maps": {
-                    "XPOS": {"": "_"},
-                    # "UPOS": {"", "_"},
-                    # "FEATS": {"", "_"},
-                    # "DEPS": {"", "_"},
-                    # "MISC": {"", "_"},
-                    # "DEPREL": {"", "_"},
+                    "XPOS": {"": "_"}
                 },
                 "include_headers": True,
                 "field_names": {
@@ -250,10 +245,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        conllu_markup_list = []
-        for text in texts:
-            conllu_markup_list.append(self._analyzer(text)._.conll_str)
-        return conllu_markup_list
+        return [self._analyzer(text)._.conll_str for text in texts]
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -278,9 +270,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         article_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         if article_path.stat().st_size == 0:
             raise EmptyFileError(f"{article.article_id} conllu is empty")
-        return cast(Doc, self._parser.parse_conll_file_as_spacy(
+        return self._parser.parse_conll_file_as_spacy(
             article_path, input_encoding=("utf-8")
-        ))
+        )
 
 
 
@@ -350,6 +342,21 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
+    def _make_graph_from_root(self, graph: DiGraph, root: Token) -> None:
+        """
+        Make graph from root token
+
+        Args:
+            graph (DiGraph): Empty graph
+            root (Token): Root token from sentence
+        """
+        graph.add_node(root.i, text=root.text, label=root.pos_)
+
+        for child in root.children:
+            graph.add_edge(root.i, child.i, label=child.dep_)
+            self._make_graph_from_root(graph, child)
+
+
     def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
@@ -360,6 +367,12 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             list[DiGraph]: Graphs for the sentences in the document
         """
+        graph_lst = []
+        for sentence in doc.sents:
+            graph = DiGraph()
+            self._make_graph_from_root(graph, sentence.root)
+            graph_lst.append(graph)
+        return graph_lst
 
     def _add_children(
         self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
@@ -384,11 +397,39 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
+        target_graph = nx.DiGraph()
+        for i in range(len(self._node_labels)):
+            target_graph.add_node(i, label=self._node_labels[i])
+        for from_vertex, to_vertex in zip(range(len(self._node_labels)), range(len(self._node_labels))[1:]):
+            target_graph.add_edge(from_vertex, to_vertex)
+        nx.draw_spring(target_graph, with_labels=True)
+        plt.savefig("graph_test.png")
+
+        pattern_matches_dict = {}
+        for doc_id, doc_graph in enumerate(doc_graphs, start=1):
+            matcher = DiGraphMatcher(
+                doc_graph,
+                target_graph,
+                node_match=lambda node_1, node_2: node_1["label"] == node_2["label"],
+            )
+            matched_graphs = []
+            for match in matcher.subgraph_isomorphisms_iter():
+                for doc_node_id in match:
+                    print(doc_node_id)
+
+        return {}
+
+
 
     def run(self) -> None:
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
+        for article in self._corpus.get_articles().values():
+            graphs = self._make_graphs(self._analyzer.from_conllu(article))
+            patterns = self._find_pattern(graphs)
+            article.set_patterns_info(patterns) #pass
+            to_meta(article)
 
 
 def main() -> None:
@@ -407,9 +448,18 @@ def main() -> None:
     corpus_manager = CorpusManager(ASSETS_PATH)
     udpipe_analyzer = UDPipeAnalyzer()
     pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
-    pipeline.run()
-    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
-    pos_pipeline.run()
+    # pipeline.run()
+    # pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+    # pos_pipeline.run()
+    pattern_searcher = PatternSearchPipeline(corpus_manager, udpipe_analyzer, ("VERB", "NOUN", "ADP"))
+    doc = udpipe_analyzer._analyzer("Я учусь в университете.")
+    pattern_searcher._find_pattern([pattern_searcher._make_graphs(doc)[0]])
+    graph = []
+    # nx.draw_spring(graph, with_labels=True)
+    # print(nx.to_dict_of_dicts(graph))
+    # plt.savefig("graph_test.png")
+
+
 
 
 if __name__ == "__main__":
