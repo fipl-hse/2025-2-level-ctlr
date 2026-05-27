@@ -216,6 +216,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         if spacy_udpipe is None:
+            raise ImportError("spacy_udpipe is not installed. Please install: pip install spacy-udpipe")
+    
+        if spacy_udpipe is None:
             raise ImportError("spacy_udpipe is not installed")
         
         spacy_udpipe.download("ru")
@@ -389,9 +392,18 @@ def main() -> None:
     """
     from core_utils.constants import ASSETS_PATH
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
-    analyzer = UDPipeAnalyzer()
-    pipeline = TextProcessingPipeline(corpus_manager, analyzer)
-    pipeline.run()
+
+    if spacy_udpipe is not None:
+        analyzer = UDPipeAnalyzer()
+        pipeline = TextProcessingPipeline(corpus_manager, analyzer)
+        pipeline.run()
+        
+        pos_pipeline = POSFrequencyPipeline(corpus_manager, analyzer)
+        pos_pipeline.run()
+    else:
+        print("spacy_udpipe not installed. Running basic preprocessing only (score 4).")
+        pipeline = TextProcessingPipeline(corpus_manager)
+        pipeline.run()
 
 
 if __name__ == "__main__":
