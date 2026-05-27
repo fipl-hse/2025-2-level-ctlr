@@ -6,14 +6,12 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
+import spacy
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
-
-import spacy
-from spacy.tokens import Doc
 
 try:
     from networkx import DiGraph
@@ -30,8 +28,8 @@ try:
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
-    spacy_conll = None
-    spacy_udpipe = None
+    spacy_conll = None # type: ignore
+    spacy_udpipe = None # type: ignore
     print("No libraries installed. Failed to import.")
 
 
@@ -194,7 +192,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = pathlib.Path(__file__).parent / "assets" / "model" / "russian-syntagrus-ud-2.0-170801.udpipe"
+        model_path = (pathlib.Path(__file__).parent / "assets" / "model" / 
+                      "russian-syntagrus-ud-2.0-170801.udpipe")
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
@@ -273,8 +272,11 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"File does not exist: {file_path}")
         if file_path.stat().st_size == 0:
             raise EmptyFileError(f"File is empty: {file_path}")
+        
         with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
+        
+        # Собираем текст из слов
         words = []
         pos_tags = []
         for line in lines:
@@ -283,15 +285,19 @@ class UDPipeAnalyzer(LibraryWrapper):
                 continue
             parts = line.split('\t')
             if len(parts) >= 5:
-                word = parts[1]
-                upos = parts[3]
-                words.append(word)
-                pos_tags.append(upos)
+                words.append(parts[1])
+                pos_tags.append(parts[3])
+        
+        # Создаем Doc из текста (через строку)
         nlp = spacy.blank("ru")
-        doc = Doc(nlp.vocab, words=words)
+        text = " ".join(words)
+        doc = nlp(text)
+        
+        # Обновляем POS теги
         for i, token in enumerate(doc):
             if i < len(pos_tags):
                 token.pos_ = pos_tags[i]
+        
         return doc
 
 
@@ -338,7 +344,8 @@ class POSFrequencyPipeline:
             pos_frequencies = self._count_frequencies(article)
             article.set_pos_info(pos_frequencies)
             to_meta(article)
-            image_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU).parent / f"{article.article_id}_image.png"
+            image_path = (article.get_file_path(ArtifactType.UDPIPE_CONLLU).parent / 
+                          f"{article.article_id}_image.png")
             visualize(article=article, path_to_save=image_path)
 
 
