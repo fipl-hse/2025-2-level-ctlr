@@ -22,6 +22,7 @@ try:
     import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy_conll import init_parser
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
@@ -178,7 +179,9 @@ class TextProcessingPipeline(PipelineProtocol):
             cleaned_text = re.sub(r'[^\w\s\n]', ' ', text_lower)
             cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
             cleaned_text = cleaned_text.strip()
-            to_cleaned(article_obj, cleaned_text)
+
+            article_obj.set_cleaned_text(cleaned_text)
+            to_cleaned(article_obj)
 
             if self._analyzer is not None:
                 conllu_results = self._analyzer.analyze([cleaned_text])
@@ -210,33 +213,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         if spacy_udpipe is None:
             raise ImportError("spacy_udpipe is not installed. Please install: pip install spacy-udpipe")
-    
+
         spacy_udpipe.download("ru")
         nlp = spacy_udpipe.load("ru")
-
-        from spacy_conll import ConllFormatter
-
-        nlp.add_pipe(
-            ConllFormatter(
-                field_names={
-                    "ID": 0,
-                    "FORM": 1,
-                    "LEMMA": 2,
-                    "UPOS": 3,
-                    "XPOS": 4,
-                    "FEATS": 5,
-                    "HEAD": 6,
-                    "DEPREL": 7,
-                    "DEPS": 8,
-                    "MISC": 9
-                },
-                include_headers=True
-            ),
-            last=True
-        )
     
         nlp.max_length = 2000000
-    
+
         return nlp
         
     def analyze(self, texts: list[str]) -> list[str]:
@@ -249,10 +231,15 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        if self._analyzer is None or init_parser is None:
+            return []
+    
         results = []
         for text in texts:
             doc = self._analyzer(text)
-            conllu = doc._.conllu
+            conll_parser = init_parser(self._analyzer, "conllu")
+            conll_doc = conll_parser(doc.text)
+            conllu = conll_doc._.conllu
             lines = conllu.split('\n')
             processed_lines = []
             
