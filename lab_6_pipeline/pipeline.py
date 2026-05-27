@@ -77,19 +77,21 @@ class CorpusManager:
         if not all_files:
             raise EmptyDirectoryError('The directory is empty.')
         raw_files = [
-            raw.name for raw in self.path.iterdir() if raw.name.endswith('_raw.txt')
+            raw for raw in self.path.iterdir() if raw.name.endswith('_raw.txt')
         ]
         meta_files = [
-            meta.name for meta in self.path.iterdir() if meta.name.endswith('_meta.json')
+            meta for meta in self.path.iterdir() if meta.name.endswith('_meta.json')
         ]
         if len(raw_files) != len(meta_files):
             raise InconsistentDatasetError('Numbers of raw and meta files are not equal.')
-        for file_id in range(1, len(raw_files) + 1):
-            if not any(f'{file_id}_raw.txt' == raw for raw in raw_files):
-                raise InconsistentDatasetError('Raw IDs contain slips.')
-        for meta_id in range(1, len(meta_files) + 1):
-            if not any(f'{meta_id}_meta.json' == meta for meta in meta_files):
-                raise InconsistentDatasetError('Meta IDs contain slips.')
+        raw_ids = {int(f.stem.split('_')[0]) for f in raw_files}
+        expected_raw_ids = set(range(1, len(raw_ids) + 1))
+        if raw_ids != expected_raw_ids:
+            raise InconsistentDatasetError('Raw IDs contain slips.')
+        meta_ids = {int(f.stem.split('_')[0]) for f in meta_files}
+        expected_meta_ids = set(range(1, len(meta_ids) + 1))
+        if meta_ids != expected_meta_ids:
+            raise InconsistentDatasetError('Meta IDs contain slips.')
         if any(
             True for filepath in self.path.iterdir()
             if filepath.stat().st_size == 0
@@ -102,7 +104,7 @@ class CorpusManager:
         Register each dataset entry.
         """
         for file_path in self.path.glob('*_raw.txt'):
-            self._storage[int(file_path.name[:-8])] = from_raw(file_path)
+            self._storage[int(file_path.stem.split('_')[0])] = from_raw(file_path)
 
     def get_articles(self) -> dict:
         """
@@ -136,13 +138,16 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         Perform basic preprocessing and write processed text to files.
         """
-        for article in self._corpus.get_articles().values():
-            to_cleaned(article)
-            if self._analyzer is not None:
-                conllu_list = self._analyzer.analyze([article.text])
-                conllu_str = conllu_list[0] if conllu_list else ''
-                article.set_conllu_info(conllu_str)
-                self._analyzer.to_conllu(article)
+        articles = list(self._corpus.get_articles().values())
+        list(map(to_cleaned, articles))
+        if self._analyzer:
+            raw_texts = [article.text for article in articles]
+            conllu_results = self._analyzer.analyze(raw_texts)
+            if conllu_results:
+                for article, conllu_text in zip(articles, conllu_results):
+                    if conllu_text:
+                        article.set_conllu_info(conllu_text)
+                        self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
