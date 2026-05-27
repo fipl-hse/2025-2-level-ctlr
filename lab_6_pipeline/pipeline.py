@@ -188,7 +188,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = pathlib.Path(__file__).parent / "assets" / "model" / "ru.udpipe"
+        model_path = pathlib.Path(__file__).parent / "assets" / "model" / "russian-syntagrus-ud-2.0-170801.udpipe"
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
