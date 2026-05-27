@@ -6,10 +6,14 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-from core_utils.article.article import Article
-from core_utils.article.io import from_raw, to_cleaned
+from core_utils.article.article import Article, ArtifactType
+from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
+from core_utils.visualizer import visualize
+
+import spacy
+from spacy.tokens import Doc
 
 try:
     from networkx import DiGraph
@@ -19,12 +23,14 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 try:
+    import spacy_conll
     import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
+    spacy_conll = None
     spacy_udpipe = None
     print("No libraries installed. Failed to import.")
 
@@ -262,7 +268,31 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        raise NotImplementedError("from_conllu not implemented for mark 6")
+        file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+        if not file_path.exists():
+            raise EmptyFileError(f"File does not exist: {file_path}")
+        if file_path.stat().st_size == 0:
+            raise EmptyFileError(f"File is empty: {file_path}")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        words = []
+        pos_tags = []
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            parts = line.split('\t')
+            if len(parts) >= 5:
+                word = parts[1]
+                upos = parts[3]
+                words.append(word)
+                pos_tags.append(upos)
+        nlp = spacy.blank("ru")
+        doc = Doc(nlp.vocab, words=words)
+        for i, token in enumerate(doc):
+            if i < len(pos_tags):
+                token.pos_ = pos_tags[i]
+        return doc
 
 
 class POSFrequencyPipeline:
@@ -291,11 +321,25 @@ class POSFrequencyPipeline:
         Returns:
             dict[str, int]: POS frequencies
         """
+        doc = self._analyzer.from_conllu(article)
+        pos_freq = {}
+        for token in doc:
+            pos = token.pos_
+            if pos:
+                pos_freq[pos] = pos_freq.get(pos, 0) + 1
+        return pos_freq
 
     def run(self) -> None:
         """
         Visualize the frequencies of each part of speech.
         """
+        articles = self._corpus.get_articles()
+        for article in articles.values():
+            pos_frequencies = self._count_frequencies(article)
+            article.set_pos_info(pos_frequencies)
+            to_meta(article)
+            image_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU).parent / f"{article.article_id}_image.png"
+            visualize(article=article, path_to_save=image_path)
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -369,6 +413,8 @@ def main() -> None:
     udpipe_analyzer = UDPipeAnalyzer()
     text_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     text_pipeline.run()
+    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+    pos_pipeline.run()
     print("Pipeline execution completed successfully")
 
 if __name__ == "__main__":
