@@ -95,13 +95,12 @@ class CorpusManager:
         raw_ids = sorted(raw_files.keys())
         if raw_ids[0] != 1 or len(raw_ids) != len(set(raw_ids)):
             raise InconsistentDatasetError("Invalid article IDs")
-        missing_meta = [aid for aid in raw_ids if aid not in meta_files]
-        if missing_meta:
-            raise InconsistentDatasetError(f"Missing meta files for IDs: {missing_meta}")
         for aid in raw_ids:
+            if aid not in meta_files:
+                raise InconsistentDatasetError(f"Missing meta file for ID: {aid}")
             if raw_files[aid].stat().st_size == 0:
                 raise InconsistentDatasetError(f"Raw file {aid}_raw.txt is empty")
-            if aid in meta_files and meta_files[aid].stat().st_size == 0:
+            if meta_files[aid].stat().st_size == 0:
                 raise InconsistentDatasetError(f"Meta file {aid}_meta.json is empty")
 
     def _scan_dataset(self) -> None:
@@ -218,7 +217,10 @@ class UDPipeAnalyzer(LibraryWrapper):
                     morph = str(t.morph).replace(" ", "|") if t.morph and str(t.morph) else "_"
                     head = 0 if t.head == t else t.head.i - sent.start + 1
                     deprel = "root" if t.head == t else (t.dep_ if t.dep_ else "_")
-                    conllu_lines.append(f"{tid}\t{t.text}\t{lemma}\t{t.pos_}\t_\t{morph}\t{head}\t{deprel}\t_\t")
+                    conllu_lines.append(
+                        f"{tid}\t{t.text}\t{lemma}\t{t.pos_}\t_\t"
+                        f"{morph}\t{head}\t{deprel}\t_\t"
+                    )
                 conllu_lines.append("")
             results.append("\n".join(conllu_lines) + "\n")
         return results
