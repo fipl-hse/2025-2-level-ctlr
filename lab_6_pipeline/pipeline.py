@@ -218,7 +218,6 @@ class UDPipeAnalyzer(LibraryWrapper):
 
         nlp.add_pipe(
             ConllFormatter(
-                nlp=nlp,
                 field_names={
                     "id": 0,
                     "form": 1,
