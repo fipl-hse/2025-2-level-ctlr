@@ -71,25 +71,23 @@ class CorpusManager:
         """
         Validate folder with assets.
         """
-        if not self.path_to_raw_txt_data.exists():
-            raise FileNotFoundError(f"Path does not exist: {self.path_to_raw_txt_data}")
-        if not self.path_to_raw_txt_data.is_dir():
-            raise NotADirectoryError(f"Path is not a directory: {self.path_to_raw_txt_data}")
+        if not self.path_to_raw_txt_data.exists() or not self.path_to_raw_txt_data.is_dir():
+            raise FileNotFoundError(
+                f"Path does not exist or is not a directory: {self.path_to_raw_txt_data}"
+            )
         files = list(self.path_to_raw_txt_data.iterdir())
         if not files:
             raise EmptyDirectoryError(f"Directory is empty: {self.path_to_raw_txt_data}")
         raw_files = {}
         meta_files = {}
         for file_path in files:
-            if not file_path.is_file():
-                continue
-            file_name = file_path.name
-            raw_match = re.match(r'^(\d+)_raw\.txt$', file_name)
-            meta_match = re.match(r'^(\d+)_meta\.json$', file_name)
-            if raw_match:
-                raw_files[int(raw_match.group(1))] = file_path
-            elif meta_match:
-                meta_files[int(meta_match.group(1))] = file_path
+            if file_path.is_file():
+                raw_match = re.match(r'^(\d+)_raw\.txt$', file_path.name)
+                meta_match = re.match(r'^(\d+)_meta\.json$', file_path.name)
+                if raw_match:
+                    raw_files[int(raw_match.group(1))] = file_path
+                elif meta_match:
+                    meta_files[int(meta_match.group(1))] = file_path
         if not raw_files:
             raise InconsistentDatasetError("No raw files found in directory")
         raw_ids = sorted(raw_files.keys())
@@ -99,11 +97,7 @@ class CorpusManager:
             if (aid not in meta_files or
                 raw_files[aid].stat().st_size == 0 or
                 meta_files[aid].stat().st_size == 0):
-                if aid not in meta_files:
-                    raise InconsistentDatasetError(f"Missing meta file for ID: {aid}")
-                if raw_files[aid].stat().st_size == 0:
-                    raise InconsistentDatasetError(f"Raw file {aid}_raw.txt is empty")
-                raise InconsistentDatasetError(f"Meta file {aid}_meta.json is empty")
+                raise InconsistentDatasetError(f"Invalid data for article {aid}")
 
     def _scan_dataset(self) -> None:
         """
