@@ -371,6 +371,20 @@ class PatternSearchPipeline(PipelineProtocol):
             graph_lst.append(graph)
         return graph_lst
 
+    def _make_target_graph(self) -> nx.DiGraph:
+        """_summary_ ДОПИСАТЬ ДОКСТРИНГ
+
+        Returns:
+            nx.DiGraph: _description_
+        """
+        target_graph = nx.DiGraph()
+        for i, label in enumerate(self._node_labels):
+            target_graph.add_node(i, label=label)
+            if i > 0:
+                target_graph.add_edge(i - 1, i)
+
+        return target_graph
+
     def _add_children(
         self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
     ) -> None:
@@ -383,6 +397,20 @@ class PatternSearchPipeline(PipelineProtocol):
             node_id (int): ID of root node of the match
             tree_node (TreeNode): Root node of the match
         """
+        next_subgraph_id = subgraph_to_graph[node_id] + 1
+        next_child_id = None
+        for graph_id, subgraph_id in subgraph_to_graph.items():
+            if subgraph_id == next_subgraph_id:
+                next_child_id = graph_id
+                break
+        if next_child_id is not None:
+            child_node = TreeNode(
+                graph.nodes[next_child_id]["label"],
+                graph.nodes[next_child_id]["text"],
+                []
+            )
+            tree_node.children.append(child_node)
+            self._add_children(graph, subgraph_to_graph, next_child_id, child_node)
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
@@ -394,18 +422,57 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
+        target_graph = self._make_target_graph()
+        graph_mathces = {}
+        for graph_id, graph in enumerate(doc_graphs):
+            matcher = DiGraphMatcher(
+                graph,
+                target_graph,
+                node_match=lambda node_1, node_2: node_1["label"] == node_2["label"],
+            )
+            matched_trees = []
+            for match_dict in matcher.subgraph_isomorphisms_iter():
+                head_id = int(next(iter(match_dict)))
+                head_node = TreeNode(
+                        graph.nodes[head_id]["label"],
+                        graph.nodes[head_id]["text"],
+                        []
+                    )
+                matched_trees.append(head_node)
+                self._add_children(graph, match_dict, head_id, head_node)
 
+            if matched_trees:
+                graph_mathces[graph_id] = matched_trees
 
+        return graph_mathces
+
+    def _unpack_tree(self, tree_node: TreeNode) -> dict:
+        """_summary_ ДОПИСАТЬ ДОКСТРИНГ
+
+        Args:
+            tree_node (_type_): _description_
+
+        Returns:
+            dict: _description_
+        """
+        return {
+            "upos": tree_node.upos,
+            "text": tree_node.text,
+            "children": [self._unpack_tree(child) for child in tree_node.children]
+        }
 
     def run(self) -> None:
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
-        # for article in self._corpus.get_articles().values():
-        #     graphs = self._make_graphs(self._analyzer.from_conllu(article))
-        #     patterns = self._find_pattern(graphs)
-        #     article.set_patterns_info(patterns) #pass
-        #     to_meta(article)
+        for article in self._corpus.get_articles().values():
+            article_doc = self._make_graphs(self._analyzer.from_conllu(article))
+            patterns = self._find_pattern(article_doc)
+            patterns_info_dict = {}
+            for graph_id, matched_trees in patterns.items():
+                patterns_info_dict[graph_id] = [self._unpack_tree(tree) for tree in matched_trees]
+            article.set_patterns_info(patterns_info_dict)
+            to_meta(article)
 
 
 def main() -> None:
@@ -427,11 +494,39 @@ def main() -> None:
     pipeline.run()
     pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
     pos_pipeline.run()
-    # pattern_searcher = PatternSearchPipeline(
-    #     corpus_manager,
-    #     udpipe_analyzer,
-    #     ("VERB", "NOUN", "ADP")
-    # )
+    pattern_searcher = PatternSearchPipeline(
+        corpus_manager,
+        udpipe_analyzer,
+        ("VERB", "NOUN", "ADP")
+    )
+    pattern_searcher.run()
+    # graph = pattern_searcher._make_target_graph()
+    # nx.draw(graph, with_labels=True)
+    # plt.show()
+    # test_dict = {
+    #     1: {"label": "VERB"},
+    #     2: {"label": "NOUN"},
+    #     3: {"label": "ADP"},
+    #     4: {"label": "POS"},
+    #     5: {"label": "X"},
+    #     6: {"label": "NOUN"},
+    #     7: {"label": "NOUN"},
+    #     8: {"label": "ADP"}
+    # }
+    # test_graph = nx.DiGraph()
+    # for name, features in test_dict.items():
+    #     test_graph.add_node(name, label=features["label"])
+    # test_graph.add_edge(1, 2)
+    # test_graph.add_edge(2, 3)
+    # test_graph.add_edge(1, 6)
+    # test_graph.add_edge(6, 3)
+    # test_graph.add_edge(1, 7)
+    # test_graph.add_edge(7, 8)
+    # nx.draw(test_graph, with_labels=True)
+    # plt.show()
+
+    # print(pattern_searcher._find_pattern([test_graph]))
+
     # doc = udpipe_analyzer._analyzer("Я учусь в университете.")
     # pattern_searcher._find_pattern([pattern_searcher._make_graphs(doc)[0]])
     # graph = []
