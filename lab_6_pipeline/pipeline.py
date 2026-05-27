@@ -11,6 +11,7 @@ from spacy import Language
 from spacy.tokens import Doc
 
 from core_utils.article.article import Article
+from core_utils.article.io import from_raw, to_cleaned
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 class FileNotFoundError(Exception):
@@ -43,24 +44,41 @@ class CorpusManager:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
         self.path_to_raw_txt_data = path_to_raw_txt_data
+        self._storage = {}
         self._validate_dataset()
+        self._scan_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
-        if not self.path_to_raw_txt_data.exist():
+        if not self.path_to_raw_txt_data.exists():
             raise FileNotFoundError()
         if not self.path_to_raw_txt_data.is_dir():
             raise NotADirectoryError()
-        files = self.path_to_raw_txt_data.iterdir()
+        files = list(self.path_to_raw_txt_data.iterdir())
         if not files:
             raise EmptyDirectoryError()
+        raw_files = [file for file in files if file.name.endswith('_raw.txt')]
+        meta_files = [file for file in files if file.name.endswith('_meta.json')]
+        if not raw_files:
+            raise InconsistentDatasetError()
+        if len(raw_files) != len(meta_files):
+            raise InconsistentDatasetError()
+        raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
+        meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
+        if raw_ids!=meta_ids:
+            raise InconsistentDatasetError()
 
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry.
         """
+        for file in self.path_to_raw_txt_data.iterdir():
+            if file.name.endswith('_raw.txt'):
+                article_id = int(file.name.split('_')[0])
+                article = Article(url=None, article_id = article_id)
+                self._storage[article_id] = from_raw(article, file)
 
     def get_articles(self) -> dict:
         """
@@ -69,6 +87,7 @@ class CorpusManager:
         Returns:
             dict: Storage params
         """
+        return self._storage
 
 
 class TextProcessingPipeline(PipelineProtocol):
@@ -86,12 +105,19 @@ class TextProcessingPipeline(PipelineProtocol):
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def run(self) -> None:
         """
         Perform basic preprocessing and write processed text to files.
         """
-
+        articles=self._corpus.get_articles()
+        for article in articles.values():
+            raw_text = article.get_raw_text()
+            result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
+            cleaned_text = ''.join(result_text).lower()
+            to_cleaned(article, cleaned_text)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
