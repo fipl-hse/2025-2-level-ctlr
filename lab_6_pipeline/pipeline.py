@@ -110,14 +110,6 @@ class CorpusManager:
             raise EmptyDirectoryError(
                 "Directory is empty"
             )
-        if not found_raw:
-            raise InconsistentDatasetError(
-                "Dataset contains no raw files"
-            )
-        if not found_meta:
-            raise InconsistentDatasetError(
-                "Dataset contains no meta files"
-            )
         if len(found_meta) != len(found_raw):
             raise InconsistentDatasetError(
                 "Number of meta and raw files is not equal"
