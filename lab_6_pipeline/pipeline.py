@@ -38,7 +38,7 @@ class InconsistentDatasetError(Exception):
 
 
 class EmptyFileError(Exception):
-    """Raised when file is empty."""
+    """Raised when file is emptyy."""
     pass
 
 
