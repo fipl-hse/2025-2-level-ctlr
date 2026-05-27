@@ -7,6 +7,7 @@ import pathlib
 import re
 
 import spacy
+
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
@@ -192,7 +193,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = (pathlib.Path(__file__).parent / "assets" / "model" / 
+        model_path = (pathlib.Path(__file__).parent / "assets" / "model" /
                       "russian-syntagrus-ud-2.0-170801.udpipe")
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
@@ -272,11 +273,8 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"File does not exist: {file_path}")
         if file_path.stat().st_size == 0:
             raise EmptyFileError(f"File is empty: {file_path}")
-        
         with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
-        
-        # Собираем текст из слов
         words = []
         pos_tags = []
         for line in lines:
@@ -287,17 +285,12 @@ class UDPipeAnalyzer(LibraryWrapper):
             if len(parts) >= 5:
                 words.append(parts[1])
                 pos_tags.append(parts[3])
-        
-        # Создаем Doc из текста (через строку)
         nlp = spacy.blank("ru")
         text = " ".join(words)
-        doc = nlp(text)
-        
-        # Обновляем POS теги
+        doc = nlp(text) # type: ignore
         for i, token in enumerate(doc):
             if i < len(pos_tags):
                 token.pos_ = pos_tags[i]
-        
         return doc
 
 
