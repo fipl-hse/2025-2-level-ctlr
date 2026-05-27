@@ -71,10 +71,10 @@ class CorpusManager:
         """
         Validate folder with assets.
         """
-        if not self.path_to_raw_txt_data.exists() or not self.path_to_raw_txt_data.is_dir():
-            raise FileNotFoundError(
-                f"Path does not exist or is not a directory: {self.path_to_raw_txt_data}"
-            )
+        if not self.path_to_raw_txt_data.exists():
+            raise FileNotFoundError(f"Path does not exist: {self.path_to_raw_txt_data}")
+        if not self.path_to_raw_txt_data.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {self.path_to_raw_txt_data}")
         files = list(self.path_to_raw_txt_data.iterdir())
         if not files:
             raise EmptyDirectoryError(f"Directory is empty: {self.path_to_raw_txt_data}")
@@ -107,12 +107,13 @@ class CorpusManager:
             if not file_path.is_file():
                 continue
             match = re.match(r'^(\d+)_raw\.txt$', file_path.name)
-            if match:
-                article_id = int(match.group(1))
-                article = Article(url=None, article_id=article_id)
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    article.text = f.read()
-                self._storage[article_id] = article
+            if not match:
+                continue
+            article_id = int(match.group(1))
+            article = Article(url=None, article_id=article_id)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                article.text = f.read()
+            self._storage[article_id] = article
 
     def get_articles(self) -> dict:
         """
