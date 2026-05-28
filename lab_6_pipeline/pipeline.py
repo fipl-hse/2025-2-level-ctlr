@@ -5,7 +5,7 @@ Pipeline for CONLL-U formatting.
 
 import pathlib
 import re
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from core_utils.article.article import Article
 from core_utils.constants import ASSETS_PATH
@@ -27,7 +27,7 @@ class EmptyFileError(Exception):
 class UDPipeAnalyzer(LibraryWrapper):
     """Wrapper for udpipe library."""
 
-    _analyzer: Any = None
+    _analyzer: Any
 
     def __init__(self) -> None:
         """Initialize an instance of the UDPipeAnalyzer class."""
@@ -79,7 +79,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Any) -> list:
+    def _make_graphs(self, doc: Any) -> list[Any]:
         """Make graphs for a document."""
         return []
 
