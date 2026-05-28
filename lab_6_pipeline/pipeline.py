@@ -7,6 +7,10 @@ import pathlib
 import re
 from typing import Dict, List, Optional
 
+from spacy import Language
+from spacy.tokens import Doc
+from networkx import DiGraph
+
 from core_utils.article.article import Article
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
