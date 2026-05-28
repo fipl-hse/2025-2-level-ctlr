@@ -2,10 +2,8 @@
 Pipeline for CONLL-U formatting.
 """
 
-# pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks
-import json
+# pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-import string
 import spacy_udpipe
 
 from networkx import DiGraph
@@ -18,7 +16,6 @@ from core_utils.article.article import Article, ArtifactType
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.article.io import from_raw, to_cleaned
-from core_utils.pipeline import PipelineProtocol, LibraryWrapper
 
 class EmptyFileError(Exception):
     """Raised when a file is empty."""
@@ -32,6 +29,21 @@ class EmptyDirectoryError(Exception):
 class InconsistentDatasetError(Exception):
     """Raised when dataset has inconsistencies."""
     pass
+
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
+    from spacy.language import Language
+    from spacy.tokens import Doc
+except ImportError:
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 
 
 class CorpusManager:
@@ -182,8 +194,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         except Exception as e:
             print(f"Download error (may already be cached): {e}")
     
-        nlp = spacy_udpipe.download("ru-syntagrus")
-        
+        nlp = spacy_udpipe.load("ru-syntagrus")
+
+        from spacy_conll import ConllFormatter
         conll_formatter = ConllFormatter(
             nlp,
             ext=True,
@@ -193,7 +206,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             ext_ner=True
         )
         nlp.add_pipe("conll_formatter", last=True)
-        
+
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:

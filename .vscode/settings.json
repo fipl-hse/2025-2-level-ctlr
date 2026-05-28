@@ -1,6 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "."
+        "lab_6_pipeline"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true
