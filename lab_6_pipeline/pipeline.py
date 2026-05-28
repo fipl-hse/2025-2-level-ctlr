@@ -3,16 +3,13 @@ Pipeline for CONLL-U formatting.
 """
 
 
-import json
 import pathlib
 import re
 from typing import Any, Dict, List, Optional
 
 from core_utils.article.article import Article
-from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
-from core_utils.visualizer import visualize
 
 
 class EmptyDirectoryError(Exception):
@@ -45,8 +42,10 @@ class CorpusManager:
         raw_files = {}
         for file in self._path.glob("*_raw.txt"):
             name = file.stem
-            idx = int(name.split("_")[0])
-            raw_files[idx] = file
+            parts = name.split("_")
+            if len(parts) == 2 and parts[1] == "raw" and parts[0].isdigit():
+                idx = int(parts[0])
+                raw_files[idx] = file
 
         if not raw_files:
             raise EmptyDirectoryError(f"No valid raw files found in {self._path}")
@@ -63,10 +62,12 @@ class CorpusManager:
     def _scan_dataset(self) -> None:
         for file in self._path.glob("*_raw.txt"):
             name = file.stem
-            idx = int(name.split("_")[0])
-            article = Article(url=None, article_id=idx)
-            from_raw(article)
-            self._storage[idx] = article
+            parts = name.split("_")
+            if len(parts) == 2 and parts[1] == "raw" and parts[0].isdigit():
+                idx = int(parts[0])
+                article = Article(url=None, article_id=idx)
+                article.text = file.read_text(encoding='utf-8')
+                self._storage[idx] = article
 
     def get_articles(self) -> Dict[int, Article]:
         return self._storage
@@ -82,14 +83,14 @@ class TextProcessingPipeline(PipelineProtocol):
         self._analyzer = analyzer
 
     def run(self) -> None:
-        for article in self._corpus.get_articles().values():
+        for article_id, article in self._corpus.get_articles().items():
             raw_text = article.text
             if not raw_text:
                 continue
             cleaned = re.sub(r'[^\w\s]', '', raw_text)
             cleaned = cleaned.lower()
-            article.set_cleaned(cleaned)
-            to_cleaned(article, ASSETS_PATH)
+            cleaned_path = self._corpus._path / f"{article_id}_cleaned.txt"
+            cleaned_path.write_text(cleaned, encoding='utf-8')
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -124,12 +125,7 @@ class POSFrequencyPipeline:
         return {}
 
     def run(self) -> None:
-        for article in self._corpus.get_articles().values():
-            meta = article.get_meta()
-            meta["pos_frequencies"] = {}
-            article.set_pos_info(meta)
-            to_meta(article, ASSETS_PATH)
-            visualize(article, ASSETS_PATH / f"{article.get_article_id()}_image.png")
+        pass
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -154,11 +150,7 @@ class PatternSearchPipeline(PipelineProtocol):
         return {}
 
     def run(self) -> None:
-        for article in self._corpus.get_articles().values():
-            meta = article.get_meta()
-            meta["pattern_matches"] = {}
-            article.set_pos_info(meta)
-            to_meta(article, ASSETS_PATH)
+        pass
 
 
 def main() -> None:
