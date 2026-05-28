@@ -5,11 +5,7 @@ Pipeline for CONLL-U formatting.
 
 import pathlib
 import re
-from typing import Dict, List, Optional
-
-from spacy import Language
-from spacy.tokens import Doc
-from networkx import DiGraph
+from typing import Dict, List, Optional, Any
 
 from core_utils.article.article import Article
 from core_utils.constants import ASSETS_PATH
@@ -31,13 +27,13 @@ class EmptyFileError(Exception):
 class UDPipeAnalyzer(LibraryWrapper):
     """Wrapper for udpipe library."""
 
-    _analyzer: Language | None
+    _analyzer: Any = None
 
     def __init__(self) -> None:
         """Initialize an instance of the UDPipeAnalyzer class."""
         self._analyzer = self._bootstrap()
 
-    def _bootstrap(self) -> Language | None:
+    def _bootstrap(self) -> Any:
         """Load and set up the UDPipe model."""
         # Stub for mark 4
         return None
@@ -83,12 +79,12 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+    def _make_graphs(self, doc: Any) -> list:
         """Make graphs for a document."""
         return []
 
     def _add_children(
-        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+        self, graph: Any, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
     ) -> None:
         """Add children to TreeNode."""
         pass
