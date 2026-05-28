@@ -332,9 +332,31 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        paragraphs = article_soup.find_all('p')
-        text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
-        self.article.text = '\n'.join(text_parts) if text_parts else "NOT FOUND"
+        for tech_tag in article_soup(["script", "style", "noscript", "meta", "header", "footer"]):
+            tech_tag.extract()
+            
+        menu_keywords = {'главная', 'стихи', 'пьесы', 'публицистика', 'биография', 'контакты', 'новости', 'на главную'}
+        for link in article_soup.find_all('a'):
+            link_text = link.get_text().strip().lower()
+            if link_text in menu_keywords or 'menu' in ''.join(link.get('class', [])).lower():
+                link.extract()
+        body = article_soup.find('body')
+        if not body:
+            return ""
+        raw_text = body.get_text(separator='\n', strip=True)
+        clean_lines = []
+        for line in raw_text.split('\n'):
+            clean_line = line.strip()
+            if not clean_line:
+                continue
+            if clean_line.lower() in {'назад', 'вперед', 'вверх', 'top', 'далее', 'следующая', 'предыдущая'}:
+                continue
+            if re.match(r'^\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}$', clean_line):
+                continue
+            clean_lines.append(clean_line)
+        self.article.text =  "\n".join(clean_lines) if clean_lines else "NOT FOUND"
+        # text_parts = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+        # self.article.text = '\n'.join(text_parts) if text_parts else "NOT FOUND"
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -391,6 +413,8 @@ class HTMLParser:
             return self.article
         soup = BeautifulSoup(response.text, 'lxml')
         self._fill_article_with_text(soup)
+        # if self.article.text == "NOT FOUND":
+        #     return None
         self._fill_article_with_meta_information(soup)
         return self.article
 

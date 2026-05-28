@@ -1,15 +1,15 @@
 {
     "python.testing.pytestArgs": [
-        "lab_5_scraper"
+        "lab_6_pipeline"
     ],
-    "python.testing.unittestEnabled": true,
-    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./lab_5_scraper",
+        "./venv",
         "-p",
-        "*_test.py"
+        "*test.py"
     ]
 }
