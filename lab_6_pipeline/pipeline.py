@@ -4,16 +4,25 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-
 import re
-import matplotlib.pyplot as plt
+
 import networkx as nx
 import spacy_udpipe
 
-from networkx import DiGraph
-from networkx.algorithms.isomorphism import DiGraphMatcher
-from spacy.language import Language
-from spacy.tokens import Doc, Token
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None
+    print("No libraries installed. Failed to import.")
+
+try:
+    from spacy.language import Language
+    from spacy.tokens import Doc, Token
+except ImportError:
+    Language = None
+    Doc = None
+    print("No libraries installed. Failed to import.")
 from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import (

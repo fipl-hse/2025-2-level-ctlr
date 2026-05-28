@@ -338,6 +338,11 @@ class HTMLParser:
         menu_keywords = {'главная', 'стихи', 'пьесы', 'публицистика', 'биография', 'контакты', 'новости', 'на главную'}
         for link in article_soup.find_all('a'):
             link_text = link.get_text().strip().lower()
+            link_classes = link.get('class') or []
+            link_classes = [link_classes] if isinstance(link_classes, str) else list(link_classes)
+            
+            if link_text in menu_keywords or 'menu' in ''.join(link_classes).lower():
+                link.extract()
             if link_text in menu_keywords or 'menu' in ''.join(link.get('class', [])).lower():
                 link.extract()
         body = article_soup.find('body')
