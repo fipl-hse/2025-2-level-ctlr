@@ -334,7 +334,7 @@ class HTMLParser:
         """
         for tech_tag in article_soup(["script", "style", "noscript", "meta", "header", "footer"]):
             tech_tag.extract()
-        menu_keywords = {'главная', 'стихи', 'пьесы', 'публицистика', 
+        menu_keywords = {'главная', 'стихи', 'пьесы', 'публицистика',
                          'биография', 'контакты', 'новости', 'на главную'}
         for link in article_soup.find_all('a'):
             link_text = link.get_text().strip().lower()
@@ -355,7 +355,7 @@ class HTMLParser:
                 clean_line = line.strip()
                 if not clean_line:
                     continue
-                if clean_line.lower() in {'назад', 'вперед', 'вверх', 'top', 
+                if clean_line.lower() in {'назад', 'вперед', 'вверх', 'top',
                                           'далее', 'следующая', 'предыдущая'}:
                     continue
                 if re.match(r'^\d{1,2}[\.\/\-]\d{1,2}[\.\/\-]\d{2,4}$', clean_line):
