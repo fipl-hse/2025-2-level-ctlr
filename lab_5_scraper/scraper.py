@@ -386,7 +386,12 @@ class HTMLParser:
             print(f"Failed to download document from {document_url}")
             return
 
-        doc = Document(BytesIO(response.content))
+        try:
+            doc = Document(BytesIO(response.content))
+        except:
+            print(f"Failed to extract {document_url} as .docx file")
+            return
+
 
         parser = WordParser(doc, self.article)
 
