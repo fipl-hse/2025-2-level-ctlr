@@ -68,15 +68,29 @@ class CorpusManager:
         """
         Validate folder with assets.
         """
-        if not self.path_to_raw_txt_data.exists():
-            raise FileNotFoundError(f"Path does not exist: {self.path_to_raw_txt_data}")
+        self._check_path_valid()
+        raw_files, meta_files = self._collect_and_validate_files()
+        self._validate_ids_continuity(raw_files)
 
+    def _check_path_valid(self) -> None:
+        """
+        Check if path exists and is a directory.
+        """
+        if not self.path_to_raw_txt_data.exists():
+            raise FileNotFoundError(
+                f"Path does not exist: "
+                f"{self.path_to_raw_txt_data}"
+            )
         if not self.path_to_raw_txt_data.is_dir():
             raise NotADirectoryError(
                 f"Path does not lead to a directory: "
                 f"{self.path_to_raw_txt_data}"
             )
 
+    def _collect_and_validate_files(self) -> tuple[dict, dict]:
+        """
+        Collect raw and meta files and validate they exist and are not empty.
+        """
         raw_files = {}
         meta_files = {}
 
@@ -91,6 +105,7 @@ class CorpusManager:
                     raw_files[article_id] = file_path
                 except ValueError:
                     continue
+
             elif file_name.endswith('_meta.json'):
                 try:
                     article_id = int(file_name.split('_')[0])
@@ -110,14 +125,16 @@ class CorpusManager:
                 f"Meta IDs: {sorted(meta_files.keys())}"
             )
 
-        for article_id, file_path in raw_files.items():
+        for file_path in list(raw_files.values()) + list(meta_files.values()):
             if file_path.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Raw file {file_path.name} is empty")
+                raise InconsistentDatasetError(f"File {file_path.name} is empty")
 
-        for article_id, file_path in meta_files.items():
-            if file_path.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Meta file {file_path.name} is empty")
+        return raw_files, meta_files
 
+    def _validate_ids_continuity(self, raw_files: dict) -> None:
+        """
+        Validate that article IDs are continuous from 1 to N.
+        """
         expected_ids = set(range(1, max(raw_files.keys()) + 1))
         if raw_files.keys() != expected_ids:
             raise InconsistentDatasetError(
