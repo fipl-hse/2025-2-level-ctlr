@@ -79,6 +79,7 @@ class CorpusManager:
             raise FileNotFoundError(f"Path does not exist: {self.path}")
         if not self.path.is_dir():
             raise NotADirectoryError(f"Path is not a directory: {self.path}")
+        
         raw_files = {}
         meta_files = {}
         
@@ -104,13 +105,6 @@ class CorpusManager:
         if not raw_files:
             raise InconsistentDatasetError("No raw files found")
         
-        if set(raw_files.keys()) != set(meta_files.keys()):
-            raise InconsistentDatasetError(
-                f"Mismatch between raw and meta files. "
-                f"Raw IDs: {sorted(raw_files.keys())}, "
-                f"Meta IDs: {sorted(meta_files.keys())}"
-            )
-        
         article_ids = sorted(raw_files.keys())
         if article_ids:
             expected_ids = list(range(1, max(article_ids) + 1))
@@ -119,7 +113,7 @@ class CorpusManager:
                     f"Article IDs have gaps. "
                     f"Expected: {expected_ids}, Got: {article_ids}"
                 )
-            
+        
         for article_id, file_path in raw_files.items():
             if file_path.stat().st_size == 0:
                 raise InconsistentDatasetError(f"Raw file {article_id} is empty")
