@@ -5,7 +5,12 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 
+from networkx import DiGraph
+from spacy import Language
+from spacy.tokens import Doc
+
 from core_utils.article.article import Article
+from core_utils.constants import PROJECT_ROOT, ASSETS_PATH
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
@@ -129,6 +134,11 @@ class TextProcessingPipeline(PipelineProtocol):
             result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
             cleaned_text = ''.join(result_text).lower()
             to_cleaned(article, cleaned_text)
+        if self._analyzer:
+            conllu_text = self._analyzer.analyze([raw_text])
+            conllu_info = conllu_text[0]
+            article.set_conllu_info(conllu_info)
+            self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -142,6 +152,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -150,6 +161,29 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        model_path =  PROJECT_ROOT / "lab_6_pipeline"/ "assets"/ "model"/ "russian-syntagrus-ud-2.0-170801.udpipe"
+        model = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+        model.add_pipe(
+        "conll_formatter",
+        last=True,
+        config={
+            "conversion_maps": {"XPOS": {"": "_"}},
+            "include_headers": True,
+            "field_names": {
+                "ID": "ID",
+                "FORM": "FORM",
+                "LEMMA": "LEMMA",
+                "UPOS": "UPOS",
+                "XPOS": "XPOS",
+                "FEATS": "FEATS",
+                "HEAD": "HEAD",
+                "DEPREL": "DEPREL",
+                "DEPS": "DEPS",
+                "MISC": "MISC",
+            },
+        },
+    )
+        return model
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -161,6 +195,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        conllu_texts = []
+        for text in texts:
+            analyzed_text = self._analyzer(text)
+            conllu_text = analyzed_text._.conll_str
+            conllu_texts.append(conllu_text)
+        return conllu_texts
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -169,6 +209,10 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        path = article.get_file_path('conllu')
+        with open(path, "w", encoding="utf-8") as file:
+            file.write(article.get_conllu_info())
+            file.write('\n')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -180,7 +224,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-
+        path = article.get_file_path('conllu')
+        with open(path, "r", encoding="utf-8") as file:
+            conllu_text = file.read()
+        parser = ConllParser(self._analyzer)
+        doc = parser.parse_conll_text_as_spacy(conllu_text.strip())
+        return doc
 
 class POSFrequencyPipeline:
     """
@@ -275,7 +324,10 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-
+    corpus_manager = CorpusManager(ASSETS_PATH)
+    udpipeanalyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus_manager, udpipeanalyzer)
+    pipeline.run()
 
 if __name__ == "__main__":
     main()
