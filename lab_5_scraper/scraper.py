@@ -448,8 +448,6 @@ class HTMLParser:
 
         relative_article_id = int(self.article.url[self.article.url.rfind("=")+1:])
 
-        print(self.article.url)
-
         article_bs = article_bs.find_all(class_="th_d1")[relative_article_id]
 
         self._fill_article_with_meta_information(article_bs)
