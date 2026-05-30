@@ -198,8 +198,11 @@ class UDPipeAnalyzer(LibraryWrapper):
 
         if "conll_formatter" not in nlp.pipe_names:
             nlp.add_pipe("conll_formatter", last=True, config={
-                "conversion_maps": {}, "ext_names": {}, "field_names": {},
-                "include_headers": False, "disable_pandas": True,
+                "conversion_maps": {},
+                "ext_names": {},
+                "field_names": {},
+                "include_headers": True,
+                "disable_pandas": True,
             })
 
         return nlp
@@ -216,7 +219,10 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         results = []
         for doc in self._analyzer.pipe(texts):
-            results.append(doc._.conll_str)
+            conll = doc._.conll_str
+            if not conll.endswith("\n\n"):
+                conll += "\n"
+            results.append(conll)
         return results
 
     def to_conllu(self, article: Article) -> None:
@@ -227,8 +233,8 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article containing information to save
         """
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(article.get_conllu_info())
+        with open(path, "w", encoding="utf-8") as conllu_file:
+            conllu_file.write(article.get_conllu_info())
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -245,7 +251,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"CoNLL-U file is empty: {path}")
 
         parser = ConllParser(self._analyzer)
-        doc = cast(Doc, parser.parse_conll_file_as_spacy(str(path)))
+        with open(path, encoding="utf-8") as conllu_file:
+            content = conllu_file.read()
+        doc: Doc = parser.parse_conll_text_as_spacy(content)
         return doc
 
 
@@ -371,6 +379,7 @@ def main() -> None:
     pipeline = TextProcessingPipeline(corpus_manager, analyzer)
     pipeline.run()
 
+    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
     pos_pipeline = POSFrequencyPipeline(corpus_manager, analyzer)
     pos_pipeline.run()
 
