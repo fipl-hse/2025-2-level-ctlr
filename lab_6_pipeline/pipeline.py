@@ -2,44 +2,52 @@
 Pipeline for CONLL-U formatting.
 """
 
-import sys
-import re
-import pathlib
-from collections import Counter
+# pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
+from __future__ import annotations
 
-from core_utils.article.article import Article
-from core_utils.article.io import from_raw, to_cleaned, from_meta, to_meta
+import pathlib
+import re
+import sys
+from collections import Counter
+from typing import cast
+
+from core_utils.article.article import Article, ArtifactType
+from core_utils.article.io import from_raw, to_cleaned, to_meta
+from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
-from core_utils.constants import ASSETS_PATH
 
 try:
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
-    DiGraph = None
-    print("No libraries installed. Failed to import.")
+    print("No libraries installed. Failed to import networkx.")
+    sys.exit(1)
 
 try:
+    import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
-    import spacy_udpipe
-    from spacy_conll import ConllFormatter
     from spacy_conll.parser import ConllParser
 except ImportError:
-    Language = None
-    Doc = None
-    print("No libraries installed. Failed to import.")
+    print("No libraries installed. Failed to import spacy.")
+    sys.exit(1)
 
 
 class EmptyDirectoryError(Exception):
-    """Raised when dataset directory is empty."""
+    """
+    Raised when dataset directory is empty.
+    """
 
 class InconsistentDatasetError(Exception):
-    """Raised when dataset has missing files, gaps, empty files, etc."""
+    """
+    Raised when dataset has missing files, gaps, empty files, etc.
+    """
 
 class EmptyFileError(Exception):
-    """Raised when a required file is empty."""
+    """
+    Raised when a required file is empty.
+    """
 
 
 class CorpusManager:
@@ -59,10 +67,7 @@ class CorpusManager:
         self._validate_dataset()
         self._scan_dataset()
 
-    def _validate_dataset(self) -> None:
-        """
-        Validate folder with assets.
-        """
+    def _check_path_exists_and_not_empty(self) -> None:
         if not self._path.exists():
             raise FileNotFoundError(f"Path does not exist: {self._path}")
         if not self._path.is_dir():
@@ -73,11 +78,11 @@ class CorpusManager:
         except StopIteration as exc:
             raise EmptyDirectoryError(f"Directory is empty: {self._path}") from exc
 
-        raw_files: dict[int, pathlib.Path] = {}
-        meta_files: dict[int, pathlib.Path] = {}
+    def _collect_files(self) -> tuple[dict[int, pathlib.Path], dict[int, pathlib.Path]]:
+        raw_files = {}
+        meta_files = {}
         pattern_raw = re.compile(r'^(\d+)_raw\.txt$')
         pattern_meta = re.compile(r'^(\d+)_meta\.json$')
-
         for file_path in self._path.iterdir():
             if not file_path.is_file():
                 continue
@@ -90,23 +95,37 @@ class CorpusManager:
             elif meta_match:
                 idx = int(meta_match.group(1))
                 meta_files[idx] = file_path
+        return raw_files, meta_files
 
+    def _validate_file_sets(self, raw_files: dict, meta_files: dict) -> None:
         if set(raw_files.keys()) != set(meta_files.keys()):
             raise InconsistentDatasetError("Mismatch between raw and meta file ids")
         if not raw_files:
             raise InconsistentDatasetError("No valid raw files found")
 
+    def _validate_ids_sequence(self, raw_files: dict) -> None:
         ids = sorted(raw_files.keys())
         expected = list(range(1, max(ids) + 1))
         if ids != expected:
             raise InconsistentDatasetError(f"Article ids are not consecutive: {ids}")
 
+    def _validate_files_non_empty(self, raw_files: dict, meta_files: dict) -> None:
         for idx, path in raw_files.items():
             if path.stat().st_size == 0:
                 raise InconsistentDatasetError(f"Raw file {idx} is empty")
         for idx, path in meta_files.items():
             if path.stat().st_size == 0:
                 raise InconsistentDatasetError(f"Meta file {idx} is empty")
+
+    def _validate_dataset(self) -> None:
+        """
+        Validate folder with assets.
+        """
+        self._check_path_exists_and_not_empty()
+        raw_files, meta_files = self._collect_files()
+        self._validate_file_sets(raw_files, meta_files)
+        self._validate_ids_sequence(raw_files)
+        self._validate_files_non_empty(raw_files, meta_files)
 
     def _scan_dataset(self) -> None:
         """
@@ -118,8 +137,8 @@ class CorpusManager:
                 continue
             match = pattern.match(file_path.name)
             if match:
-                article_id = int(match.group(1))
-                self._storage[article_id] = Article(url=None, article_id=article_id)
+                article = from_raw(file_path)
+                self._storage[article.article_id] = article
 
     def get_articles(self) -> dict:
         """
@@ -155,7 +174,6 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles = self._corpus.get_articles()
         for article in articles.values():
-            from_raw(article)
             raw_text = article.text
             if not raw_text:
                 continue
@@ -201,8 +219,24 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise FileNotFoundError("UDPipe model not found in assets/model/")
         model_path = str(model_files[0])
 
-        nlp = spacy_udpipe.load_from_path(model_path)
-        nlp.add_pipe(ConllFormatter(nlp), last=True)
+        nlp = spacy_udpipe.load_from_path(lang='ru', path=model_path)
+        conll_config = {
+        'conversion_maps': {'XPOS': {'': '_'}},
+        'include_headers': True,
+        'field_names': {
+            'ID': 'ID',
+            'FORM': 'FORM',
+            'LEMMA': 'LEMMA',
+            'UPOS': 'UPOS',
+            'XPOS': 'XPOS',
+            'FEATS': 'FEATS',
+            'HEAD': 'HEAD',
+            'DEPREL': 'DEPREL',
+            'DEPS': 'DEPS',
+            'MISC': 'MISC'
+            }
+        }
+        nlp.add_pipe('conll_formatter', last=True, config=conll_config)
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -231,13 +265,10 @@ class UDPipeAnalyzer(LibraryWrapper):
         conll_info = article.get_conllu_info()
         if not conll_info:
             return
-        raw_path = article.get_file_path(kind='raw')
-        if raw_path:
-            conllu_path = raw_path.parent / f"{article.article_id}_udpipe.conllu"
-        else:
-            conllu_path = pathlib.Path("tmp/articles") / f"{article.article_id}_udpipe.conllu"
+        article_dir = article.get_file_path(ArtifactType.CLEANED).parent
+        conllu_path = article_dir / f"{article.article_id}_udpipe.conllu"
         conllu_path.parent.mkdir(parents=True, exist_ok=True)
-        conllu_path.write_text(conll_info, encoding='utf-8')
+        conllu_path.write_text(conll_info + '\n', encoding='utf-8')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -249,21 +280,17 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        raw_path = article.get_file_path(kind='raw')
-        if raw_path:
-            conllu_path = raw_path.parent / f"{article.article_id}_udpipe.conllu"
-        else:
-            conllu_path = pathlib.Path("tmp/articles") / f"{article.article_id}_udpipe.conllu"
-
+        article_dir = article.get_file_path(ArtifactType.CLEANED).parent
+        conllu_path = article_dir / f"{article.article_id}_udpipe.conllu"
         if not conllu_path.exists():
             raise FileNotFoundError(f"CONLL-U file not found: {conllu_path}")
         content = conllu_path.read_text(encoding='utf-8')
         if not content.strip():
             raise EmptyFileError(f"CONLL-U file is empty: {conllu_path}")
-
+        content = content.rstrip() + '\n'
         parser = ConllParser(self._analyzer)
         doc = parser.parse_conll_text_as_spacy(content)
-        return doc
+        return cast(Doc, doc)
 
 
 
@@ -306,14 +333,11 @@ class POSFrequencyPipeline:
         articles = self._corpus.get_articles()
         for article in articles.values():
             freq_dict = self._count_frequencies(article)
+            article.set_pos_info(freq_dict)
+            to_meta(article)
 
-            meta = from_meta(article)
-            if meta is None:
-                meta = {}
-            meta['pos_frequencies'] = freq_dict
-            to_meta(article, meta)
-
-            image_path = article.get_file_path(kind='raw').parent / f"{article.article_id}_image.png"
+            article_dir = article.get_file_path(ArtifactType.CLEANED).parent
+            image_path = article_dir / f"{article.article_id}_image.png"
             visualize(article=article, path_to_save=image_path)
 
 
@@ -336,6 +360,17 @@ class PatternSearchPipeline(PipelineProtocol):
         self._corpus = corpus_manager
         self._analyzer = analyzer
         self._node_labels = pos
+        self._pattern_graph: DiGraph | None = None
+
+    def _node_to_dict(self, node: TreeNode) -> dict:
+        """
+        Convert TreeNode to dictionary recursively.
+        """
+        return {
+            'upos': node.upos,
+            'text': node.text,
+            'children': [self._node_to_dict(child) for child in node.children]
+        }
 
     def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
@@ -351,7 +386,7 @@ class PatternSearchPipeline(PipelineProtocol):
         for sent in doc.sents:
             g = DiGraph()
             for token in sent:
-                g.add_node(token.i, label=token.pos_)
+                g.add_node(token.i, label=token.pos_, text=token.text)
             for token in sent:
                 if token.dep_ != "ROOT" and token.head.i != token.i:
                     g.add_edge(token.head.i, token.i, label=token.dep_)
@@ -370,6 +405,43 @@ class PatternSearchPipeline(PipelineProtocol):
             node_id (int): ID of root node of the match
             tree_node (TreeNode): Root node of the match
         """
+        if self._pattern_graph is None:
+            return
+        for child_pattern in self._pattern_graph.successors(node_id):
+            child_graph_id = subgraph_to_graph[child_pattern]
+            child_upos = cast(str, graph.nodes[child_graph_id]['label'])
+            child_text = cast(str, graph.nodes[child_graph_id]['text'])
+            child_node = TreeNode(upos=child_upos, text=child_text, children=[])
+            tree_node.children.append(child_node)
+            self._add_children(graph, subgraph_to_graph, child_pattern, child_node)
+
+    def _process_match(
+        self,
+        sent_graph: DiGraph,
+        subgraph_match: dict,
+        target_root_pos: str,
+        sent_idx: int,
+        matches: dict
+    ) -> None:
+        """
+        Process one isomorphism match and add to matches.
+        """
+        pat_to_graph = {p: g for g, p in subgraph_match.items()}
+        root_pattern = None
+        for pat_node in pat_to_graph.keys():
+            if self._pattern_graph.nodes[pat_node]['label'] == target_root_pos:
+                root_pattern = pat_node
+                break
+        if root_pattern is None:
+            return
+
+        root_graph_id = pat_to_graph[root_pattern]
+        root_upos = cast(str, sent_graph.nodes[root_graph_id]['label'])
+        root_text = cast(str, sent_graph.nodes[root_graph_id]['text'])
+        root_node = TreeNode(upos=root_upos, text=root_text, children=[])
+
+        self._add_children(sent_graph, pat_to_graph, root_pattern, root_node)
+        matches.setdefault(sent_idx, []).append(root_node)
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
@@ -381,11 +453,44 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
+        self._pattern_graph = DiGraph()
+        for i, pos_tag in enumerate(self._node_labels):
+            self._pattern_graph.add_node(i, label=pos_tag)
+        for i in range(len(self._node_labels) - 1):
+            self._pattern_graph.add_edge(i, i + 1)
+
+        matches: dict[int, list[TreeNode]] = {}
+        target_root_pos = self._node_labels[0]
+
+        for sent_idx, sent_graph in enumerate(doc_graphs):
+            def node_match(node1_attrs: dict, node2_attrs: dict) -> bool:
+                return node1_attrs.get('label') == node2_attrs.get('label')
+
+            matcher = DiGraphMatcher(sent_graph, self._pattern_graph, node_match=node_match)
+
+            for subgraph_match in matcher.subgraph_isomorphisms_iter():
+                self._process_match(sent_graph, subgraph_match, target_root_pos, sent_idx, matches)
+
+        return matches
 
     def run(self) -> None:
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
+        articles = self._corpus.get_articles()
+        for article in articles.values():
+            doc = self._analyzer.from_conllu(article)
+            graphs = self._make_graphs(doc)
+            pattern_dict = self._find_pattern(graphs)
+
+            serialized_patterns = {}
+            for sent_idx, tree_nodes in pattern_dict.items():
+                serialized_patterns[str(sent_idx)] = [
+                    self._node_to_dict(node) for node in tree_nodes
+                    ]
+
+            article.set_patterns_info(serialized_patterns)
+            to_meta(article)
 
 
 def main() -> None:
@@ -396,15 +501,18 @@ def main() -> None:
         corpus_manager = CorpusManager(ASSETS_PATH)
         analyzer = UDPipeAnalyzer()
 
+        text_pipeline = TextProcessingPipeline(corpus_manager, analyzer)
+        text_pipeline.run()
+
+        pos_pipeline = POSFrequencyPipeline(corpus_manager, analyzer)
+        pos_pipeline.run()
+
         pattern_pipeline = PatternSearchPipeline(corpus_manager, analyzer, ("VERB", "NOUN", "ADP"))
         pattern_pipeline.run()
 
     except (FileNotFoundError, NotADirectoryError, EmptyDirectoryError,
             InconsistentDatasetError, EmptyFileError) as e:
         print(f"Pipeline error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
         sys.exit(1)
 
 
