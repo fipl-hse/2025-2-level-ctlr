@@ -4,15 +4,15 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-import spacy_udpipe
-import string
 import re
+import string
+
+import spacy_udpipe
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.article.io import from_raw, to_cleaned
+from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
-
 
 try:
     from networkx import DiGraph
@@ -38,6 +38,11 @@ class EmptyDirectoryError(Exception):
     """
     Raised when directory is empty.
     """
+    
+class EmptyFileError(Exception):
+    """Raised when file is empty."""
+    pass
+
 
 class CorpusManager:
     """
