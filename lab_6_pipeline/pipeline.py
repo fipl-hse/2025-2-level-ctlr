@@ -3,13 +3,14 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
+import json
 import pathlib
 import re
 
 import spacy
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import from_raw, to_cleaned, to_meta
+from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
@@ -111,7 +112,11 @@ class CorpusManager:
             if not match:
                 continue
             article_id = int(match.group(1))
-            article = Article(url=None, article_id=article_id)
+            meta_path = self.path_to_raw_txt_data / f"{article_id}_meta.json"
+            if meta_path.exists():
+                article = from_meta(meta_path)
+            else:
+                article = Article(url=None, article_id=article_id)
             with open(file_path, 'r', encoding='utf-8') as f:
                 article.text = f.read()
             self._storage[article_id] = article
@@ -161,6 +166,15 @@ class TextProcessingPipeline(PipelineProtocol):
                     conllu_info = conllu_result[0]
                     article.set_conllu_info(conllu_info)
                     self._analyzer.to_conllu(article)
+                    meta_path = self._corpus.path_to_raw_txt_data / f"{article.article_id}_meta.json"
+                    if meta_path.exists():
+                        with open(meta_path, 'r', encoding='utf-8') as f:
+                            meta_data = json.load(f)
+                        meta_data["pos_frequencies"] = article.get_pos_freq()
+                        with open(meta_path, 'w', encoding='utf-8') as f:
+                            json.dump(meta_data, f, indent=4, ensure_ascii=False)
+                    else:
+                        to_meta(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
