@@ -98,11 +98,11 @@ class CorpusManager:
                     except ValueError:
                         continue
         
-        if not raw_files:
-            raise InconsistentDatasetError("No raw files found")
-        
         if not raw_files and not meta_files:
             raise EmptyDirectoryError(f"Directory is empty: {self.path}")
+        
+        if not raw_files:
+            raise InconsistentDatasetError("No raw files found")
         
         if set(raw_files.keys()) != set(meta_files.keys()):
             raise InconsistentDatasetError(
@@ -137,8 +137,15 @@ class CorpusManager:
             if file_path.is_file() and file_path.name.endswith("_raw.txt"):
                 article_id = int(file_path.stem.replace("_raw", ""))
                 article = Article(url=None, article_id=article_id)
+                
+                raw_path = self.path / f"{article_id}_raw.txt"
+                if raw_path.exists():
+                    with open(raw_path, 'r', encoding='utf-8') as f:
+                        raw_text = f.read()
+                    article.text = raw_text
+                
                 self._storage[article_id] = article
-
+    
     def get_articles(self) -> dict:
         """
         Get storage params.
