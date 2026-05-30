@@ -40,8 +40,9 @@ class EmptyDirectoryError(Exception):
     """
     
 class EmptyFileError(Exception):
-    """Raised when file is empty."""
-    pass
+    """
+    Raised when file is empty.
+    """
 
 
 class CorpusManager:
@@ -155,7 +156,6 @@ class TextProcessingPipeline(PipelineProtocol):
             for char in string.punctuation:
                 cleaned_text = cleaned_text.replace(char, "")
             cleaned_text = re.sub(r'[^a-zа-яё0-9\s]', '', cleaned_text)
-            cleaned_text = re.sub(r'[\u0590-\u05FF]', '', cleaned_text)
             cleaned_text = ' '.join(cleaned_text.split())
             article.text = cleaned_text
             to_cleaned(article)
