@@ -194,7 +194,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             last=True,
             config={
                 "include_headers": True,
-                "conversion_maps": {"XPOS": {"": "_"}}
+                "conversion_maps": {"XPOS": {"": "_"}},
+                "field_names": {},
+                "ext_names": {},
             }
         )
         return nlp
