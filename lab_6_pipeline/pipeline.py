@@ -3,11 +3,15 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
-import json
 import pathlib
 import re
 
 import spacy
+import spacy_udpipe
+import spacy_conll
+from spacy.language import Language
+from spacy.tokens import Doc
+from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned, to_meta
@@ -20,19 +24,6 @@ try:
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
     DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
-
-try:
-    import spacy_conll
-    import spacy_udpipe
-    from spacy.language import Language
-    from spacy.tokens import Doc
-    from spacy_conll.parser import ConllParser
-except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    spacy_conll = None # type: ignore
-    spacy_udpipe = None # type: ignore
     print("No libraries installed. Failed to import.")
 
 
