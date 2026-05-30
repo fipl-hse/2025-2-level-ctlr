@@ -25,9 +25,9 @@ except ImportError:
 try:
     import spacy_conll
     import spacy_udpipe
-    from spacy_conll.parser import ConllParser
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy_conll.parser import ConllParser
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
@@ -246,7 +246,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         parser = ConllParser(self._analyzer)
         with open(file_path, 'r', encoding='utf-8') as f:
             document = f.read()
-        return parser.parse_conll_text_as_spacy(document.strip('\n'))
+        return parser.parse_conll_text_as_spacy(document.strip('\n')) # type: ignore
 
 
 class POSFrequencyPipeline:
