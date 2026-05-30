@@ -3,6 +3,7 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
+import json
 import pathlib
 import re
 
@@ -24,6 +25,7 @@ except ImportError:
 try:
     import spacy_conll
     import spacy_udpipe
+    from spacy_conll.parser import ConllParser
     from spacy.language import Language
     from spacy.tokens import Doc
 except ImportError:
@@ -147,19 +149,18 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         Perform basic preprocessing and write processed text to files.
         """
-        articles = self._corpus.get_articles()
-        for article in articles.values():
-            from_raw(article.get_raw_text_path(), article)
+        for article in self._corpus.get_articles().values():
             raw_text = article.text
-            cleaned_text = re.sub(r'[^\w\s]', '', raw_text)
-            cleaned_text = cleaned_text.lower()
-            article.text = cleaned_text
-            to_cleaned(article)
-            article.text = raw_text
+            if raw_text:
+                cleaned_text = raw_text.lower()
+                cleaned_text = re.sub(r'[^\w\s\n]', '', cleaned_text)
+                article.cleaned_text = cleaned_text
+                to_cleaned(article)
             if self._analyzer is not None:
-                conllu_results = self._analyzer.analyze([raw_text])
-                if conllu_results:
-                    article.set_conllu_info(conllu_results[0])
+                conllu_result = self._analyzer.analyze([article.text])
+                if conllu_result and len(conllu_result) > 0:
+                    conllu_info = conllu_result[0]
+                    article.set_conllu_info(conllu_info)
                     self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -189,6 +190,14 @@ class UDPipeAnalyzer(LibraryWrapper):
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+        nlp.add_pipe(
+            "conll_formatter",
+            last=True,
+            config={
+                "include_headers": True,
+                "conversion_maps": {"XPOS": {"": "_"}}
+            }
+        )
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -201,26 +210,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        results = []
-        for text in texts:
-            doc = self._analyzer(text)
-            conllu_lines = []
-            for sent in doc.sents:
-                conllu_lines.append(f"# sent_id = {len(conllu_lines)//2 + 1}")
-                conllu_lines.append(f"# text = {sent.text}")
-                for t in sent:
-                    tid = t.i - sent.start + 1
-                    lemma = t.lemma_ if t.lemma_ else "_"
-                    morph = str(t.morph).replace(" ", "|") if t.morph and str(t.morph) else "_"
-                    head = 0 if t.head == t else t.head.i - sent.start + 1
-                    deprel = "root" if t.head == t else (t.dep_ if t.dep_ else "_")
-                    conllu_lines.append(
-                        f"{tid}\t{t.text}\t{lemma}\t{t.pos_}\t_\t"
-                        f"{morph}\t{head}\t{deprel}\t_\t"
-                    )
-                conllu_lines.append("")
-            results.append("\n".join(conllu_lines) + "\n")
-        return results
+        return [self._analyzer(text)._.conll_str for text in texts]
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -231,12 +221,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         conllu_info = article.get_conllu_info()
         if conllu_info:
-            article_id = article.article_id
-            articles_dir = pathlib.Path(__file__).parent.parent / "test_tmp"
-            articles_dir.mkdir(parents=True, exist_ok=True)
-            file_path = articles_dir / f"{article_id}_udpipe.conllu"
+            file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(conllu_info)
+                if not conllu_info.endswith('\n\n'):
+                    f.write('\n')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -253,25 +243,10 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"File does not exist: {file_path}")
         if file_path.stat().st_size == 0:
             raise EmptyFileError(f"File is empty: {file_path}")
+        parser = ConllParser(self._analyzer)
         with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        words = []
-        pos_tags = []
-        for line in lines:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            parts = line.split('\t')
-            if len(parts) >= 5:
-                words.append(parts[1])
-                pos_tags.append(parts[3])
-        nlp = spacy.blank("ru")
-        text = " ".join(words)
-        doc = nlp(text)
-        for i, token in enumerate(doc):
-            if i < len(pos_tags):
-                token.pos_ = pos_tags[i]
-        return doc # type: ignore
+            document = f.read()
+        return parser.parse_conll_text_as_spacy(document.strip('\n'))
 
 
 class POSFrequencyPipeline:
