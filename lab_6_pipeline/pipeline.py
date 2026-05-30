@@ -69,7 +69,7 @@ class CorpusManager:
         Validate folder with assets.
         """
         self._check_path_valid()
-        raw_files, meta_files = self._collect_and_validate_files()
+        raw_files, _ = self._collect_and_validate_files()
         self._validate_ids_continuity(raw_files)
 
     def _check_path_valid(self) -> None:
