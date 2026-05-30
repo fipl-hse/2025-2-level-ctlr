@@ -166,7 +166,10 @@ class TextProcessingPipeline(PipelineProtocol):
                     conllu_info = conllu_result[0]
                     article.set_conllu_info(conllu_info)
                     self._analyzer.to_conllu(article)
-                    meta_path = self._corpus.path_to_raw_txt_data / f"{article.article_id}_meta.json"
+                    meta_path = (
+                        self._corpus.path_to_raw_txt_data /
+                        f"{article.article_id}_meta.json"
+                    )
                     if meta_path.exists():
                         with open(meta_path, 'r', encoding='utf-8') as f:
                             meta_data = json.load(f)
