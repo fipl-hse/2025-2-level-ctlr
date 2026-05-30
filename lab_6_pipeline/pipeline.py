@@ -42,6 +42,10 @@ class EmptyDirectoryError(Exception):
     """Raised when directory is empty."""
     pass
 
+class EmptyFileError(Exception):
+    """Raised when file is empty."""
+    pass
+
 
 class CorpusManager:
     """
