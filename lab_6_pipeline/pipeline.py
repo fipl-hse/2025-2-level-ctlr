@@ -84,27 +84,26 @@ class CorpusManager:
         ]
         if len(raw_files) != len(meta_files):
             raise InconsistentDatasetError('Numbers of raw and meta files are not equal.')
-        raw_ids = {int(f.stem.split('_')[0]) for f in raw_files}
-        expected_raw_ids = set(range(1, len(raw_ids) + 1))
-        if raw_ids != expected_raw_ids:
-            raise InconsistentDatasetError('Raw IDs contain slips.')
-        meta_ids = {int(f.stem.split('_')[0]) for f in meta_files}
-        expected_meta_ids = set(range(1, len(meta_ids) + 1))
-        if meta_ids != expected_meta_ids:
-            raise InconsistentDatasetError('Meta IDs contain slips.')
-        if any(
-            True for filepath in self.path.iterdir()
-            if filepath.stat().st_size == 0
-            and (filepath.name.endswith('_raw.txt') or filepath.name.endswith('_meta.json'))
-        ):
-            raise InconsistentDatasetError('The file is empty.')
+        for i, raw_file in enumerate(sorted(raw_files), 1):
+            if int(raw_file.stem.split('_')[0]) != i:
+                raise InconsistentDatasetError('Raw IDs contain slips.')
+        for i, meta_file in enumerate(sorted(meta_files), 1):
+            if int(meta_file.stem.split('_')[0]) != i:
+                raise InconsistentDatasetError('Meta IDs contain slips.')
+        for filepath in raw_files + meta_files:
+            if filepath.stat().st_size == 0:
+                raise InconsistentDatasetError('The file is empty.')
 
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry.
         """
-        for file_path in self.path.glob('*_raw.txt'):
-            self._storage[int(file_path.stem.split('_')[0])] = from_raw(file_path)
+        for meta_path in self.path.glob('*_meta.json'):
+            article_id = int(meta_path.stem.split('_')[0])
+            self._storage[article_id] = from_meta(meta_path)
+        for raw_path in self.path.glob('*_raw.txt'):
+            article_id = int(raw_path.stem.split('_')[0])
+            self._storage[article_id].text = raw_path.read_text(encoding='utf-8')
 
     def get_articles(self) -> dict:
         """
@@ -139,15 +138,18 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         articles = list(self._corpus.get_articles().values())
-        list(map(to_cleaned, articles))
-        if self._analyzer:
-            raw_texts = [article.text for article in articles]
-            conllu_results = self._analyzer.analyze(raw_texts)
-            if conllu_results:
-                for article, conllu_text in zip(articles, conllu_results):
-                    if conllu_text:
-                        article.set_conllu_info(conllu_text)
-                        self._analyzer.to_conllu(article)
+        for article in articles:
+            to_cleaned(article)
+        if not self._analyzer:
+            return
+        raw_texts = [article.text for article in articles]
+        conllu_results = self._analyzer.analyze(raw_texts)
+        if conllu_results is None:
+            return
+        for article, conllu_text in zip(articles, conllu_results):
+            if conllu_text:
+                article.set_conllu_info(conllu_text)
+                self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -172,9 +174,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = str((PROJECT_ROOT / 'lab_6_pipeline' / 'assets' / 'model' /
-                      'russian-syntagrus-ud-2.0-170801.udpipe'))
-        model = spacy_udpipe.load_from_path(lang='ru', path=model_path)
+        model_path = (PROJECT_ROOT / 'lab_6_pipeline' / 'assets' / 'model' /
+                      'russian-syntagrus-ud-2.0-170801.udpipe')
+        model = spacy_udpipe.load_from_path(lang='ru', path=str(model_path))
         model.add_pipe(
             'conll_formatter',
             last=True,
@@ -217,9 +219,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article containing information to save
         """
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(article.get_conllu_info())
-            f.write('\n')
+        path.write_text(article.get_conllu_info() + '\n', encoding='utf-8')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -232,10 +232,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             Doc: Document ready for parsing
         """
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
-        if len(path.read_text(encoding='utf-8')) == 0:
+        document = path.read_text(encoding='utf-8')
+        if len(document) == 0:
             raise EmptyFileError('An article file is empty.')
-        with open(path, 'r', encoding='utf-8') as f:
-            document = f.read()
         parsed: Doc = self._parser.parse_conll_text_as_spacy(document.strip('\n'))
         return parsed
 
