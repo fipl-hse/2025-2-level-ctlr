@@ -440,7 +440,7 @@ class PatternSearchPipeline(PipelineProtocol):
                 head_id = None
                 for graph_node, matcher_node in match_dict.items():
                     if matcher_node == 0:
-                        head_id = matcher_node
+                        head_id = graph_node
                         break
                 if head_id is not None:
                     head_node = TreeNode(
