@@ -251,10 +251,10 @@ class Crawler:
                 break
             
             response = make_request(seed_url, self.config)
-            if not response or response.status_code != 200:
+            if not response.ok:
                 continue
             
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, 'lxml.parser')
             
             all_links = soup.find_all('a')
             
