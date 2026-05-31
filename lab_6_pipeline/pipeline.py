@@ -7,27 +7,29 @@ import pathlib
 import re
 import string
 
-import spacy_udpipe # type: ignore
-
+import spacy_udpipe  # type: ignore
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
-    import networkx # type: ignore
-    import networkx.algorithms.isomorphism # type: ignore
+    import networkx  # type: ignore
+    from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
-    networkx.DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
+    networkx = None  # type: ignore
+    DiGraphMatcher = None  # type: ignore
+    print("No libraries installed. Failed to import networkx.")
 
 try:
-    import spacy.language # type: ignore
-    import spacy.tokens # type: ignore
+    import spacy  # type: ignore
+    from spacy.language import Language
+    from spacy.tokens import Doc
 except ImportError:
-    spacy.language.Language = None  # type: ignore
-    spacy.tokens.Doc = None  # type: ignore
-    print("No libraries installed. Failed to import.")
+    spacy = None  # type: ignore
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    print("No libraries installed. Failed to import spacy.")
 
 
 class InconsistentDatasetError(Exception):
