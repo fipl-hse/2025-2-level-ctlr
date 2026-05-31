@@ -278,11 +278,28 @@ class POSFrequencyPipeline:
         Returns:
             dict[str, int]: POS frequencies
         """
+        doc = self._analyzer.from_conllu(article)
+        frequencies: dict[str, int] = {}
+        for token in doc:
+            pos = token.pos_
+            if pos:
+                frequencies[pos] = frequencies.get(pos, 0) + 1
+        return frequencies
 
     def run(self) -> None:
         """
         Visualize the frequencies of each part of speech.
         """
+        from core_utils.article.io import from_meta, to_meta
+        from core_utils.constants import ASSETS_PATH
+        from core_utils.visualizer import visualize
+
+        for article in self._corpus.get_articles().values():
+            from_meta(article)
+            frequencies = self._count_frequencies(article)
+            article.set_pos_info(frequencies)
+            to_meta(article)
+            visualize(article=article, path_to_save=article.get_file_path(ArtifactType.IMAGE))
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -356,6 +373,8 @@ def main() -> None:
     udpipe_analyzer = UDPipeAnalyzer()
     pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     pipeline.run()
+    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+    pos_pipeline.run()
 
 
 if __name__ == "__main__":
