@@ -1,8 +1,8 @@
 beautifulsoup4==4.14.3
 matplotlib==3.10.9
+networkx==3.5
 Pillow==12.2.0
 python_docx==1.2.0
 Requests==2.33.1
-networkx==3.5
 spacy_conll==4.0.1
 spacy_udpipe==1.0.0
