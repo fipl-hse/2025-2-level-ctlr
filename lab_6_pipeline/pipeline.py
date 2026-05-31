@@ -182,8 +182,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         model_path = pathlib.Path("C:/Users/banan/pibble/2025-2-level-ctlr/lab_6_pipeline/assets/model")
-        
-        # Инициализируем UDPipe
+
         spacy_udpipe.download(model_path)
         model = spacy_udpipe.load(model_path)
         
