@@ -188,15 +188,18 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         import spacy_udpipe
-        from spacy_conll import init_parser
-
         model_path = pathlib.Path(__file__).parent / "assets" / "model"
         udpipe_model_file = next(model_path.glob("*.udpipe"), None)
         if udpipe_model_file is None:
             raise FileNotFoundError(f"No .udpipe model found in {model_path}")
 
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(udpipe_model_file))
-        nlp = init_parser(nlp, "udpipe", include_headers=True)
+        if not nlp.has_pipe("conll_formatter"):
+            nlp.add_pipe(
+                "conll_formatter",
+                config={"include_headers": True, "field_names": {}},
+                last=True,
+            )
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -222,8 +225,11 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article containing information to save
         """
         conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+        conllu_text = article.get_conllu_info()
+        if not conllu_text.endswith("\n\n"):
+            conllu_text = conllu_text.rstrip("\n") + "\n\n"
         with open(conllu_path, "w", encoding="utf-8") as f:
-            f.write(article.get_conllu_info())
+            f.write(conllu_text)
 
     def from_conllu(self, article: Article) -> Doc:
         """
