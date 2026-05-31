@@ -425,18 +425,21 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
-    configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
-    prepare_environment(ASSETS_PATH)
-    crawler = Crawler(config=configuration)
-    crawler.find_articles()
-    print(f"Articles found: {len(crawler.urls)}")
-    for i, url in enumerate(crawler.urls, start=1):
-        parser = HTMLParser(full_url=url, article_id=i, config=configuration)
+    article_id = 1
+    max_articles = configuration.get_num_articles()
+    for url in crawler.urls:
+        if article_id > max_articles:
+            break
+        parser = HTMLParser(full_url=url, article_id=article_id, config=configuration)
         article = parser.parse()
         if isinstance(article, Article):
-            to_raw(article)
-            to_meta(article)
-            print(f"Article {i} saved: {url}")
+            try:
+                to_raw(article)
+                to_meta(article)
+                print(f"Article {article_id} saved: {url}")
+                article_id += 1
+            except Exception as e:
+                print(f"Failed to write article {article_id}: {e}")
 
 
 if __name__ == "__main__":
