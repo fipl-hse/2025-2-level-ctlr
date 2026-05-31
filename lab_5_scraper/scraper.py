@@ -336,7 +336,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        self.article.text = ""
+        self.article.text = " "
         h1 = article_soup.find("h1", {"id": "firstHeading"})
         if not h1:
             return
