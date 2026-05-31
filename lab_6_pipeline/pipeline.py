@@ -35,6 +35,10 @@ class InconsistentDatasetError(Exception):
 class EmptyDirectoryError(Exception):
     """Exception raised when directory is empty"""
 
+class EmptyFileError(Exception):
+    """Exception raised when article is empty"""
+
+
 class CorpusManager:
     """
     Work with articles and store them.
