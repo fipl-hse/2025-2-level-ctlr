@@ -132,14 +132,16 @@ class TextProcessingPipeline(PipelineProtocol):
             if article.text:
                 article.text = re.sub(r'\s+', ' ', article.text).strip()
         list(map(to_cleaned, articles))
-        if self._analyzer:
-            raw_texts = [article.text for article in articles]
-            conllu_results = self._analyzer.analyze(raw_texts)
-            if conllu_results:
-                for article, conllu_text in zip(articles, conllu_results):
-                    if conllu_text:
-                        article.set_conllu_info(conllu_text)
-                        self._analyzer.to_conllu(article)
+        if not self._analyzer:
+            return
+        raw_texts = [article.text for article in articles]
+        conllu_results = self._analyzer.analyze(raw_texts)
+        if not conllu_results:
+            return
+        for article, conllu_text in zip(articles, conllu_results):
+            if conllu_text:
+                article.set_conllu_info(conllu_text)
+                self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -164,11 +166,13 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_folder = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
-        model_files = list(model_folder.glob("*.udpipe"))
-        if not model_files:
-            raise FileNotFoundError("UDPipe model file not found in assets/model/")
-        model_path = str(model_files[0])
+        model_path = str(
+            PROJECT_ROOT
+            / "lab_6_pipeline"
+            / "assets"
+            / "model"
+            / "russian-syntagrus-ud-2.0-170801.udpipe"
+            )
         nlp = spacy_udpipe.load_from_path("ru", model_path)
         if "conll_formatter" not in nlp.pipe_names:
             nlp.add_pipe(
