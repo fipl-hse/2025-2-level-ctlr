@@ -6,7 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-from core_utils.article.article import Article
+from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
@@ -187,6 +187,17 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        import spacy_udpipe
+        from spacy_conll import init_parser
+
+        model_path = pathlib.Path(__file__).parent / "assets" / "model"
+        udpipe_model_file = next(model_path.glob("*.udpipe"), None)
+        if udpipe_model_file is None:
+            raise FileNotFoundError(f"No .udpipe model found in {model_path}")
+
+        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(udpipe_model_file))
+        nlp = init_parser(nlp, "udpipe", include_headers=True)
+        return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -198,6 +209,10 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        result = []
+        for doc in self._analyzer.pipe(texts):
+            result.append(doc._.conll_str)
+        return result
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -206,6 +221,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+        with open(conllu_path, "w", encoding="utf-8") as f:
+            f.write(article.get_conllu_info())
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -217,6 +235,15 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+        if not conllu_path.exists() or conllu_path.stat().st_size == 0:
+            raise EmptyFileError(f"CoNLL-U file is empty or missing: {conllu_path}")
+        with open(conllu_path, encoding="utf-8") as f:
+            conllu_text = f.read()
+        from spacy_conll.parser import ConllParser
+        conll_parser = ConllParser(self._analyzer)
+        doc = conll_parser.parse_conll_text_as_spacy(conllu_text)
+        return doc
 
 
 class POSFrequencyPipeline:
@@ -320,7 +347,8 @@ def main() -> None:
     from core_utils.constants import ASSETS_PATH
 
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
-    pipeline = TextProcessingPipeline(corpus_manager)
+    udpipe_analyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     pipeline.run()
 
 
