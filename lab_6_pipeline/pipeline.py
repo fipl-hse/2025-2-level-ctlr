@@ -68,15 +68,17 @@ class CorpusManager:
         files = list(self._path.iterdir())
         if not files:
             raise EmptyDirectoryError("Directory is empty")
-        raw_files = [file for file in files if file.name.endswith('_raw.txt')]
-        meta_files = [file for file in files if file.name.endswith('_meta.json')]
-        if not raw_files:
-            raise InconsistentDatasetError()
-        if meta_files and len(raw_files) != len(meta_files):
+        raw_files = [file for file in self._path.iterdir() if file.name.endswith('_raw.txt')]
+        meta_files = [file for file in self._path.iterdir() if file.name.endswith('_meta.json')]
+        if len(raw_files) != len(meta_files):
             raise InconsistentDatasetError()
         raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
+        expected_raw_ids = set(range(1, len(raw_ids) + 1))
+        if raw_ids != expected_raw_ids:
+            raise InconsistentDatasetError()
         meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
-        if raw_ids!=meta_ids:
+        expected_meta_ids = set(range(1, len(raw_ids) + 1))
+        if meta_ids != expected_meta_ids:
             raise InconsistentDatasetError()
 
     def _scan_dataset(self) -> None:
@@ -122,15 +124,16 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles=self._corpus.get_articles()
         for article in articles.values():
-            raw_text = article.get_raw_text()
-            result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
-            cleaned_text = ''.join(result_text).lower()
-            to_cleaned(article, cleaned_text)
-            if self._analyzer:
-                conllu_text = self._analyzer.analyze([raw_text])
-                conllu_info = conllu_text[0]
-                article.set_conllu_info(conllu_info)
-                self._analyzer.to_conllu(article)
+            if article.name.endswith("_raw.txt"):
+                raw_text = article.get_raw_text()
+                result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
+                cleaned_text = ''.join(result_text).lower()
+                to_cleaned(article, cleaned_text)
+                if self._analyzer:
+                    conllu_text = self._analyzer.analyze([raw_text])
+                    conllu_info = conllu_text[0]
+                    article.set_conllu_info(conllu_info)
+                    self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -153,8 +156,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path =  PROJECT_ROOT / "lab_6_pipeline"/ "assets"/ "model"/ "russian-syntagrus-ud-2.0-170801.udpipe"
-        model = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+        model_path =  str((PROJECT_ROOT / "lab_6_pipeline"/ 
+                       "assets"/ "model"/ "russian-syntagrus-ud-2.0-170801.udpipe"))
+        model = spacy_udpipe.load_from_path(lang="ru", path=model_path)
         model.add_pipe(
         "conll_formatter",
         last=True,
