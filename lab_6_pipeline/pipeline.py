@@ -207,7 +207,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        nlp = spacy_udpipe.load("ru")
+        model_path = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model" / "russian-syntagrus-ud-2.0-170801.udpipe"
+
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model not found at {model_path}")
+
+        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
         config = {
             "field_names": {
                 "ID": "ID",
