@@ -254,7 +254,7 @@ class Crawler:
             if not response.ok:
                 continue
             
-            soup = BeautifulSoup(response.content, 'lxml.parser')
+            soup = BeautifulSoup(response.content, 'lxml')
             
             all_links = soup.find_all('a')
             
@@ -354,15 +354,24 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = article_soup.find("title")
-        if title_tag:
-            raw_title = title_tag.text.strip()
-            if '|' in raw_title:
-                self.article.title = raw_title.split('|')[-1].strip()
-            else:
-                self.article.title = raw_title
+        title = article_soup.find("title")
+        self.article.title = title.text.strip()
+        author = article_soup.find("meta", attrs={"name": "author"})
+        if author and author.get("content"):
+            self.article.author = [author.get("content").strip()]
         else:
-            self.article.title = "NO TITLE"
+            self.article.author = ["NOT FOUND"]
+        date_div = article_soup.find("div", class_="date_post")
+        if date_div:
+            date_text = date_div.get_text(strip=True)
+            self.article.date = self.unify_date_format(date_text)
+        else:
+            self.article.date = datetime.datetime.now()
+        keywords = article_soup.find("meta", {"name": "keywords"})
+        if keywords and keywords.get("content"):
+            self.article.topics = [k.strip() for k in keywords["content"].split(",")]
+        else:
+            self.article.topics = []
 
         author_tag = article_soup.find("meta", attrs={"name": "author"})
         if author_tag and author_tag.get("content"):
