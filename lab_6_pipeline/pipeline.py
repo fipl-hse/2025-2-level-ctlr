@@ -6,6 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
+import spacy
 import spacy_udpipe
 from spacy_conll.parser import ConllParser
 from spacy_conll import init_parser
@@ -148,6 +149,7 @@ class TextProcessingPipeline(PipelineProtocol):
             if article.text:
                 cleaned_text = article.text.lower()
                 cleaned_text = re.sub(r'[^\w\s]', '', cleaned_text)
+                cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
                 article.text = cleaned_text
         list(map(to_cleaned, articles))
         if self._analyzer:
@@ -182,7 +184,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        import spacy
         model = spacy.load("ru_core_news_sm")
         if 'conll_formatter' not in model.pipe_names:
             model.add_pipe(
@@ -224,7 +225,17 @@ class UDPipeAnalyzer(LibraryWrapper):
                 results.append("")
                 continue
             doc = self._analyzer(text)
-            results.append(doc._.conll_str)
+            conll_str = doc._.conll_str
+            lines = conll_str.split('\n')
+            modified_lines = []
+            for line in lines:
+                if line and not line.startswith('#') and '\t' in line:
+                    parts = line.split('\t')
+                    if len(parts) >= 5:
+                        parts[4] = '_'
+                        line = '\t'.join(parts)
+                modified_lines.append(line)
+            results.append('\n'.join(modified_lines))
         return results
 
     def to_conllu(self, article: Article) -> None:
@@ -235,9 +246,10 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article containing information to save
         """
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+        conllu_info = article.get_conllu_info()
         with open(path, 'w', encoding='utf-8') as f:
-            f.write(article.get_conllu_info())
-            if not article.get_conllu_info().endswith('\n'):
+            f.write(conllu_info)
+            if conllu_info and not conllu_info.endswith('\n\n'):
                 f.write('\n')
 
     def from_conllu(self, article: Article) -> Doc:
