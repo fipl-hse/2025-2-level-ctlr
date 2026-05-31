@@ -70,8 +70,9 @@ class CorpusManager:
             raise EmptyDirectoryError()
         raw_files = [file for file in files if file.name.endswith('_raw.txt')]
         meta_files = [file for file in files if file.name.endswith('_meta.json')]
-        if meta_files and len(raw_files) != len(meta_files):
-            raise InconsistentDatasetError()
+        if meta_files:
+            if len(raw_files) != len(meta_files):
+                raise InconsistentDatasetError()
         raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
         meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
         if raw_ids!=meta_ids:
@@ -125,16 +126,17 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles=self._corpus.get_articles()
         for article in articles.values():
-            if article.name.endswith("_raw.txt"):
-                raw_text = article.get_raw_text()
-                result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
-                cleaned_text = ''.join(result_text).lower()
-                to_cleaned(article, cleaned_text)
-                if self._analyzer:
-                    conllu_text = self._analyzer.analyze([raw_text])
-                    conllu_info = conllu_text[0]
-                    article.set_conllu_info(conllu_info)
-                    self._analyzer.to_conllu(article)
+            raw_text = article.get_raw_text()
+            if not raw_text:
+                continue
+            result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
+            cleaned_text = ''.join(result_text).lower()
+            to_cleaned(article, cleaned_text)
+            if self._analyzer:
+                conllu_text = self._analyzer.analyze([raw_text])
+                conllu_info = conllu_text[0]
+                article.set_conllu_info(conllu_info)
+                self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
