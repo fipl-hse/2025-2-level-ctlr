@@ -247,23 +247,23 @@ class Crawler:
         href = article_bs.get('href', '').strip()
         if not href:
             return ''
-        if href.startswith('#') or href.startswith('javascript:') or href.startswith('mailto:'):
+        
+        if href.startswith('#') or href.startswith('javascript:'):
             return ''
-        if href.startswith('http') and 'tarranova.lib.ru' not in href:
-            return ''
-
-        base_url = "https://tarranova.lib.ru"
-        full_url = urllib.parse.urljoin(base_url, href)
-
+        
+        full_url = urllib.parse.urljoin('https://tarranova.lib.ru', href)
+        
         if 'tarranova.lib.ru' not in full_url:
             return ''
+        
         if full_url.rstrip('/') in ['https://tarranova.lib.ru',
                                       'https://tarranova.lib.ru/index.html',
                                       'https://tarranova.lib.ru/index.htm']:
             return ''
+        
         if '#' in full_url:
-            return ''
-
+            full_url = full_url.split('#')[0]
+        
         return full_url
         
 
@@ -274,53 +274,26 @@ class Crawler:
         seed_urls = self.config.get_seed_urls()
         max_articles = self.config.get_num_articles()
         self.urls = []
-
-        try:
-            test = requests.get("https://tarranova.lib.ru/", timeout=5)
-            if test.status_code != 200:
-                return
-        except Exception:
-            return
-
-        all_pages_to_visit = list(seed_urls)
-        visited_pages = set()
-        max_pages_to_visit = 50
         
-        while all_pages_to_visit and len(self.urls) < max_articles and len(visited_pages) < max_pages_to_visit:
-            current_url = all_pages_to_visit.pop(0)
-            if current_url in visited_pages:
-                continue
-            visited_pages.add(current_url)
-            
+        for seed_url in seed_urls:
+            if len(self.urls) >= max_articles:
+                break
+                
             try:
-                response = make_request(current_url, self.config)
+                response = make_request(seed_url, self.config)
                 if response.status_code != 200:
                     continue
+                    
                 soup = BeautifulSoup(response.text, 'html.parser')
-                links = []
-                for tag in soup.find_all('a', href=True):
-                    url = self._extract_url(tag)
-                    if url:
-                        links.append(url)
                 
-                for link in links:
+                for link in soup.find_all('a', href=True):
                     if len(self.urls) >= max_articles:
                         break
-                    if link.endswith('.txt') or '/authors/' in link:
-                        if link.endswith('.htm') or link.endswith('.txt'):
-                            if link not in self.urls:
-                                try:
-                                    test_response = make_request(link, self.config)
-                                    if test_response.status_code == 200:
-                                        self.urls.append(link)
-                                except Exception:
-                                    continue
-                
-                    if link.endswith('.htm') and '/authors/' not in link:
-                        if link not in visited_pages and link not in all_pages_to_visit:
-                            if len(visited_pages) < max_pages_to_visit:
-                                all_pages_to_visit.append(link)
-                            
+                        
+                    url = self._extract_url(link)
+                    if url and (url.endswith('.htm') or url.endswith('.txt')):
+                        if url not in self.urls:
+                            self.urls.append(url)
             except Exception:
                 continue
 
