@@ -62,19 +62,19 @@ class CorpusManager:
         Validate folder with assets.
         """
         if not self._path.exists():
-            raise FileNotFoundError("Path does not exist")
+            raise FileNotFoundError()
         if not self._path.is_dir():
-            raise NotADirectoryError("Path is not the directory")
+            raise NotADirectoryError()
         files = list(self._path.iterdir())
         if not files:
-            raise EmptyDirectoryError("Directory is empty")
-        raw_files = [file for file in self._path.iterdir() if file.name.endswith('_raw.txt')]
-        meta_files = [file for file in self._path.iterdir() if file.name.endswith('_meta.json')]
+            raise EmptyDirectoryError()
+        raw_files = [file for file in files if file.name.endswith('_raw.txt')]
+        meta_files = [file for file in files if file.name.endswith('_meta.json')]
         if meta_files and len(raw_files) != len(meta_files):
             raise InconsistentDatasetError()
-        raw_ids = sorted([int(file.name.split('_')[0]) for file in raw_files])
-        expected_raw_ids = list(range(min(raw_ids), max(raw_ids) + 1))
-        if raw_ids != expected_raw_ids:
+        raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
+        meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
+        if raw_ids!=meta_ids:
             raise InconsistentDatasetError()
         for file in raw_files:
             if file.stat().st_size == 0:
