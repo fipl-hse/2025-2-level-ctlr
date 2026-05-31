@@ -5,13 +5,11 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 
-from networkx import DiGraph
-from spacy import Language
-from spacy.tokens import Doc
+import spacy_udpipe
 
-from core_utils.article.article import Article
-from core_utils.constants import PROJECT_ROOT, ASSETS_PATH
+from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned
+from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
@@ -59,7 +57,7 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
-        self.path_to_raw_txt_data = path_to_raw_txt_data
+        self._path = path_to_raw_txt_data
         self._storage = {}
         self._validate_dataset()
         self._scan_dataset()
@@ -68,11 +66,11 @@ class CorpusManager:
         """
         Validate folder with assets.
         """
-        if not self.path_to_raw_txt_data.exists():
+        if not self._path.exists():
             raise FileNotFoundError()
-        if not self.path_to_raw_txt_data.is_dir():
+        if not self._path.is_dir():
             raise NotADirectoryError()
-        files = list(self.path_to_raw_txt_data.iterdir())
+        files = list(self._path.iterdir())
         if not files:
             raise EmptyDirectoryError()
         raw_files = [file for file in files if file.name.endswith('_raw.txt')]
@@ -90,7 +88,7 @@ class CorpusManager:
         """
         Register each dataset entry.
         """
-        for file in self.path_to_raw_txt_data.iterdir():
+        for file in self._path.iterdir():
             if file.name.endswith('_raw.txt'):
                 article_id = int(file.name.split('_')[0])
                 article = Article(url=None, article_id = article_id)
@@ -134,11 +132,11 @@ class TextProcessingPipeline(PipelineProtocol):
             result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
             cleaned_text = ''.join(result_text).lower()
             to_cleaned(article, cleaned_text)
-        if self._analyzer:
-            conllu_text = self._analyzer.analyze([raw_text])
-            conllu_info = conllu_text[0]
-            article.set_conllu_info(conllu_info)
-            self._analyzer.to_conllu(article)
+            if self._analyzer:
+                conllu_text = self._analyzer.analyze([raw_text])
+                conllu_info = conllu_text[0]
+                article.set_conllu_info(conllu_info)
+                self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -209,10 +207,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
-        path = article.get_file_path('conllu')
+        path = article.get_file_path("conllu")
         with open(path, "w", encoding="utf-8") as file:
             file.write(article.get_conllu_info())
-            file.write('\n')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -224,12 +221,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        path = article.get_file_path('conllu')
+        path = article.get_file_path("conllu")
         with open(path, "r", encoding="utf-8") as file:
-            conllu_text = file.read()
-        parser = ConllParser(self._analyzer)
-        doc = parser.parse_conll_text_as_spacy(conllu_text.strip())
-        return doc
+            return file.read()
 
 class POSFrequencyPipeline:
     """
@@ -324,9 +318,9 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-    corpus_manager = CorpusManager(ASSETS_PATH)
-    udpipeanalyzer = UDPipeAnalyzer()
-    pipeline = TextProcessingPipeline(corpus_manager, udpipeanalyzer)
+    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
+    udpipe_analyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     pipeline.run()
 
 if __name__ == "__main__":
