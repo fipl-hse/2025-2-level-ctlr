@@ -7,7 +7,7 @@ import pathlib
 
 import spacy_udpipe
 
-from core_utils.article.article import Article
+from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
@@ -221,7 +221,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        path = article.get_file_path("conllu")
+        path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         with open(path, "r", encoding="utf-8") as file:
             return file.read()
 
