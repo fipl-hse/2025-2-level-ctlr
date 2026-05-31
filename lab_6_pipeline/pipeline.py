@@ -179,7 +179,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_folder = pathlib.Path(__file__).parent / "assets" / "model"
+        import spacy_udpipe
+        model_folder = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
         model_files = list(model_folder.glob("*.udpipe"))
         if not model_files:
             raise FileNotFoundError("UDPipe model file not found in assets/model/")
