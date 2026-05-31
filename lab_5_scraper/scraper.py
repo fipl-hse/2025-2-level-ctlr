@@ -56,6 +56,7 @@ class IncorrectVerifyError(Exception):
     Exception raised when verify_certificate or headless_mode is not a boolean value.
     """
 
+
 class Config:
     """
     Class for unpacking and validating configurations.
@@ -77,7 +78,6 @@ class Config:
         self._encoding = dto.encoding
         self._timeout = dto.timeout
         self._should_verify_certificate = dto.should_verify_certificate
-
         self._headless_mode = dto.headless_mode
 
     def _extract_config_content(self) -> ConfigDTO:
@@ -103,8 +103,8 @@ class Config:
         for url in dto.seed_urls:
             if not isinstance(url, str) or not re.match(url_pattern, url):
                 raise IncorrectSeedURLError(f"Incorrect seed URL: {url}")
-        
-        if (not isinstance(dto.total_articles, int) or dto.total_articles < 1):
+        if (not isinstance(dto.total_articles, int)
+        or dto.total_articles < 1):
             raise IncorrectNumberOfArticlesError(
                 "Total number of articles must be a positive integer"
             )
@@ -122,9 +122,11 @@ class Config:
         if not isinstance(dto.timeout, int) or dto.timeout < 0 or dto.timeout > 60:
             raise IncorrectTimeoutError("Timeout must be an integer between 0 and 60")
 
-        if not isinstance(dto.should_verify_certificate, bool) or \
-           not isinstance(dto.headless_mode, bool):
-            raise IncorrectVerifyError("should_verify_certificate and headless_mode must be boolean")
+        if not isinstance(dto.should_verify_certificate, bool):
+            raise IncorrectVerifyError("should_verify_certificate must be a boolean")
+
+        if not isinstance(dto.headless_mode, bool):
+            raise IncorrectVerifyError("headless_mode must be a boolean")
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -152,6 +154,7 @@ class Config:
             dict[str, str]: Headers
         """
         return self._headers
+
 
     def get_encoding(self) -> str:
         """
@@ -182,16 +185,13 @@ class Config:
 
     def get_headless_mode(self) -> bool:
         """
-    Deliver a response from a request with given configuration.
+        Retrieve whether to use headless mode.
 
-    Args:
-        url (str): Site url
-        config (Config): Configuration
-
-    Returns:
-        requests.models.Response: A response from a request
+        Returns:
+            bool: Whether to use headless mode or not
         """
         return self._headless_mode
+
 
 def make_request(url: str, config: Config) -> requests.models.Response:
     """
@@ -204,23 +204,23 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=config.get_timeout(),
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = config.get_encoding()
-        return response
-    except (requests.exceptions.RequestException, requests.exceptions.HTTPError):
-        return None
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    return response
 
 
 class Crawler:
     """
     Crawler implementation.
     """
+
+    #: Url pattern
+    url_pattern: re.Pattern | str
 
     def __init__(self, config: Config) -> None:
         """
@@ -251,28 +251,25 @@ class Crawler:
         for seed_url in self.get_search_urls():
             if len(self.urls) >= self.config.get_num_articles():
                 break
-                
             try:
                 response = make_request(seed_url, self.config)
                 time.sleep(random.uniform(1, 3))
             except requests.exceptions.RequestException:
                 continue
 
-            if not response or response.status_code != 200:
-                continue
-
             page_soup = BeautifulSoup(response.text, "lxml")
 
-            for link_tag in page_soup.select(".CategoryTreeItem a"):
+            for link_tag in page_soup.find_all("a", href=True):
                 if len(self.urls) >= self.config.get_num_articles():
                     break
 
                 href = link_tag.get("href", "")
-                
-                if href.startswith("/wiki/") and ":" not in href.split("/wiki/")[1]:
-                    full_url = self._extract_url(link_tag)
-                    if full_url not in self.urls:
-                        self.urls.append(full_url)
+                if not href.startswith("/wiki/") or ":" in href:
+                    continue
+
+                full_url = self._extract_url(link_tag)
+                if full_url not in self.urls:
+                    self.urls.append(full_url)
 
     def get_search_urls(self) -> list:
         """
@@ -282,6 +279,35 @@ class Crawler:
             list: seed_urls param
         """
         return self.config.get_seed_urls()
+
+
+# 10
+
+
+class CrawlerRecursive(Crawler):
+    """
+    Recursive implementation.
+
+    Get one URL of the title page and find requested number of articles recursively.
+    """
+
+    def __init__(self, config: Config) -> None:
+        """
+        Initialize an instance of the CrawlerRecursive class.
+
+        Args:
+            config (Config): Configuration
+        """
+        super().__init__(config)
+        self.start_url = self.config.get_seed_urls()[0]
+
+    def find_articles(self) -> None:
+        """
+        Find number of article urls requested.
+        """
+
+
+# 4, 6, 8, 10
 
 
 class HTMLParser:
@@ -310,25 +336,17 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        texts = []
-        
-        h1 = article_soup.find("h1")
-        if h1:
-            texts.append(h1.get_text(strip=True))
+        h1 = article_soup.find("h1", {"id": "firstHeading"})
+        if not h1:
+            return
 
-        main_content = article_soup.find("div", {"class": "mw-parser-output"})
+        content_block = article_soup.find("div", {"class": "mw-parser-output"})
+        if not content_block:
+            return
 
-        if not main_content:
-            main_content = article_soup.find("body")
-        
-        if main_content:
-            for junk in main_content.find_all(["style", "script"]):
-                junk.decompose()
-            
-            content_text = main_content.get_text(separator="\n", strip=True)
-            texts.append(content_text)
-            
-        self.article.text = "\n\n".join(filter(None, texts))
+        title_text = h1.get_text(separator="\n", strip=True)
+        content_text = content_block.get_text(separator="\n", strip=True)
+        self.article.text = "\n".join(filter(None, [title_text, content_text]))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -337,13 +355,17 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        h1 = article_soup.find("h1")
+        h1 = article_soup.find("h1", {"id": "firstHeading"})
+        self.article.title = h1.get_text(strip=True) if h1 else "Без заголовка"
         
-        self.article.title = h1.get_text(strip=True) if h1 else "NOT FOUND"
         self.article.author = ["NOT FOUND"]
         self.article.url = self.full_url
-        
-        self.article.date = self.unify_date_format("")
+
+        time_tag = article_soup.find("time")
+        if time_tag and time_tag.get("datetime"):
+            self.article.date = self.unify_date_format(time_tag["datetime"])
+        else:
+            self.article.date = datetime.datetime(1970, 1, 1)
 
         self.article.topics = []
 
@@ -376,7 +398,7 @@ class HTMLParser:
         except requests.exceptions.RequestException:
             return False
 
-        if not response or response.status_code != 200:
+        if response.status_code != 200:
             return False
 
         article_soup = BeautifulSoup(response.text, "lxml")
@@ -408,18 +430,14 @@ def main() -> None:
     crawler = Crawler(config=configuration)
     crawler.find_articles()
     print(f"Articles found: {len(crawler.urls)}")
-    
-    valid_id = 1
-    for url in crawler.urls:
-        parser = HTMLParser(full_url=url, article_id=valid_id, config=configuration)
+    for i, url in enumerate(crawler.urls, start=1):
+        parser = HTMLParser(full_url=url, article_id=i, config=configuration)
         article = parser.parse()
-        time.sleep(random.uniform(1, 3))
-        
         if isinstance(article, Article):
             to_raw(article)
             to_meta(article)
-            print(f"Article {valid_id} saved: {url}")
-            valid_id += 1
+            print(f"Article {i} saved: {url}")
+
 
 if __name__ == "__main__":
     main()
