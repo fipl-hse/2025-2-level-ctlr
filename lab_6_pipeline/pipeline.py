@@ -72,14 +72,17 @@ class CorpusManager:
         meta_files = [file for file in self._path.iterdir() if file.name.endswith('_meta.json')]
         if len(raw_files) != len(meta_files):
             raise InconsistentDatasetError()
-        raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
-        expected_raw_ids = set(range(1, len(raw_ids) + 1))
+        raw_ids = sorted([int(file.name.split('_')[0]) for file in raw_files])
+        expected_raw_ids = list(range(min(raw_ids), max(raw_ids) + 1))
         if raw_ids != expected_raw_ids:
             raise InconsistentDatasetError()
-        meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
-        expected_meta_ids = set(range(1, len(meta_ids) + 1))
+        meta_ids = sorted([int(file.name.split('_')[0]) for file in meta_files])
+        expected_meta_ids = set(range(min(meta_ids), max(meta_ids) + 1))
         if meta_ids != expected_meta_ids:
             raise InconsistentDatasetError()
+        for file in raw_files + meta_files:
+            if file.stat().st_size == 0:
+                raise EmptyFileError("File is empty")
 
     def _scan_dataset(self) -> None:
         """
