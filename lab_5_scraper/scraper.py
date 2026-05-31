@@ -336,6 +336,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        self.article.text = ""
         h1 = article_soup.find("h1", {"id": "firstHeading"})
         if not h1:
             return
@@ -430,16 +431,13 @@ def main() -> None:
     crawler = Crawler(config=config)
     crawler.find_articles()
     print(f"Articles found: {len(crawler.urls)}")
-    
+
     max_articles = config.get_num_articles()
-    
     for i, url in enumerate(crawler.urls, start=1):
         if i > max_articles:
             break
-            
         parser = HTMLParser(full_url=url, article_id=i, config=config)
         article = parser.parse()
-        
         if isinstance(article, Article):
             to_raw(article)
             to_meta(article)
