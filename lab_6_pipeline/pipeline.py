@@ -70,7 +70,7 @@ class CorpusManager:
             raise EmptyDirectoryError("Directory is empty")
         raw_files = [file for file in self._path.iterdir() if file.name.endswith('_raw.txt')]
         meta_files = [file for file in self._path.iterdir() if file.name.endswith('_meta.json')]
-        if len(raw_files) != len(meta_files):
+        if meta_files and len(raw_files) != len(meta_files):
             raise InconsistentDatasetError()
         raw_ids = sorted([int(file.name.split('_')[0]) for file in raw_files])
         expected_raw_ids = list(range(min(raw_ids), max(raw_ids) + 1))
