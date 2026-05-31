@@ -5,11 +5,12 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
+import spacy_udpipe
 
-from spacy_conll.parser import ConllParser
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
+from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned, to_meta
@@ -163,7 +164,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        import spacy_udpipe
         model_folder = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
         model_files = list(model_folder.glob("*.udpipe"))
         if not model_files:
@@ -321,6 +321,7 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             list[DiGraph]: Graphs for the sentences in the document
         """
+        _ = doc
         return []
 
     def _add_children(
@@ -346,6 +347,7 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
+        _ = doc_graphs
         return {}
 
     def run(self) -> None:
