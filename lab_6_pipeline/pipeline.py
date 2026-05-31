@@ -73,10 +73,10 @@ class CorpusManager:
         if meta_files:
             if len(raw_files) != len(meta_files):
                 raise InconsistentDatasetError()
-        raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
-        meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
-        if raw_ids!=meta_ids:
-            raise InconsistentDatasetError()
+            raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
+            meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
+            if raw_ids!=meta_ids:
+                raise InconsistentDatasetError()
         for file in raw_files:
             if file.stat().st_size == 0:
                 raise EmptyFileError("File is empty")
