@@ -159,9 +159,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path =  str((PROJECT_ROOT / "lab_6_pipeline"/ 
-                       "assets"/ "model"/ "russian-syntagrus-ud-2.0-170801.udpipe"))
-        model = spacy_udpipe.load_from_path(lang="ru", path=model_path)
+        model_path = PROJECT_ROOT / "lab_6_pipeline"/ "assets"/ "model"/ "russian-syntagrus-ud-2.0-170801.udpipe"
+        model = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
         model.add_pipe(
         "conll_formatter",
         last=True,
