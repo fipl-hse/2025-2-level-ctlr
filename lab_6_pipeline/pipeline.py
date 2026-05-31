@@ -18,7 +18,9 @@ try:
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
+    networkx = None  # type: ignore
     DiGraph = None  # type: ignore
+    DiGraphMatcher = None  # type: ignore
     print("No libraries installed. Failed to import.")
 
 try:
