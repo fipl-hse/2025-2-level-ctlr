@@ -34,6 +34,10 @@ class EmptyDirectoryError(Exception):
     """Raised when the dataset directory is empty."""
 
 
+class EmptyFileError(Exception):
+    """Raised when an article file is empty."""
+
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -105,11 +109,13 @@ class CorpusManager:
         Register each dataset entry.
         """
         path = self.path_to_raw_txt_data
-        for f in path.glob("*_raw.txt"):
+        for f in sorted(path.glob("*_raw.txt")):
             match = re.match(r"^(\d+)_raw\.txt$", f.name)
             if match:
                 article_id = int(match.group(1))
-                self._storage[article_id] = Article(url=None, article_id=article_id)
+                article = Article(url=None, article_id=article_id)
+                article.text = f.read_text(encoding="utf-8")
+                self._storage[article_id] = article
 
     def get_articles(self) -> dict:
         """
@@ -144,16 +150,16 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         for article in self._corpus.get_articles().values():
-            from_raw(article)
+            original_text = article.text
 
-            cleaned = article.text.lower()
+            cleaned = original_text.lower()
             cleaned = re.sub(r"[^\w\s]", "", cleaned)
             article.text = cleaned
 
             to_cleaned(article)
 
             if self._analyzer is not None:
-                from_raw(article)
+                article.text = original_text
                 conllu_output = self._analyzer.analyze([article.text])
                 if conllu_output:
                     article.set_conllu_info(conllu_output[0])
