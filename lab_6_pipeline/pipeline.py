@@ -330,6 +330,9 @@ class InconsistentDatasetError(Exception):
     """Raised when the dataset structure is inconsistent."""
 
 
+class EmptyFileError(Exception):
+    """Raised when a file is empty."""
+
 def main() -> None:
     """
     Entrypoint for pipeline module.
