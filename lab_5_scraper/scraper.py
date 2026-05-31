@@ -377,12 +377,14 @@ def main() -> None:
     crawler.find_articles()
     print(f"Articles found: {len(crawler.urls)}")
 
-    article_id = 1
+    saved_articles_count = 0
 
     for url in crawler.urls:
-        if article_id > configuration.get_num_articles():
+        if saved_articles_count >= configuration.get_num_articles():
             break
-            
+
+        article_id = saved_articles_count + 1
+        
         parser = HTMLParser(full_url=url, article_id=article_id, config=configuration)
         article = parser.parse()
         
@@ -390,7 +392,7 @@ def main() -> None:
             to_raw(article)
             to_meta(article)
             print(f"Article {article_id} saved: {url}")
-            article_id += 1
+            saved_articles_count += 1
 
 if __name__ == "__main__":
     main()
