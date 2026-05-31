@@ -18,9 +18,12 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 try:
+    import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy_conll import init_parser
 except ImportError:
+    spacy_udpipe = None  # type: ignore
     Language = None  # type: ignore
     Doc = None  # type: ignore
     print("No libraries installed. Failed to import.")
@@ -163,6 +166,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        if spacy_udpipe is None:
+            raise ImportError("spacy_udpipe is not installed")
         model_path = pathlib.Path(__file__).parent / "assets" / "model"
         model_files = list(model_path.glob("*.udpipe"))
         if not model_files:
@@ -172,12 +177,28 @@ class UDPipeAnalyzer(LibraryWrapper):
         model_file = str(model_files[0])
         nlp = spacy_udpipe.load_from_path(lang="ru", path=model_file)
         if "conll_formatter" not in nlp.pipe_names:
-            nlp.add_pipe(
-                "conll_formatter",
-                config={"conversion_maps": {"DEPREL": {"root": "ROOT"}},
-                        "include_headers": True},
-                last=True
-            )
+            if "conll_formatter" not in nlp.pipe_names:
+                nlp.add_pipe(
+                    "conll_formatter",
+                    last=True,
+                    config={
+                        "conversion_maps": {"XPOS": {"": "_"}},
+                        "include_headers": True,
+                        "field_names": {
+                            "ID": "ID",
+                            "FORM": "FORM",
+                            "LEMMA": "LEMMA",
+                            "UPOS": "UPOS",
+                            "XPOS": "XPOS",
+                            "FEATS": "FEATS",
+                            "HEAD": "HEAD",
+                            "DEPREL": "DEPREL",
+                            "DEPS": "DEPS",
+                            "MISC": "MISC",
+                        },
+                    },
+                )
+
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
