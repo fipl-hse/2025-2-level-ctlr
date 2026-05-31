@@ -182,29 +182,30 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = str((PROJECT_ROOT / 'lab_6_pipeline' /
-                      'russian-syntagrus-ud-2.0-170801.udpipe'))
-        model = spacy_udpipe.load_from_path(lang='ru', path=model_path)
-        model.add_pipe(
-            'conll_formatter',
-            last=True,
-            config={
-                'conversion_maps': {'XPOS': {'': '_'}},
-                'include_headers': True,
-                'field_names': {
-                    'ID': 'ID',
-                    'FORM': 'FORM',
-                    'LEMMA': 'LEMMA',
-                    'UPOS': 'UPOS',
-                    'XPOS': 'XPOS',
-                    'FEATS': 'FEATS',
-                    'HEAD': 'HEAD',
-                    'DEPREL': 'DEPREL',
-                    'DEPS': 'DEPS',
-                    'MISC': 'MISC'
+        import spacy
+        model = spacy.load("ru_core_news_sm")
+        if 'conll_formatter' not in model.pipe_names:
+            model.add_pipe(
+                'conll_formatter',
+                last=True,
+                config={
+                    'conversion_maps': {'XPOS': {'': '_'}},
+                    'include_headers': True,
+                    'field_names': {
+                        'ID': 'ID',
+                        'FORM': 'FORM',
+                        'LEMMA': 'LEMMA',
+                        'UPOS': 'UPOS',
+                        'XPOS': 'XPOS',
+                        'FEATS': 'FEATS',
+                        'HEAD': 'HEAD',
+                        'DEPREL': 'DEPREL',
+                        'DEPS': 'DEPS',
+                        'MISC': 'MISC'
+                    }
                 }
-            }
-        )
+            )
+        
         return model
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -217,7 +218,14 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        return [self._analyzer(text)._.conll_str for text in texts]
+        results = []
+        for text in texts:
+            if not text or not text.strip():
+                results.append("")
+                continue
+            doc = self._analyzer(text)
+            results.append(doc._.conll_str)
+        return results
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -229,7 +237,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         with open(path, 'w', encoding='utf-8') as f:
             f.write(article.get_conllu_info())
-            f.write('\n')
+            if not article.get_conllu_info().endswith('\n'):
+                f.write('\n')
 
     def from_conllu(self, article: Article) -> Doc:
         """
