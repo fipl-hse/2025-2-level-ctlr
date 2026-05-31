@@ -144,16 +144,12 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         articles = list(self._corpus.get_articles().values())
-        
-        # Clean texts
         for article in articles:
             if article.text:
                 cleaned_text = article.text.lower()
                 cleaned_text = re.sub(r'[^\w\s]', '', cleaned_text)
                 article.text = cleaned_text
-        
         list(map(to_cleaned, articles))
-        
         if self._analyzer:
             raw_texts = [article.text for article in articles]
             conllu_results = self._analyzer.analyze(raw_texts)
@@ -186,29 +182,33 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = str((PROJECT_ROOT / 'lab_6_pipeline' / 'assets' / 'model' /
-                      'russian-syntagrus-ud-2.0-170801.udpipe'))
-        model = spacy_udpipe.load_from_path(lang='ru', path=model_path)
-        model.add_pipe(
-            'conll_formatter',
-            last=True,
-            config={
-                'conversion_maps': {'XPOS': {'': '_'}},
-                'include_headers': True,
-                'field_names': {
-                    'ID': 'ID',
-                    'FORM': 'FORM',
-                    'LEMMA': 'LEMMA',
-                    'UPOS': 'UPOS',
-                    'XPOS': 'XPOS',
-                    'FEATS': 'FEATS',
-                    'HEAD': 'HEAD',
-                    'DEPREL': 'DEPREL',
-                    'DEPS': 'DEPS',
-                    'MISC': 'MISC'
+        model_path = PROJECT_ROOT / 'lab_6_pipeline' / 'russian-syntagrus-ud-2.0-170801.udpipe'
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model not found at {model_path}")
+        model = spacy_udpipe.load_from_path(lang='ru', path=str(model_path))
+        if model is None:
+            raise RuntimeError()
+        if 'conll_formatter' not in model.pipe_names:
+            model.add_pipe(
+                'conll_formatter',
+                last=True,
+                config={
+                    'conversion_maps': {'XPOS': {'': '_'}},
+                    'include_headers': True,
+                    'field_names': {
+                        'ID': 'ID',
+                        'FORM': 'FORM',
+                        'LEMMA': 'LEMMA',
+                        'UPOS': 'UPOS',
+                        'XPOS': 'XPOS',
+                        'FEATS': 'FEATS',
+                        'HEAD': 'HEAD',
+                        'DEPREL': 'DEPREL',
+                        'DEPS': 'DEPS',
+                        'MISC': 'MISC'
+                    }
                 }
-            }
-        )
+            )
         return model
 
     def analyze(self, texts: list[str]) -> list[str]:
