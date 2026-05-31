@@ -68,18 +68,18 @@ class CorpusManager:
         files = list(self._path.iterdir())
         if not files:
             raise EmptyDirectoryError()
-        raw_files = [file for file in files if file.name.endswith('_raw.txt')]
-        meta_files = [file for file in files if file.name.endswith('_meta.json')]
+        raw_files = [file for file in files if file.name.endswith("_raw.txt")]
+        meta_files = [file for file in files if file.name.endswith("_meta.json")]
         if meta_files:
             if len(raw_files) != len(meta_files):
                 raise InconsistentDatasetError()
-            raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
-            meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
+            raw_ids = [int(file.name.split("_")[0]) for file in raw_files]
+            meta_ids = [int(file.name.split("_")[0]) for file in meta_files]
             if raw_ids!=meta_ids:
                 raise InconsistentDatasetError()
         for file in raw_files:
             if file.stat().st_size == 0:
-                raise EmptyFileError("File is empty")
+                raise InconsistentDatasetError("File is empty")
 
     def _scan_dataset(self) -> None:
         """
@@ -87,7 +87,7 @@ class CorpusManager:
         """
         for file in self._path.iterdir():
              if file.name.endswith("_raw.txt"):
-                article_id = int(file.name.split('_')[0])
+                article_id = int(file.name.split("_")[0])
                 article = Article(url=None, article_id=article_id)
                 from_raw(file, article)
                 self._storage[article.article_id] = article
@@ -130,13 +130,15 @@ class TextProcessingPipeline(PipelineProtocol):
             if not raw_text:
                 continue
             result_text = [char for char in raw_text if char.isalnum() or char.isspace()]
-            cleaned_text = ''.join(result_text).lower()
-            to_cleaned(article, cleaned_text)
+            cleaned_text = "".join(result_text).lower()
+            article.text = cleaned_text
+            to_cleaned(article)
             if self._analyzer:
                 conllu_text = self._analyzer.analyze([raw_text])
-                conllu_info = conllu_text[0]
-                article.set_conllu_info(conllu_info)
-                self._analyzer.to_conllu(article)
+                if conllu_text:
+                    conllu_info = conllu_text[0]
+                    article.set_conllu_info(conllu_info)
+                    self._analyzer.to_conllu(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -209,7 +211,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         with open(path, "w", encoding="utf-8") as file:
-            file.write(article.get_conllu_info())
+            file.write(article.get_conllu_info().rstrip("\n"))
+            file.write("\n")
 
     def from_conllu(self, article: Article) -> Doc:
         """
