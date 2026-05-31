@@ -433,11 +433,14 @@ def main() -> None:
     
     article_id = 1
     max_articles = config.get_num_articles()
+    
     for url in crawler.urls:
         if article_id > max_articles:
             break
+        
         parser = HTMLParser(full_url=url, article_id=article_id, config=config)
         article = parser.parse()
+        
         if isinstance(article, Article):
             try:
                 to_raw(article)
@@ -446,6 +449,12 @@ def main() -> None:
                 article_id += 1
             except Exception as e:
                 print(f"Failed to write article {article_id}: {e}")
+                raw_path = ASSETS_PATH / f"{article_id}_raw.txt"
+                if raw_path.exists():
+                    raw_path.unlink()
+                meta_path = ASSETS_PATH / f"{article_id}_meta.json"
+                if meta_path.exists():
+                    meta_path.unlink()
 
 
 if __name__ == "__main__":
