@@ -21,6 +21,7 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 try:
+    import spacy
     from spacy.language import Language
     from spacy.tokens import Doc
 except ImportError:
