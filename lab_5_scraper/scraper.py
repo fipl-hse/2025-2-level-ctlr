@@ -431,30 +431,19 @@ def main() -> None:
     crawler.find_articles()
     print(f"Articles found: {len(crawler.urls)}")
     
-    article_id = 1
     max_articles = config.get_num_articles()
     
-    for url in crawler.urls:
-        if article_id > max_articles:
+    for i, url in enumerate(crawler.urls, start=1):
+        if i > max_articles:
             break
-        
-        parser = HTMLParser(full_url=url, article_id=article_id, config=config)
+            
+        parser = HTMLParser(full_url=url, article_id=i, config=config)
         article = parser.parse()
         
         if isinstance(article, Article):
-            try:
-                to_raw(article)
-                to_meta(article)
-                print(f"Article {article_id} saved: {url}")
-                article_id += 1
-            except Exception as e:
-                print(f"Failed to write article {article_id}: {e}")
-                raw_path = ASSETS_PATH / f"{article_id}_raw.txt"
-                if raw_path.exists():
-                    raw_path.unlink()
-                meta_path = ASSETS_PATH / f"{article_id}_meta.json"
-                if meta_path.exists():
-                    meta_path.unlink()
+            to_raw(article)
+            to_meta(article)
+            print(f"Article {i} saved: {url}")
 
 
 if __name__ == "__main__":
