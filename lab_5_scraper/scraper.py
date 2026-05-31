@@ -118,7 +118,7 @@ class Config:
         if not isinstance(conf.should_verify_certificate, bool):
             raise IncorrectVerifyError()
         if not isinstance(conf.headless_mode, bool):
-            raise IncorrectHeadlessModeError()
+            raise IncorrectVerifyError()
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -291,6 +291,7 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        super().__init__()
         self.full_url = full_url
         self.article_id = article_id
         self.config = config
@@ -433,7 +434,7 @@ def main() -> None:
             config=configuration,
         )
         article = parser.parse()
-        if article is False:
+        if not isinstance(article, Article):
             continue
         to_raw(article)
         to_meta(article)
