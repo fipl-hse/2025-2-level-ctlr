@@ -244,21 +244,21 @@ class Crawler:
         for seed_url in self.config.get_seed_urls():
             try:
                 response = make_request(seed_url, self.config)
-                if response.status_code != 200:
-                    continue
-                soup = BeautifulSoup(response.text, "lxml")
-                for tag in soup.find_all("a", href=True):
-                    href = tag.get("href", "")
-                    if not href or any(x in href.lower() for x in ["search", "award", "javascript:", "#"]):
-                        continue
-                    if any(x in href for x in ["/press/", "/news/", "/history/", "/details/"]):
-                        full_url = self._extract_url(tag)
-                        if full_url and full_url not in self.urls:
-                            self.urls.append(full_url)
-                    if len(self.urls) >= self.config.get_num_articles():
-                        return
-            except (requests.RequestException, AttributeError, ValueError):
+            except requests.RequestException:
                 continue
+            if response.status_code != 200:
+                continue
+            soup = BeautifulSoup(response.text, "lxml")
+            for tag in soup.find_all("a", href=True):
+                href = tag.get("href", "")
+                if not href or any(x in href.lower() for x in ["search", "award", "javascript:", "#"]):
+                    continue
+                if any(x in href for x in ["/press/", "/news/", "/history/", "/details/"]):
+                    full_url = self._extract_url(tag)
+                    if full_url and full_url not in self.urls:
+                        self.urls.append(full_url)
+                if len(self.urls) >= self.config.get_num_articles():
+                    return
 
     def get_search_urls(self) -> list:
         """
@@ -409,7 +409,7 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     path = pathlib.Path(base_path)
     if path.exists():
         shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True)
 
 def main() -> None:
     """
