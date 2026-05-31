@@ -174,33 +174,29 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = str(
-            PROJECT_ROOT
-            / "lab_6_pipeline"
-            / "assets"
-            / "model"
-            / "russian-syntagrus-ud-2.0-170801.udpipe"
+        model_path = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model" / "russian-syntagrus-ud-2.0-170801.udpipe"
+        model = spacy_udpipe.load_from_path(
+            lang="ru",
+            path=str(model_path),
         )
-        model = spacy_udpipe.load_from_path(lang='ru', path=model_path)
         model.add_pipe(
-            'conll_formatter',
+            "conll_formatter",
             last=True,
             config={
-                'conversion_maps': {'XPOS': {'': '_'}},
-                'include_headers': True,
-                'field_names': {
-                    'ID': 'ID',
-                    'FORM': 'FORM',
-                    'LEMMA': 'LEMMA',
-                    'UPOS': 'UPOS',
-                    'XPOS': 'XPOS',
-                    'FEATS': 'FEATS',
-                    'HEAD': 'HEAD',
-                    'DEPREL': 'DEPREL',
-                    'DEPS': 'DEPS',
-                    'MISC': 'MISC'
-                }
-            }
+                "conversion_maps": {"XPOS": {"": "_"}},
+                "include_headers": True,
+                "field_names": {
+                    "FORM": "FORM",
+                    "LEMMA": "LEMMA",
+                    "UPOS": "UPOS",
+                    "XPOS": "XPOS",
+                    "FEATS": "FEATS",
+                    "HEAD": "HEAD",
+                    "DEPREL": "DEPREL",
+                    "DEPS": "DEPS",
+                    "MISC": "MISC",
+                },
+            },
         )
         return model
 
