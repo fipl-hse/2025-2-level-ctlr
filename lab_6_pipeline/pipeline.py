@@ -136,11 +136,28 @@ class TextProcessingPipeline(PipelineProtocol):
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper | None, optional): Analyzer instance. Defaults to None.
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def run(self) -> None:
         """
         Perform basic preprocessing and write processed text to files.
         """
+        for article in self._corpus.get_articles().values():
+            from_raw(article)
+
+            cleaned = article.text.lower()
+            cleaned = re.sub(r"[^\w\s]", "", cleaned)
+            article.text = cleaned
+
+            to_cleaned(article)
+
+            if self._analyzer is not None:
+                from_raw(article)
+                conllu_output = self._analyzer.analyze([article.text])
+                if conllu_output:
+                    article.set_conllu_info(conllu_output[0])
+                self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -155,6 +172,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -208,6 +226,8 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -242,6 +262,9 @@ class PatternSearchPipeline(PipelineProtocol):
             analyzer (LibraryWrapper): Analyzer instance
             pos (tuple[str, ...]): Root, Dependency, Child part of speech
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
+        self._node_labels = pos
 
     def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
@@ -288,6 +311,11 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
+    from core_utils.constants import ASSETS_PATH
+
+    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
+    pipeline = TextProcessingPipeline(corpus_manager)
+    pipeline.run()
 
 
 if __name__ == "__main__":
