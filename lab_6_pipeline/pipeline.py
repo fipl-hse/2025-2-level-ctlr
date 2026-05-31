@@ -27,14 +27,6 @@ except ImportError:
     Doc = None  # type: ignore
     print("No libraries installed. Failed to import.")
 
-class FileNotFoundError(Exception):
-    """
-    Path does not exist
-    """
-class NotADirectoryError(Exception):
-    """
-    Path does not lead to a directory
-    """
 class InconsistentDatasetError(Exception):
     """
     IDs contain slips, number of meta and raw files is not equal, files are empty
@@ -70,12 +62,12 @@ class CorpusManager:
         Validate folder with assets.
         """
         if not self._path.exists():
-            raise FileNotFoundError()
+            raise FileNotFoundError("Path does not exist")
         if not self._path.is_dir():
-            raise NotADirectoryError()
+            raise NotADirectoryError("Path is not the directory")
         files = list(self._path.iterdir())
         if not files:
-            raise EmptyDirectoryError()
+            raise EmptyDirectoryError("Directory is empty")
         raw_files = [file for file in files if file.name.endswith('_raw.txt')]
         meta_files = [file for file in files if file.name.endswith('_meta.json')]
         if not raw_files:
@@ -92,10 +84,9 @@ class CorpusManager:
         Register each dataset entry.
         """
         for file in self._path.iterdir():
-            if file.name.endswith('_raw.txt'):
-                article_id = int(file.name.split('_')[0])
-                article = Article(url=None, article_id = article_id)
-                self._storage[article_id] = from_raw(article, file)
+             if file.name.endswith("_raw.txt"):
+                article = from_raw(file)
+                self._storage[article.article_id] = article
 
     def get_articles(self) -> dict:
         """
