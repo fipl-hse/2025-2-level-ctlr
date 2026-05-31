@@ -376,23 +376,14 @@ def main() -> None:
     crawler = Crawler(config=configuration)
     crawler.find_articles()
     print(f"Articles found: {len(crawler.urls)}")
-
-    saved_articles_count = 0
-
-    for url in crawler.urls:
-        if saved_articles_count >= configuration.get_num_articles():
-            break
-
-        article_id = saved_articles_count + 1
-        
-        parser = HTMLParser(full_url=url, article_id=article_id, config=configuration)
+    for i, url in enumerate(crawler.urls, start=1):
+        parser = HTMLParser(full_url=url, article_id=i, config=configuration)
         article = parser.parse()
-        
+        time.sleep(random.uniform(1, 3))
         if isinstance(article, Article):
             to_raw(article)
             to_meta(article)
-            print(f"Article {article_id} saved: {url}")
-            saved_articles_count += 1
+            print(f"Article {i} saved: {url}")
 
 if __name__ == "__main__":
     main()
