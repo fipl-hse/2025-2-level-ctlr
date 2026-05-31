@@ -1,11 +1,11 @@
 """
 Pipeline for CONLL-U formatting.
 """
-import sys
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
+import sys
 from typing import Dict
 
 from core_utils.article.article import Article
@@ -265,62 +265,62 @@ class UDPipeAnalyzer(LibraryWrapper):
         #"""
 
 
-class PatternSearchPipeline(PipelineProtocol):
-    """
-    Search for the required syntactic pattern.
-    """
+#class PatternSearchPipeline(PipelineProtocol):
+    #"""
+    #Search for the required syntactic pattern.
+    #"""
 
-    def __init__(
-        self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
-    ) -> None:
-        """
-        Initialize an instance of the PatternSearchPipeline class.
+    #def __init__(
+        #self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
+    #) -> None:
+        #"""
+        #Initialize an instance of the PatternSearchPipeline class.
 
-        Args:
-            corpus_manager (CorpusManager): CorpusManager instance
-            analyzer (LibraryWrapper): Analyzer instance
-            pos (tuple[str, ...]): Root, Dependency, Child part of speech
-        """
+        #Args:
+            #corpus_manager (CorpusManager): CorpusManager instance
+            #analyzer (LibraryWrapper): Analyzer instance
+            #pos (tuple[str, ...]): Root, Dependency, Child part of speech
+        #"""
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
-        """
-        Make graphs for a document.
+    #def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+        #"""
+        #Make graphs for a document.
 
-        Args:
-            doc (Doc): Document for patterns searching
+        #Args:
+            #doc (Doc): Document for patterns searching
 
-        Returns:
-            list[DiGraph]: Graphs for the sentences in the document
-        """
+        #Returns:
+            #list[DiGraph]: Graphs for the sentences in the document
+        #"""
 
-    def _add_children(
-        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
-    ) -> None:
-        """
-        Add children to TreeNode.
+    #def _add_children(
+        #self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+    #) -> None:
+        #"""
+        #Add children to TreeNode.
 
-        Args:
-            graph (DiGraph): Sentence graph to search for a pattern
-            subgraph_to_graph (dict): Matched subgraph
-            node_id (int): ID of root node of the match
-            tree_node (TreeNode): Root node of the match
-        """
+        #Args:
+            #graph (DiGraph): Sentence graph to search for a pattern
+            #subgraph_to_graph (dict): Matched subgraph
+            #node_id (int): ID of root node of the match
+            #tree_node (TreeNode): Root node of the match
+        #"""
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
-        """
-        Search for the required pattern.
+    #def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
+        #"""
+        #Search for the required pattern.
 
-        Args:
-            doc_graphs (list): A list of graphs for the document
+        #Args:
+            #doc_graphs (list): A list of graphs for the document
 
-        Returns:
-            dict[int, list[TreeNode]]: A dictionary with pattern matches
-        """
+        #Returns:
+            #dict[int, list[TreeNode]]: A dictionary with pattern matches
+        #"""
 
-    def run(self) -> None:
-        """
-        Search for a pattern in documents and writes found information to JSON file.
-        """
+    #def run(self) -> None:
+        #"""
+        #Search for a pattern in documents and writes found information to JSON file.
+        #"""
 
 
 def main() -> None:
