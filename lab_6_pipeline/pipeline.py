@@ -5,8 +5,9 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
+import string
 
-import spacy_udpipe
+import spacy_udpipe # type: ignore
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned
@@ -14,18 +15,18 @@ from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
-    from networkx import DiGraph
-    from networkx.algorithms.isomorphism import DiGraphMatcher
+    import networkx # type: ignore
+    import networkx.algorithms.isomorphism # type: ignore
 except ImportError:
-    DiGraph = None  # type: ignore
+    networkx.DiGraph = None  # type: ignore
     print("No libraries installed. Failed to import.")
 
 try:
-    from spacy.language import Language
-    from spacy.tokens import Doc
+    import spacy.language # type: ignore
+    import spacy.tokens # type: ignore
 except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
+    spacy.language.Language = None  # type: ignore
+    spacy.tokens.Doc = None  # type: ignore
     print("No libraries installed. Failed to import.")
 
 
@@ -173,7 +174,7 @@ class UDPipeAnalyzer(LibraryWrapper):
     """
 
     #: Analyzer
-    _analyzer: Language
+    _analyzer: spacy.language.Language
 
     def __init__(self) -> None:
         """
@@ -181,7 +182,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         self._analyzer = self._bootstrap()
 
-    def _bootstrap(self) -> Language:
+    def _bootstrap(self) -> spacy.language.Language:
         """
         Load and set up the UDPipe model.
 
@@ -244,7 +245,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         with open(path, "w", encoding="utf-8") as file:
             file.write(article.get_conllu_info())
 
-    def from_conllu(self, article: Article) -> Doc:
+    def from_conllu(self, article: Article) -> spacy.tokens.Doc:
         """
         Load ConLLU content from article stored on disk.
 
@@ -307,7 +308,7 @@ class PatternSearchPipeline(PipelineProtocol):
             pos (tuple[str, ...]): Root, Dependency, Child part of speech
         """
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+    def _make_graphs(self, doc: spacy.tokens.Doc) -> list[networkx.DiGraph]:
         """
         Make graphs for a document.
 
@@ -319,7 +320,7 @@ class PatternSearchPipeline(PipelineProtocol):
         """
 
     def _add_children(
-        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+        self, graph: networkx.DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
     ) -> None:
         """
         Add children to TreeNode.
