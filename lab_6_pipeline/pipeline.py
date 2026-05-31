@@ -274,25 +274,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         for text in texts:
             doc = self._analyzer(text)
             conllu = doc._.conll_str
-            
-            lines = conllu.split('\n')
-            processed_lines = []
-            
-            for line in lines:
-                if line.startswith('#'):
-                    processed_lines.append(line)
-                elif line.strip() and not line.startswith('#'):
-                    parts = line.split('\t')
-                    if len(parts) >= 5:
-                        parts[3] = '_'
-                        parts[4] = '_'
-                        processed_lines.append('\t'.join(parts))
-                    else:
-                        processed_lines.append(line)
-                else:
-                    processed_lines.append(line)
-            
-            results.append('\n'.join(processed_lines))
+            results.append(conllu)
         
         return results
 
