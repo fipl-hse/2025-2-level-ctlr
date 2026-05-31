@@ -219,9 +219,11 @@ class Crawler:
             str: Url from HTML
         """
         url = article_bs.get('href')
-        if not isinstance(url, str) or not url:
+        if not isinstance(url, str):
             return ''
-        return url
+        if url.startswith('http'):
+            return url
+        return 'https://burkin.rusf.ru/' + url.lstrip('/')
 
     def find_articles(self) -> None:
         """
