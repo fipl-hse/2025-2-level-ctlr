@@ -147,10 +147,7 @@ class TextProcessingPipeline(PipelineProtocol):
         articles = list(self._corpus.get_articles().values())
         for article in articles:
             if article.text:
-                cleaned_text = article.text.lower()
-                cleaned_text = re.sub(r'[^\w\s]', '', cleaned_text)
-                cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
-                article.text = cleaned_text
+                article.text = article.text.lower()
         list(map(to_cleaned, articles))
         if self._analyzer:
             raw_texts = [article.text for article in articles]
@@ -232,10 +229,13 @@ class UDPipeAnalyzer(LibraryWrapper):
                 if line and not line.startswith('#') and '\t' in line:
                     parts = line.split('\t')
                     if len(parts) >= 5:
-                        parts[4] = '_'
+                        if len(parts) >= 5:
+                            parts[4] = '_'
                         line = '\t'.join(parts)
                 modified_lines.append(line)
-            results.append('\n'.join(modified_lines))
+            result = '\n'.join(modified_lines)
+            result = result.rstrip() + '\n'
+            results.append(result)
         return results
 
     def to_conllu(self, article: Article) -> None:
