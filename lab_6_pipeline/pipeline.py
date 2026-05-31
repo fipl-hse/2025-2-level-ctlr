@@ -180,7 +180,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         import spacy_udpipe
-        model_folder = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
+        model_folder = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model" / "russian-syntagrus-ud-2.0-170801.udpipe"
         model_files = list(model_folder.glob("*.udpipe"))
         if not model_files:
             raise FileNotFoundError("UDPipe model file not found in assets/model/")
