@@ -6,8 +6,8 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
+import spacy_udpipe
 from spacy_conll.parser import ConllParser
-from spacy_conll import init_parser
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
@@ -179,7 +179,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        import spacy_udpipe
         model_folder = pathlib.Path(__file__).parent / "assets" / "model"
         model_files = list(model_folder.glob("*.udpipe"))
         if not model_files:
