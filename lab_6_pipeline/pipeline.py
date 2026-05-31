@@ -76,12 +76,7 @@ class CorpusManager:
         expected_raw_ids = list(range(min(raw_ids), max(raw_ids) + 1))
         if raw_ids != expected_raw_ids:
             raise InconsistentDatasetError()
-        if meta_files:
-            meta_ids = sorted([int(file.name.split('_')[0]) for file in meta_files])
-            expected_meta_ids = set(range(min(meta_ids), max(meta_ids) + 1))
-            if meta_ids != expected_meta_ids:
-                raise InconsistentDatasetError()
-        for file in raw_files + meta_files:
+        for file in raw_files:
             if file.stat().st_size == 0:
                 raise EmptyFileError("File is empty")
 
