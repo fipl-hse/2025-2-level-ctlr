@@ -88,7 +88,7 @@ class CorpusManager:
              if file.name.endswith("_raw.txt"):
                 article_id = int(file.name.split('_')[0])
                 article = Article(url=None, article_id=article_id)
-                from_raw(article, file)
+                from_raw(file, article)
                 self._storage[article.article_id] = article
 
     def get_articles(self) -> dict:
