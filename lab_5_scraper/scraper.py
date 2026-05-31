@@ -242,33 +242,37 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        href = article_bs.get("href", "")
-        return urljoin("https://ru.wikisource.org", href)
+        return urljoin("https://ru.wikisource.org", str(article_bs.get("href", "")))
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
         for seed_url in self.get_search_urls():
-            response = make_request(seed_url, self.config)
-            
-            if not response or not response.ok:
+            if len(self.urls) >= self.config.get_num_articles():
+                break
+
+            try:
+                response = make_request(seed_url, self.config)
+                time.sleep(random.uniform(1, 3))
+            except requests.exceptions.RequestException:
+                continue
+
+            if not response or response.status_code != 200:
                 continue
 
             page_soup = BeautifulSoup(response.text, "lxml")
-            
-            for link_tag in page_soup.find_all("a", href=True):
+
+            for link_tag in page_soup.select(".CategoryTreeItem a"):
+                if len(self.urls) >= self.config.get_num_articles():
+                    break
+
                 href = link_tag.get("href", "")
                 
-                if href.startswith("/wiki/") and ":" not in href.split("/wiki/")[1]:
+                if href.startswith("/wiki/") and "Категория:" not in href:
                     full_url = self._extract_url(link_tag)
                     if full_url not in self.urls:
                         self.urls.append(full_url)
-
-                if len(self.urls) >= self.config.get_num_articles():
-                    return
-            
-            time.sleep(random.uniform(1, 2))
 
     def get_search_urls(self) -> list:
         """
@@ -308,12 +312,13 @@ class HTMLParser:
         """
         main_content = article_soup.find("div", {"class": "mw-parser-output"})
         
-        if main_content:
-            for junk in main_content.find_all(["style", "script", "sup"]):
-                junk.decompose()
-            self.article.text = main_content.get_text(separator="\n", strip=True)
-        else:
-            self.article.text = ""
+        if not main_content:
+            return
+            
+        for junk in main_content.find_all(["style", "script", "sup", "table"]):
+            junk.decompose()
+            
+        self.article.text = main_content.get_text(separator="\n", strip=True)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -322,9 +327,15 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        self.article.title = "Твой заголовок" 
+        h1 = article_soup.find("h1")
+        
+        self.article.title = h1.get_text(strip=True) if h1 else "NOT FOUND"
         self.article.author = ["NOT FOUND"]
-        self.article.date = datetime.datetime(1970, 1, 1)
+        self.article.url = self.full_url
+        
+        self.article.date = self.unify_date_format("")
+
+        self.article.topics = []
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -337,7 +348,10 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        return datetime.datetime.now()
+        try:
+            return datetime.datetime.strptime(date_str.strip(), "%Y-%m-%d")
+        except ValueError:
+            return datetime.datetime(1970, 1, 1)
 
     def parse(self) -> Article | bool:
         """
@@ -346,7 +360,11 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
-        response = make_request(self.full_url, self.config)
+        try:
+            response = make_request(self.full_url, self.config)
+            time.sleep(random.uniform(1, 3))
+        except requests.exceptions.RequestException:
+            return False
 
         if not response or response.status_code != 200:
             return False
