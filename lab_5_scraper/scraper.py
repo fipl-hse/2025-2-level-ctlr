@@ -17,6 +17,7 @@ from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
+
 class IncorrectSeedURLError(Exception):
     """
     Seed URL does not match standard pattern "https?://(www.)
@@ -99,7 +100,7 @@ class Config:
         standard_pattern = re.compile(r"https?://(www\.)?")
         if not isinstance(conf.seed_urls, list):
             raise IncorrectSeedURLError()
-        for url in conf.seed_urls: 
+        for url in conf.seed_urls:
             if not isinstance(url, str) or not standard_pattern.match(url):
                 raise IncorrectSeedURLError()
         if not isinstance(conf.total_articles, int):
@@ -117,7 +118,7 @@ class Config:
         if not isinstance(conf.should_verify_certificate, bool):
             raise IncorrectVerifyError()
         if not isinstance(conf.headless_mode, bool):
-            raise IncorrectVerifyError()
+            raise IncorrectHeadlessModeError()
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -217,6 +218,7 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
+        super().__init__()
         self.config = config
         self.urls = []
 
@@ -231,6 +233,8 @@ class Crawler:
             str: Url from HTML
         """
         href = article_bs.get("href", "")
+        if not isinstance(href, str):
+            return ""
         if not href:
             return ""
         if href.startswith("http"):
@@ -251,7 +255,8 @@ class Crawler:
             soup = BeautifulSoup(response.text, "lxml")
             for tag in soup.find_all("a", href=True):
                 href = tag.get("href", "")
-                if not href or any(x in href.lower() for x in ["search", "award", "javascript:", "#"]):
+                skip_patterns = ["search", "award", "javascript:", "#"]
+                if not href or any(x in href.lower() for x in skip_patterns):
                     continue
                 if any(x in href for x in ["/press/", "/news/", "/history/", "/details/"]):
                     full_url = self._extract_url(tag)
@@ -330,6 +335,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        # pylint: disable=too-many-branches
         author_tag = article_soup.find("div", class_="author")
         if author_tag is None:
             self.article.author = ["NOT FOUND"]
@@ -348,8 +354,8 @@ class HTMLParser:
             title_text = title_tag.get_text(strip=True)
             self.article.title = title_text.split(". Text")[0]
         date_element = (
-            article_soup.find('span', class_='date') 
-            or article_soup.find('div', class_='date') 
+            article_soup.find('span', class_='date')
+            or article_soup.find('div', class_='date')
             or article_soup.find('p', class_='date')
         )
         date_str = ""
@@ -427,7 +433,7 @@ def main() -> None:
             config=configuration,
         )
         article = parser.parse()
-        if not article:
+        if article is False:
             continue
         to_raw(article)
         to_meta(article)
