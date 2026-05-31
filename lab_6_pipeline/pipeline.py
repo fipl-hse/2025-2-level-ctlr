@@ -6,26 +6,6 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-import matplotlib.pyplot as plt
-import networkx as nx
-import spacy_udpipe
-
-try:
-    from networkx import DiGraph
-    from networkx.algorithms.isomorphism import DiGraphMatcher
-except ImportError:
-    DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
-
-try:
-    from spacy.language import Language
-    from spacy.tokens import Doc, Token
-except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    print("No libraries installed. Failed to import.")
-from spacy_conll.parser import ConllParser
-
 from core_utils.article.article import (
     Article,
     ArtifactType,
@@ -38,6 +18,30 @@ from core_utils.pipeline import (
     TreeNode,
 )
 from core_utils.visualizer import visualize
+
+try:
+    import networkx as nx
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+
+except ImportError:
+    DiGraph = None  # type: ignore
+    nx = None #type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
+    import spacy_udpipe
+    from spacy.language import Language
+    from spacy.tokens import Doc, Token
+    from spacy_conll.parser import ConllParser
+except ImportError:
+    spacy_udpipe = None # type: ignore
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    ConllParser = None # type: ignore
+    print("No libraries installed. Failed to import.")
+
+
 
 MODEL_PATH = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model"
 MODEL_NAME = "russian-syntagrus-ud-2.0-170801.udpipe"
@@ -433,14 +437,19 @@ class PatternSearchPipeline(PipelineProtocol):
             )
             matched_trees = []
             for match_dict in matcher.subgraph_isomorphisms_iter():
-                head_id = int(next(iter(match_dict)))
-                head_node = TreeNode(
-                        graph.nodes[head_id]["label"],
-                        graph.nodes[head_id]["text"],
-                        []
-                    )
-                matched_trees.append(head_node)
-                self._add_children(graph, match_dict, head_id, head_node)
+                head_id = None
+                for graph_node, matcher_node in match_dict.items():
+                    if matcher_node == 0:
+                        head_id = matcher_node
+                        break
+                if head_id is not None:
+                    head_node = TreeNode(
+                            graph.nodes[head_id]["label"],
+                            graph.nodes[head_id]["text"],
+                            []
+                        )
+                    matched_trees.append(head_node)
+                    self._add_children(graph, match_dict, head_id, head_node)
 
             if matched_trees:
                 graph_mathces[graph_id] = matched_trees
