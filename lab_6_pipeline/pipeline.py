@@ -70,6 +70,14 @@ class CorpusManager:
         if not self.path_to_raw_txt_data.is_dir():
             raise NotADirectoryError("Path does not lead to directory")
 
+        raw_files = list(self.path_to_raw_txt_data.glob("*_raw.txt"))
+        for raw_path in raw_files:
+            article_id = int(raw_path.stem.split("_")[0])
+            meta_path = raw_path.with_name(f"{article_id}_meta.json")
+            if not meta_path.exists():
+                article = from_raw(raw_path)
+                to_meta(article)
+
         raw_ids = []
         meta_ids = []
 
