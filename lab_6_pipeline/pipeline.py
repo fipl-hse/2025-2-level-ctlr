@@ -367,7 +367,7 @@ class POSFrequencyPipeline:
 
     def run(self) -> None:
         """
-        Visualize the frequencies of each part of speech.
+        Visualize the frequencies of each part of speeeech.
         """
         for article in self._corpus.get_articles().values():
             frequencies = self._count_frequencies(article)
