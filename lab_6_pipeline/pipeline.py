@@ -5,7 +5,11 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
+
+from spacy import Language
+from spacy.tokens import Doc
+from networkx import DiGraph
 
 from core_utils.article.article import Article
 from core_utils.constants import ASSETS_PATH
@@ -131,7 +135,7 @@ class UDPipeAnalyzer(LibraryWrapper):
     """
 
     #: Analyzer
-    _analyzer: Any
+    _analyzer: Language
 
     def __init__(self) -> None:
         """
@@ -178,7 +182,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        pass
+        return None
 
 
 class POSFrequencyPipeline:
@@ -197,7 +201,7 @@ class POSFrequencyPipeline:
         self._corpus = corpus_manager
         self._analyzer = analyzer
 
-    def _count_frequencies(self, article: Article) -> dict[str, int]:
+    def _count_frequencies(self, article: Article) -> Dict[str, int]:
         """
         Count POS frequency in Article.
 
@@ -262,7 +266,7 @@ class PatternSearchPipeline(PipelineProtocol):
         """
         pass
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
+    def _find_pattern(self, doc_graphs: list) -> Dict[int, list[TreeNode]]:
         """
         Search for the required pattern.
 
