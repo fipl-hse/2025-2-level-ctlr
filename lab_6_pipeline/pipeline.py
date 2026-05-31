@@ -11,14 +11,14 @@ from typing import Dict
 from core_utils.article.article import Article
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH
-from core_utils.pipeline import LibraryWrapper, PipelineProtocol #TreeNode
+from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
-#try:
-    #from networkx import DiGraph
-    #from networkx.algorithms.isomorphism import DiGraphMatcher
-#except ImportError:
-    #DiGraph = None  # type: ignore
-    #print("No libraries installed. Failed to import.")
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 
 try:
     from spacy.language import Language
@@ -234,93 +234,101 @@ class UDPipeAnalyzer(LibraryWrapper):
         raise NotImplementedError("UDPipeAnalyzer not implemented for mark 4")
 
 
-#class POSFrequencyPipeline:
-    #"""
-    #Count frequencies of each POS in articles, update meta info and produce graphic report.
-    #"""
+class POSFrequencyPipeline:
+    """
+    Count frequencies of each POS in articles, update meta info and produce graphic report.
+    """
 
-    #def __init__(self, corpus_manager: CorpusManager, analyzer: LibraryWrapper) -> None:
-        #"""
-        #Initialize an instance of the POSFrequencyPipeline class.
+    def __init__(self, corpus_manager: CorpusManager, analyzer: LibraryWrapper) -> None:
+        """
+        Initialize an instance of the POSFrequencyPipeline class.
 
-        #Args:
-            #corpus_manager (CorpusManager): CorpusManager instance
-            #analyzer (LibraryWrapper): Analyzer instance
-        #"""
+        Args:
+            corpus_manager (CorpusManager): CorpusManager instance
+            analyzer (LibraryWrapper): Analyzer instance
+        """
+        pass
 
-    #def _count_frequencies(self, article: Article) -> dict[str, int]:
-        #"""
-        #Count POS frequency in Article.
+    def _count_frequencies(self, article: Article) -> dict[str, int]:
+        """
+        Count POS frequency in Article.
 
-        #Args:
-            #article (Article): Article instance
+        Args:
+            article (Article): Article instance
 
-        #Returns:
-            #dict[str, int]: POS frequencies
-        #"""
+        Returns:
+            dict[str, int]: POS frequencies
+        """
+        raise NotImplementedError("POSFrequencyPipeline not implemented for mark 4")
 
-    #def run(self) -> None:
-        #"""
-        #Visualize the frequencies of each part of speech.
-        #"""
+    def run(self) -> None:
+        """
+        Visualize the frequencies of each part of speech.
+        """
+        raise NotImplementedError("POSFrequencyPipeline not implemented for mark 4")
 
 
-#class PatternSearchPipeline(PipelineProtocol):
-    #"""
-    #Search for the required syntactic pattern.
-    #"""
+class PatternSearchPipeline(PipelineProtocol):
+    """
+    Search for the required syntactic pattern.
+    """
 
-    #def __init__(
-        #self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
-    #) -> None:
-        #"""
-        #Initialize an instance of the PatternSearchPipeline class.
+    def __init__(
+        self, corpus_manager: CorpusManager, analyzer: LibraryWrapper, pos: tuple[str, ...]
+    ) -> None:
+        """
+        Initialize an instance of the PatternSearchPipeline class.
 
-        #Args:
-            #corpus_manager (CorpusManager): CorpusManager instance
-            #analyzer (LibraryWrapper): Analyzer instance
-            #pos (tuple[str, ...]): Root, Dependency, Child part of speech
-        #"""
+        Args:
+            corpus_manager (CorpusManager): CorpusManager instance
+            analyzer (LibraryWrapper): Analyzer instance
+            pos (tuple[str, ...]): Root, Dependency, Child part of speech
+        """
+        pass
 
-    #def _make_graphs(self, doc: Doc) -> list[DiGraph]:
-        #"""
-        #Make graphs for a document.
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+        """
+        Make graphs for a document.
 
-        #Args:
-            #doc (Doc): Document for patterns searching
+        Args:
+            doc (Doc): Document for patterns searching
 
-        #Returns:
-            #list[DiGraph]: Graphs for the sentences in the document
-        #"""
+        Returns:
+            list[DiGraph]: Graphs for the sentences in the document
+        """
+        raise NotImplementedError("PatternSearchPipeline not implemented for mark 4")
 
-    #def _add_children(
-        #self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
-    #) -> None:
-        #"""
-        #Add children to TreeNode.
+    def _add_children(
+        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+    ) -> None:
+        """
+        Add children to TreeNode.
 
-        #Args:
-            #graph (DiGraph): Sentence graph to search for a pattern
-            #subgraph_to_graph (dict): Matched subgraph
-            #node_id (int): ID of root node of the match
-            #tree_node (TreeNode): Root node of the match
-        #"""
+        Args:
+            graph (DiGraph): Sentence graph to search for a pattern
+            subgraph_to_graph (dict): Matched subgraph
+            node_id (int): ID of root node of the match
+            tree_node (TreeNode): Root node of the match
+        """
+        raise NotImplementedError("PatternSearchPipeline not implemented for mark 4")
 
-    #def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
-        #"""
-        #Search for the required pattern.
+    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
+        """
+        Search for the required pattern.
 
-        #Args:
-            #doc_graphs (list): A list of graphs for the document
+        Args:
+            doc_graphs (list): A list of graphs for the document
 
-        #Returns:
-            #dict[int, list[TreeNode]]: A dictionary with pattern matches
-        #"""
+        Returns:
+            dict[int, list[TreeNode]]: A dictionary with pattern matches
+        """
+        raise NotImplementedError("PatternSearchPipeline not implemented for mark 4")
 
-    #def run(self) -> None:
-        #"""
-        #Search for a pattern in documents and writes found information to JSON file.
-        #"""
+    def run(self) -> None:
+        """
+        Search for a pattern in documents and writes found information to JSON file.
+        """
+        raise NotImplementedError("PatternSearchPipeline not implemented for mark 4")
 
 
 def main() -> None:
