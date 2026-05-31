@@ -6,7 +6,6 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-import spacy
 import spacy_udpipe
 from spacy_conll.parser import ConllParser
 from spacy_conll import init_parser

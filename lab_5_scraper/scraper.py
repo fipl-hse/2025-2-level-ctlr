@@ -306,13 +306,15 @@ class Crawler:
                     return
                 href = link.get('href')
                 if (not href or not isinstance(href, str) or
-                    href == '#' or href.startswith('javascript')):
+                    href == '#' or href.startswith('javascript') or href == 'None'):
                     continue
                 if href.startswith('/'):
                     full_url = f"https://sufler.su{href}"
                 elif 'sufler.su' in href:
                     full_url = href
                 else:
+                    continue
+                if not full_url or full_url == 'None':
                     continue
                 is_invalid = (full_url == 'https://sufler.su/' or
                             any(pattern in full_url for pattern in exclude_patterns))
@@ -376,6 +378,7 @@ class CrawlerRecursive(Crawler):
                     or not isinstance(href, str)
                     or href in ('#',)
                     or href.startswith('javascript')
+                    or href == 'None'
                 ):
                     continue
                 if href.startswith('/'):
@@ -384,7 +387,7 @@ class CrawlerRecursive(Crawler):
                     full_url = href
                 else:
                     continue
-                if full_url == 'https://sufler.su/':
+                if not full_url or full_url == 'None' or full_url == 'https://sufler.su/':
                     continue
                 is_bad = any(p in full_url for p in exclude)
                 if not is_bad and full_url not in self.urls:
@@ -499,13 +502,13 @@ class HTMLParser:
         try:
             response = make_request(self.full_url, self.config)
             if not response.ok:
-                return self.article
+                return False
             soup = BeautifulSoup(response.text, 'lxml')
             self._fill_article_with_meta_information(soup)
             self._fill_article_with_text(soup)
             return self.article
         except requests.exceptions.RequestException:
-            return self.article
+            return False
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -535,9 +538,11 @@ def main() -> None:
     for i, url in enumerate(crawler.urls, 1):
         if i > config.get_num_articles():
             break
+        if not url or url == 'None':
+            continue
         parser = HTMLParser(full_url=url, article_id=i, config=config)
         article = parser.parse()
-        if isinstance(article, Article):
+        if isinstance(article, Article) and article.text:
             with open(article.get_raw_text_path(), "w", encoding="utf-8") as f:
                 f.write(article.text)
             with open(article.get_meta_file_path(), "w", encoding="utf-8") as f:
