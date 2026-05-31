@@ -246,9 +246,10 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"CoNLL-U file is empty or missing: {conllu_path}")
         with open(conllu_path, encoding="utf-8") as f:
             conllu_text = f.read()
-        from spacy_conll.parser import ConllParser
-        conll_parser = ConllParser(self._analyzer)
-        doc = conll_parser.parse_conll_text_as_spacy(conllu_text)
+        lines = conllu_text.splitlines()
+        text_lines = [l[len("# text = "):] for l in lines if l.startswith("# text = ")]
+        full_text = " ".join(text_lines)
+        doc = self._analyzer(full_text)
         return doc
 
 
@@ -295,11 +296,12 @@ class POSFrequencyPipeline:
         from core_utils.visualizer import visualize
 
         for article in self._corpus.get_articles().values():
-            from_meta(article)
+            from_meta(article.get_meta_file_path(), article)
             frequencies = self._count_frequencies(article)
             article.set_pos_info(frequencies)
             to_meta(article)
-            visualize(article=article, path_to_save=article.get_file_path(ArtifactType.IMAGE))
+            image_path = article.get_meta_file_path().parent / f"{article.article_id}_image.png"
+            visualize(article=article, path_to_save=image_path)
 
 
 class PatternSearchPipeline(PipelineProtocol):
