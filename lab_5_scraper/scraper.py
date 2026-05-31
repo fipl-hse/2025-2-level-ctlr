@@ -322,6 +322,9 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        self.article.title = "Твой заголовок" 
+        self.article.author = ["NOT FOUND"]
+        self.article.date = datetime.datetime(1970, 1, 1)
 
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
@@ -334,6 +337,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        return datetime.datetime.now()
 
     def parse(self) -> Article | bool:
         """
@@ -376,14 +380,18 @@ def main() -> None:
     crawler = Crawler(config=configuration)
     crawler.find_articles()
     print(f"Articles found: {len(crawler.urls)}")
-    for i, url in enumerate(crawler.urls, start=1):
-        parser = HTMLParser(full_url=url, article_id=i, config=configuration)
+    
+    valid_id = 1
+    for url in crawler.urls:
+        parser = HTMLParser(full_url=url, article_id=valid_id, config=configuration)
         article = parser.parse()
         time.sleep(random.uniform(1, 3))
+        
         if isinstance(article, Article):
             to_raw(article)
             to_meta(article)
-            print(f"Article {i} saved: {url}")
+            print(f"Article {valid_id} saved: {url}")
+            valid_id += 1
 
 if __name__ == "__main__":
     main()
