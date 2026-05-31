@@ -127,13 +127,9 @@ class CorpusManager:
             if file_path.is_file() and file_path.name.endswith("_raw.txt"):
                 article_id = int(file_path.stem.replace("_raw", ""))
                 article = Article(url=None, article_id=article_id)
-                
-                raw_path = self.path / f"{article_id}_raw.txt"
-                if raw_path.exists():
-                    with open(raw_path, 'r', encoding='utf-8') as f:
-                        raw_text = f.read()
-                    article.text = raw_text
-                
+            
+                article = from_raw(article)
+            
                 self._storage[article_id] = article
 
     def get_articles(self) -> dict:
@@ -172,17 +168,17 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         articles = self._corpus.get_articles()
-    
-    for article in articles.values():
-        raw_text = article.text
         
-        cleaned_text = raw_text.lower()
-        cleaned_text = re.sub(r'[^\w\s\n]', '', cleaned_text)
-        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
-        cleaned_text = cleaned_text.strip()
-        
-        article.set_cleaned_text(cleaned_text)
-        to_cleaned(article)
+        for article in articles.values():
+            raw_text = article.text
+
+            cleaned_text = raw_text.lower()
+            cleaned_text = re.sub(r'[^\w\s\n]', '', cleaned_text)
+            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+            cleaned_text = cleaned_text.strip()
+            
+            article.set_cleaned_text(cleaned_text)
+            to_cleaned(article)
 
 class UDPipeAnalyzer(LibraryWrapper):
     """
@@ -335,7 +331,7 @@ class PatternSearchPipeline(PipelineProtocol):
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
-        raise NotImplementedError("PatternSearchPipeline not implemented for mark 4")
+        pass
 
 
 def main() -> None:
@@ -352,6 +348,7 @@ def main() -> None:
         corpus_manager = CorpusManager(tmp_articles_path)
         pipeline = TextProcessingPipeline(corpus_manager)
         pipeline.run()
+        print(f"Successfully processed {len(corpus_manager.get_articles())} articles.")
         
     except (FileNotFoundError, NotADirectoryError, EmptyDirectoryError, 
             InconsistentDatasetError) as error:
