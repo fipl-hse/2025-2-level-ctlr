@@ -91,6 +91,9 @@ class CorpusManager:
 
         if not all([raw_ids[i] - raw_ids[i-1] == 1 for i in range(1, len(raw_ids))]):
             raise InconsistentDatasetError
+    
+        if any([file.stat().st_size == 0 for file in raw_files + meta_files]):
+            raise InconsistentDatasetError
 
     def _scan_dataset(self) -> None:
         """
