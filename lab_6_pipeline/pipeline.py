@@ -7,8 +7,10 @@ import pathlib
 import re
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import from_raw, to_cleaned
+from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
+from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
+from core_utils.visualizer import visualize
 
 try:
     from networkx import DiGraph
@@ -18,9 +20,11 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 try:
+    import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
 except ImportError:
+    spacy_udpipe = None  # type: ignore
     Language = None  # type: ignore
     Doc = None  # type: ignore
     print("No libraries installed. Failed to import.")
@@ -187,7 +191,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        import spacy_udpipe
         model_path = pathlib.Path(__file__).parent / "assets" / "model"
         udpipe_model_file = next(model_path.glob("*.udpipe"), None)
         if udpipe_model_file is None:
@@ -291,10 +294,6 @@ class POSFrequencyPipeline:
         """
         Visualize the frequencies of each part of speech.
         """
-        from core_utils.article.io import from_meta, to_meta
-        from core_utils.constants import ASSETS_PATH
-        from core_utils.visualizer import visualize
-
         for article in self._corpus.get_articles().values():
             from_meta(article.get_meta_file_path(), article)
             frequencies = self._count_frequencies(article)
@@ -369,8 +368,6 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-    from core_utils.constants import ASSETS_PATH
-
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
     udpipe_analyzer = UDPipeAnalyzer()
     pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
