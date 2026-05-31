@@ -226,6 +226,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         with open(conllu_path, "w", encoding="utf-8") as f:
             f.write(article.get_conllu_info())
+            f.write("\n")
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -238,9 +239,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             Doc: Document ready for parsing
         """
         conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
-        with open(conllu_path, "w", encoding="utf-8") as f:
-            f.write(article.get_conllu_info())
-            f.write("\n")
+        with open(conllu_path, "r", encoding="utf-8") as f:
+            conllu_text = f.read()
+        return self._analyzer(conllu_text)
 
 
 class POSFrequencyPipeline:
