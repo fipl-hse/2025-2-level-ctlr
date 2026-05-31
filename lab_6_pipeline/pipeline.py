@@ -7,7 +7,7 @@ import pathlib
 
 import spacy_udpipe
 
-from core_utils.article.article import Article, ArtifactType
+from core_utils.article.article import Article
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
@@ -43,7 +43,10 @@ class EmptyDirectoryError(Exception):
     """
     Directory is empty
     """
-
+class EmptyFileError(Exception):
+    """
+    File is empty
+    """
 
 class CorpusManager:
     """
@@ -77,7 +80,7 @@ class CorpusManager:
         meta_files = [file for file in files if file.name.endswith('_meta.json')]
         if not raw_files:
             raise InconsistentDatasetError()
-        if len(raw_files) != len(meta_files):
+        if meta_files and len(raw_files) != len(meta_files):
             raise InconsistentDatasetError()
         raw_ids = [int(file.name.split('_')[0]) for file in raw_files]
         meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
