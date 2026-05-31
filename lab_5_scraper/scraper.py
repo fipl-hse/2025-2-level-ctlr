@@ -425,12 +425,18 @@ def main() -> None:
     """
     Entrypoint for scraper module.
     """
+    config = Config(path_to_config=CRAWLER_CONFIG_PATH)
+    prepare_environment(ASSETS_PATH)
+    crawler = Crawler(config=config)
+    crawler.find_articles()
+    print(f"Articles found: {len(crawler.urls)}")
+    
     article_id = 1
-    max_articles = configuration.get_num_articles()
+    max_articles = config.get_num_articles()
     for url in crawler.urls:
         if article_id > max_articles:
             break
-        parser = HTMLParser(full_url=url, article_id=article_id, config=configuration)
+        parser = HTMLParser(full_url=url, article_id=article_id, config=config)
         article = parser.parse()
         if isinstance(article, Article):
             try:
