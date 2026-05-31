@@ -181,34 +181,24 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = pathlib.Path("C:/Users/banan/pibble/2025-2-level-ctlr/lab_6_pipeline/assets/model")
-
-        spacy_udpipe.download(model_path)
-        model = spacy_udpipe.load(model_path)
-        
-        if 'conll_formatter' not in model.pipe_names:
-            model.add_pipe(
-                'conll_formatter',
+        model_folder = pathlib.Path(__file__).parent / "assets" / "model"
+        model_files = list(model_folder.glob("*.udpipe"))
+        if not model_files:
+            raise FileNotFoundError("UDPipe model file not found in assets/model/")
+        model_path = str(model_files[0])
+        nlp = spacy_udpipe.load_from_path("ru", model_path)
+        if "conll_formatter" not in nlp.pipe_names:
+            nlp.add_pipe(
+                "conll_formatter",
                 last=True,
                 config={
-                    'conversion_maps': {'XPOS': {'': '_'}},
-                    'include_headers': True,
-                    'field_names': {
-                        'ID': 'ID',
-                        'FORM': 'FORM',
-                        'LEMMA': 'LEMMA',
-                        'UPOS': 'UPOS',
-                        'XPOS': 'XPOS',
-                        'FEATS': 'FEATS',
-                        'HEAD': 'HEAD',
-                        'DEPREL': 'DEPREL',
-                        'DEPS': 'DEPS',
-                        'MISC': 'MISC'
-                    }
-                }
+                    "conversion_maps": {"XPOS": {"": "_"}},
+                    "include_headers": True,
+                    "ext_names": {},
+                    "field_names": {},
+                },
             )
-        
-        return model
+        return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -239,6 +229,8 @@ class UDPipeAnalyzer(LibraryWrapper):
             result = '\n'.join(modified_lines)
             if result and not result.endswith('\n\n'):
                 result = result.rstrip('\n') + '\n\n'
+            results.append(result)
+        return results
 
     def to_conllu(self, article: Article) -> None:
         """
