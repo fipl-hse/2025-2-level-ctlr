@@ -91,7 +91,9 @@ class CorpusManager:
         """
         for file in self._path.iterdir():
              if file.name.endswith("_raw.txt"):
-                article = from_raw(file)
+                article_id = int(file.name.split('_')[0])
+                article = Article(url=None, article_id=article_id)
+                from_raw(article, file)
                 self._storage[article.article_id] = article
 
     def get_articles(self) -> dict:
