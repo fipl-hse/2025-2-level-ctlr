@@ -147,7 +147,7 @@ class TextProcessingPipeline(PipelineProtocol):
         articles = list(self._corpus.get_articles().values())
         for article in articles:
             if article.text:
-                article.text = article.text.lower()
+                article.text = re.sub(r'\s+', ' ', article.text).strip()
         list(map(to_cleaned, articles))
         if self._analyzer:
             raw_texts = [article.text for article in articles]
