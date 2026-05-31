@@ -296,6 +296,9 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        self.full_url = full_url
+        self.config = config
+        self.article_id = article_id
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -304,6 +307,14 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        texts = []
+        for tag in article_soup.find_all(['p', 'dt']):
+            text = tag.get_text(strip=True)
+            if text:
+                texts.append(text)
+        self.article.text = '\n'.join(texts)
+
+
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
