@@ -224,7 +224,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         for txt in texts:
             analyzed_text = self._analyzer(txt)
             conllu_annotation = analyzed_text._.conll_str
-            new_list.append(str(conllu_annotation))
+            new_list.append(str(conllu_annotation) - "\n")
 
         return new_list
 
