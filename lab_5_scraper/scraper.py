@@ -251,7 +251,7 @@ class Crawler:
         for seed_url in self.get_search_urls():
             if len(self.urls) >= self.config.get_num_articles():
                 break
-
+                
             try:
                 response = make_request(seed_url, self.config)
                 time.sleep(random.uniform(1, 3))
@@ -269,7 +269,7 @@ class Crawler:
 
                 href = link_tag.get("href", "")
                 
-                if href.startswith("/wiki/") and "Категория:" not in href:
+                if href.startswith("/wiki/") and ":" not in href.split("/wiki/")[1]:
                     full_url = self._extract_url(link_tag)
                     if full_url not in self.urls:
                         self.urls.append(full_url)
@@ -310,15 +310,25 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        main_content = article_soup.find("div", {"class": "mw-parser-output"})
+        texts = []
         
+        h1 = article_soup.find("h1")
+        if h1:
+            texts.append(h1.get_text(strip=True))
+
+        main_content = article_soup.find("div", {"class": "mw-parser-output"})
+
         if not main_content:
-            return
+            main_content = article_soup.find("body")
+        
+        if main_content:
+            for junk in main_content.find_all(["style", "script"]):
+                junk.decompose()
             
-        for junk in main_content.find_all(["style", "script", "sup", "table"]):
-            junk.decompose()
+            content_text = main_content.get_text(separator="\n", strip=True)
+            texts.append(content_text)
             
-        self.article.text = main_content.get_text(separator="\n", strip=True)
+        self.article.text = "\n\n".join(filter(None, texts))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
