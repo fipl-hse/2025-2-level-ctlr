@@ -6,11 +6,10 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-from core_utils.article.article import Article
 import spacy_udpipe
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import to_cleaned
+from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
