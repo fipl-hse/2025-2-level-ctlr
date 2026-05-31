@@ -79,7 +79,7 @@ class CorpusManager:
 
         meta_files = [file.name for file in self.path_to_raw_txt_data.glob("*_meta.json")]
 
-        meta_ids = [file.name.split("_meta")[0] for file in meta_files]
+        meta_ids = [file.split("_meta")[0] for file in meta_files]
 
         meta_ids = [int(el) for el in meta_ids if el.isdigit()]
 
