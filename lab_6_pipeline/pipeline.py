@@ -207,7 +207,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
-        path = article.get_file_path("conllu")
+        path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         with open(path, "w", encoding="utf-8") as file:
             file.write(article.get_conllu_info())
 
