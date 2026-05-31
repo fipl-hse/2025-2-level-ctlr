@@ -299,6 +299,7 @@ class HTMLParser:
         self.full_url = full_url
         self.config = config
         self.article_id = article_id
+        self.article = Article(url=full_url, article_id=article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -342,6 +343,12 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
+        response = make_request(self.full_url, self.config)
+        if not response.ok:
+            return False
+        article_soup = BeautifulSoup(response.content, 'lxml')
+        self._fill_article_with_text(article_soup)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
