@@ -180,6 +180,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        import spacy_udpipe
         model_folder = pathlib.Path(__file__).parent / "assets" / "model"
         model_files = list(model_folder.glob("*.udpipe"))
         if not model_files:
