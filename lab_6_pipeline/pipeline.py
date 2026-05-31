@@ -3,6 +3,7 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
+import json
 import pathlib
 
 from core_utils.article.article import Article
@@ -75,9 +76,24 @@ class CorpusManager:
             article_id = int(raw_path.stem.split("_")[0])
             meta_path = raw_path.with_name(f"{article_id}_meta.json")
             if not meta_path.exists():
-                article = from_raw(raw_path)
-                to_meta(article)
-
+                try:
+                    article = from_raw(raw_path)
+                    to_meta(article)
+                    if not meta_path.exists():
+                        meta_dict = {
+                            "id": article.article_id,
+                            "url": article.url,
+                            "title": article.title,
+                            "date": article.date.strftime("%Y-%m-%d") if article.date else "1970-01-01",
+                            "author": article.author,
+                            "topics": article.topics,
+                            "text": article.text
+                        }
+                        with open(meta_path, 'w', encoding='utf-8') as f:
+                            json.dump(meta_dict, f, ensure_ascii=False, indent=4)
+                except Exception as e:
+                    raw_path.unlink(missing_ok=True)
+                    print(f"Removed corrupted raw file: {raw_path} ({e})")
         raw_ids = []
         meta_ids = []
 
