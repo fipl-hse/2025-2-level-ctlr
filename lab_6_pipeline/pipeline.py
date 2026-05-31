@@ -6,32 +6,16 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-import spacy_udpipe
 from spacy_conll.parser import ConllParser
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
+from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
-
-try:
-    from networkx import DiGraph
-    from networkx.algorithms.isomorphism import DiGraphMatcher
-except ImportError:
-    DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
-
-try:
-    from spacy.language import Language
-    from spacy.tokens import Doc
-except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    print("No libraries installed. Failed to import.")
 
 
 class InconsistentDatasetError(Exception):
@@ -351,7 +335,6 @@ class PatternSearchPipeline(PipelineProtocol):
             node_id (int): ID of root node of the match
             tree_node (TreeNode): Root node of the match
         """
-        pass
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
@@ -369,7 +352,6 @@ class PatternSearchPipeline(PipelineProtocol):
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
-        pass
 
 
 def main() -> None:
