@@ -3,9 +3,6 @@ matplotlib==3.10.9
 Pillow==12.2.0
 python_docx==1.2.0
 Requests==2.33.1
-core_utils==0.2.3
-fiplconfig==0.2.1
 networkx==3.5
-pytest==8.4.1
 spacy_conll==4.0.1
 spacy_udpipe==1.0.0
