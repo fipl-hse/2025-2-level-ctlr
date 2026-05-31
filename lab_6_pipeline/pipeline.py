@@ -4,7 +4,6 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-from typing import cast
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
@@ -386,13 +385,12 @@ class PatternSearchPipeline(PipelineProtocol):
         pattern_graph.add_edge(0, 1)
         pattern_graph.add_edge(1, 2)
 
+        def node_match(n1: dict, n2: dict) -> bool:
+            return n1["label"] == n2["label"]  # type: ignore
+
         result: dict[int, list[TreeNode]] = {}
         for sent_id, graph in enumerate(doc_graphs):
-            matcher = DiGraphMatcher(
-                graph,
-                pattern_graph,
-                node_match=lambda n1, n2: n1["label"] == n2["label"],
-            )
+            matcher = DiGraphMatcher(graph, pattern_graph, node_match=node_match)
             matches = list(matcher.subgraph_isomorphisms_iter())
             if not matches:
                 continue
@@ -411,28 +409,18 @@ class PatternSearchPipeline(PipelineProtocol):
         return result
 
 
-def run(self) -> None:
-    """
-    Search for a pattern in documents and writes found information to JSON file.
-    """
-    for article in self._corpus.get_articles().values():
-        doc = self._analyzer.from_conllu(article)
-        doc_graphs = self._make_graphs(doc)
-        patterns = self._find_pattern(doc_graphs)
-        article.set_patterns_info(
-            {str(k): [vars(node) for node in v] for k, v in patterns.items()}
-        )
-        to_meta(article)
-
     def run(self) -> None:
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
         for article in self._corpus.get_articles().values():
+            from_meta(article.get_meta_file_path(), article)
             doc = self._analyzer.from_conllu(article)
             doc_graphs = self._make_graphs(doc)
             patterns = self._find_pattern(doc_graphs)
-            article.set_patterns_info(patterns)
+            article.set_patterns_info(
+                {str(k): [vars(node) for node in v] for k, v in patterns.items()}
+            )
             to_meta(article)
 
 
