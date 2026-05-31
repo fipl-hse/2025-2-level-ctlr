@@ -229,12 +229,12 @@ class UDPipeAnalyzer(LibraryWrapper):
                 if line and not line.startswith('#') and '\t' in line:
                     parts = line.split('\t')
                     if len(parts) >= 5:
-                        if len(parts) >= 5:
-                            parts[4] = '_'
+                        parts[4] = '_'
                         line = '\t'.join(parts)
                 modified_lines.append(line)
             result = '\n'.join(modified_lines)
-            result = result.rstrip() + '\n'
+            if result and not result.endswith('\n\n'):
+                result = result.rstrip('\n') + '\n\n'
             results.append(result)
         return results
 
