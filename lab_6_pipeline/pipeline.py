@@ -6,6 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
+from core_utils.article.article import Article
 import spacy_udpipe
 
 from core_utils.article.article import Article, ArtifactType
@@ -14,17 +15,13 @@ from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
-    import networkx
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
-    networkx = None  # type: ignore
     DiGraph = None  # type: ignore
-    DiGraphMatcher = None  # type: ignore
     print("No libraries installed. Failed to import.")
 
 try:
-    import spacy
     from spacy.language import Language
     from spacy.tokens import Doc
 except ImportError:
@@ -35,19 +32,23 @@ except ImportError:
 
 class InconsistentDatasetError(Exception):
     """
-    Raised when IDs contain slips, number of meta and raw files is not equal, files are empty.
+    Raised when the dataset has inconsistent structure (e.g., missing files, wrong IDs).
     """
+    pass
+
 
 class EmptyDirectoryError(Exception):
     """
-    Raised when directory is empty.
+    Raised when the dataset directory exists but contains no valid files.
     """
-    
+    pass
+
+
 class EmptyFileError(Exception):
     """
-    Raised when file is empty.
+    Raised when a file is empty.
     """
-
+    pass
 
 class CorpusManager:
     """
@@ -159,7 +160,7 @@ class UDPipeAnalyzer(LibraryWrapper):
     """
 
     #: Analyzer
-    _analyzer: spacy.language.Language
+    _analyzer: Language
 
     def __init__(self) -> None:
         """
@@ -167,7 +168,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         self._analyzer = self._bootstrap()
 
-    def _bootstrap(self) -> spacy.language.Language:
+    def _bootstrap(self) -> Language:
         """
         Load and set up the UDPipe model.
 
@@ -204,6 +205,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         )
         return model
 
+
     def analyze(self, texts: list[str]) -> list[str]:
         """
         Process texts into CoNLL-U formatted markup.
@@ -216,8 +218,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         results = []
         for text in texts:
-            doc = self._analyzer(text)
-            results.append(doc._.conll_str)
+            results.append(self._analyzer(text)._.conll_str)
         return results
 
     def to_conllu(self, article: Article) -> None:
@@ -236,7 +237,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             f.write(conllu_info)
             f.write("\n")
 
-    def from_conllu(self, article: Article) -> spacy.tokens.Doc:
+    def from_conllu(self, article: Article) -> Doc:
         """
         Load ConLLU content from article stored on disk.
 
@@ -246,9 +247,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        path = article.get_file_path(ArtifactType.CONLLU)
-        with open(path, "r", encoding="utf-8") as file:
-            return file.read()
 
 
 class POSFrequencyPipeline:
@@ -299,7 +297,7 @@ class PatternSearchPipeline(PipelineProtocol):
             pos (tuple[str, ...]): Root, Dependency, Child part of speech
         """
 
-    def _make_graphs(self, doc: spacy.tokens.Doc) -> list[networkx.DiGraph]:
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
 
@@ -311,7 +309,7 @@ class PatternSearchPipeline(PipelineProtocol):
         """
 
     def _add_children(
-        self, graph: networkx.DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
     ) -> None:
         """
         Add children to TreeNode.
