@@ -77,7 +77,7 @@ class CorpusManager:
         if raw_ids != expected_raw_ids:
             raise InconsistentDatasetError()
         meta_ids = [int(file.name.split('_')[0]) for file in meta_files]
-        expected_meta_ids = set(range(1, len(raw_ids) + 1))
+        expected_meta_ids = set(range(1, len(meta_ids) + 1))
         if meta_ids != expected_meta_ids:
             raise InconsistentDatasetError()
 
