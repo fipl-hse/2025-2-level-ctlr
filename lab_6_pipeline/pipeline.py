@@ -240,6 +240,7 @@ class UDPipeAnalyzer(LibraryWrapper):
 
         with open(article.get_file_path(ArtifactType.UDPIPE_CONLLU), "w", encoding="utf-8") as file:
             file.write(article._conllu_info)
+            file.write("\n")
 
 
 
