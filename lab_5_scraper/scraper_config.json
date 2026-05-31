@@ -1,11 +1,9 @@
 {
     "seed_urls": [
         "https://old.mxat.ru/news/",
-        "https://old.mxat.ru/press/2024/",
-        "https://old.mxat.ru/press/2023/",
-        "https://old.mxat.ru/press/2022/",
-        "https://old.mxat.ru/press/2021/",
-        "https://old.mxat.ru/press/2020/"
+        "https://old.mxat.ru/history/persons/",
+        "https://old.mxat.ru/history/",
+        "https://old.mxat.ru/history/performance/"
     ],
     "headers": {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
