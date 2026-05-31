@@ -181,7 +181,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model = spacy.load("ru_core_news_sm")
+        model_path = pathlib.Path("C:/Users/banan/pibble/2025-2-level-ctlr/lab_6_pipeline/assets/model")
+        
+        # Инициализируем UDPipe
+        spacy_udpipe.download(model_path)
+        model = spacy_udpipe.load(model_path)
+        
         if 'conll_formatter' not in model.pipe_names:
             model.add_pipe(
                 'conll_formatter',
@@ -235,8 +240,6 @@ class UDPipeAnalyzer(LibraryWrapper):
             result = '\n'.join(modified_lines)
             if result and not result.endswith('\n\n'):
                 result = result.rstrip('\n') + '\n\n'
-            results.append(result)
-        return results
 
     def to_conllu(self, article: Article) -> None:
         """
