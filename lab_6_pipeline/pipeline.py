@@ -4,8 +4,10 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
+import re
 
 from core_utils.article.article import Article
+from core_utils.article.io import from_raw, to_cleaned
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
@@ -24,6 +26,14 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 
+class InconsistentDatasetError(Exception):
+    """Raised when dataset has inconsistent structure."""
+
+
+class EmptyDirectoryError(Exception):
+    """Raised when the dataset directory is empty."""
+
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -36,17 +46,70 @@ class CorpusManager:
         Args:
             path_to_raw_txt_data (pathlib.Path): Path to raw txt data
         """
-        
+        self.path_to_raw_txt_data = path_to_raw_txt_data
+        self._storage = {}
+        self._validate_dataset()
+        self._scan_dataset()
 
     def _validate_dataset(self) -> None:
         """
         Validate folder with assets.
         """
+        path = self.path_to_raw_txt_data
+
+        if not path.exists():
+            raise FileNotFoundError(f"Path does not exist: {path}")
+
+        if not path.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {path}")
+
+        raw_files = list(path.glob("*_raw.txt"))
+        meta_files = list(path.glob("*_meta.json"))
+
+        if not raw_files:
+            raise EmptyDirectoryError(f"Directory is empty: {path}")
+
+        raw_ids = []
+        for f in raw_files:
+            match = re.match(r"^(\d+)_raw\.txt$", f.name)
+            if match:
+                raw_ids.append(int(match.group(1)))
+
+        meta_ids = []
+        for f in meta_files:
+            match = re.match(r"^(\d+)_meta\.json$", f.name)
+            if match:
+                meta_ids.append(int(match.group(1)))
+
+        if not raw_ids:
+            raise EmptyDirectoryError(f"No valid raw files found in: {path}")
+
+        if len(raw_ids) != len(meta_ids):
+            raise InconsistentDatasetError(
+                "Number of raw and meta files does not match."
+            )
+
+        raw_ids_sorted = sorted(raw_ids)
+        expected = list(range(1, len(raw_ids_sorted) + 1))
+        if raw_ids_sorted != expected:
+            raise InconsistentDatasetError(
+                "Article IDs are not consecutive starting from 1."
+            )
+
+        for f in raw_files:
+            if f.stat().st_size == 0:
+                raise InconsistentDatasetError(f"File is empty: {f}")
 
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry.
         """
+        path = self.path_to_raw_txt_data
+        for f in path.glob("*_raw.txt"):
+            match = re.match(r"^(\d+)_raw\.txt$", f.name)
+            if match:
+                article_id = int(match.group(1))
+                self._storage[article_id] = Article(url=None, article_id=article_id)
 
     def get_articles(self) -> dict:
         """
@@ -55,6 +118,7 @@ class CorpusManager:
         Returns:
             dict: Storage params
         """
+        return self._storage
 
 
 class TextProcessingPipeline(PipelineProtocol):
