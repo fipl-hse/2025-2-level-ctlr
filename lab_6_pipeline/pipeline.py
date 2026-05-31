@@ -5,11 +5,7 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 import re
-from typing import Dict, List, Optional
-
-from spacy import Language
-from spacy.tokens import Doc
-from networkx import DiGraph
+from typing import Any, Dict, List, Optional
 
 from core_utils.article.article import Article
 from core_utils.constants import ASSETS_PATH
@@ -135,7 +131,7 @@ class UDPipeAnalyzer(LibraryWrapper):
     """
 
     #: Analyzer
-    _analyzer: Language
+    _analyzer: Any
 
     def __init__(self) -> None:
         """
@@ -143,7 +139,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         self._analyzer = self._bootstrap()
 
-    def _bootstrap(self) -> Language:
+    def _bootstrap(self) -> Any:
         """
         Load and set up the UDPipe model.
         Returns:
@@ -172,7 +168,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         pass
 
-    def from_conllu(self, article: Article) -> Doc:
+    def from_conllu(self, article: Article) -> Any:
         """
         Load ConLLU content from article stored on disk.
 
@@ -240,7 +236,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+    def _make_graphs(self, doc: Any) -> List[Any]:
         """
         Make graphs for a document.
 
@@ -253,7 +249,7 @@ class PatternSearchPipeline(PipelineProtocol):
         return []
 
     def _add_children(
-        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+        self, graph: Any, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
     ) -> None:
         """
         Add children to TreeNode.
