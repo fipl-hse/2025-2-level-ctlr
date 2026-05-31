@@ -14,6 +14,7 @@ from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
+    import networkx
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
