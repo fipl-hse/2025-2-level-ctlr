@@ -11,7 +11,6 @@ Make sure to install the library in your working environment!
 try:
     import networkx as nx
     from networkx.algorithms.isomorphism import DiGraphMatcher
-    import matplotlib.pyplot as plt
 except ImportError:
     print("No libraries installed. Failed to import.")
 
@@ -47,6 +46,7 @@ def simple_graph_example() -> nx.DiGraph:
     for from_vertex, to_vertex in [(0, 1), (1, 2), (2, 3)]:
         simple_graph.add_edge(from_vertex, to_vertex)
     return simple_graph
+
 
 def simple_graph_task() -> nx.DiGraph:
     """
@@ -195,6 +195,7 @@ def main() -> None:
         2: {3: {}},
         3: {},
     }
+
     # simple_graph = simple_graph_task()
     # assert nx.to_dict_of_dicts(simple_graph) == {
     #     2: {3: {}, 4: {}},
@@ -205,14 +206,14 @@ def main() -> None:
     # }
 
     # 2. Hard graphs
-    # family_graph_sample = family_graph_example()
-    # assert nx.to_dict_of_dicts(family_graph_sample) == {
-    #     "Оля": {"Юля": {"label": "mother"}},
-    #     "Петя": {"Юля": {"label": "father"}},
-    #     "Юля": {"Костя": {"label": "mother"}},
-    #     "Никита": {"Костя": {"label": "father"}},
-    #     "Костя": {},
-    # }
+    family_graph_sample = family_graph_example()
+    assert nx.to_dict_of_dicts(family_graph_sample) == {
+        "Оля": {"Юля": {"label": "mother"}},
+        "Петя": {"Юля": {"label": "father"}},
+        "Юля": {"Костя": {"label": "mother"}},
+        "Никита": {"Костя": {"label": "father"}},
+        "Костя": {},
+    }
 
     # family_graph = family_graph_task()
     # assert nx.to_dict_of_dicts(family_graph) == {
