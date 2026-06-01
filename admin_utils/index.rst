@@ -20,14 +20,9 @@
     ../docs/public/article.rst
     ../docs/public/core_utils.rst
     ../docs/public/dataset.rst
-    ../docs/public/DEVELOPER.rst
     ../docs/public/dynamic_scraping.rst
     ../docs/public/faq.rst
-    ../docs/public/fork_update.rst
-    ../docs/public/run_in_terminal.rst
     ../docs/public/lectures_content.rst
-    ../docs/public/starting_guide.rst
-    ../docs/public/tests.rst
     ../docs/public/ud_format.rst
     ../docs/public/UD_intro.rst
     ../docs/public/graphs_intro.rst
