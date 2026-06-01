@@ -70,6 +70,8 @@ class CorpusManager:
             raise EmptyDirectoryError()
         raw_files = [file for file in files if file.name.endswith("_raw.txt")]
         meta_files = [file for file in files if file.name.endswith("_meta.json")]
+        if not files:
+            raise EmptyDirectoryError()
         if meta_files:
             if len(raw_files) != len(meta_files):
                 raise InconsistentDatasetError()
