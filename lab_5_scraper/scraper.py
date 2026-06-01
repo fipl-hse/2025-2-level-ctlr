@@ -222,6 +222,9 @@ class Crawler:
         url = article_bs.get('href')
         if not isinstance(url, str):
             return ''
+        url = url.strip()
+        if not re.search(r'\d+\.htm$', url):
+            return ''
         if url.startswith('http'):
             if 'burkin.rusf.ru' not in url:
                 return ''
