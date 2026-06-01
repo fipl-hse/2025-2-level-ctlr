@@ -7,9 +7,6 @@ import pathlib
 import re
 
 import spacy_udpipe
-from networkx import DiGraph
-from spacy import Language
-from spacy.tokens import Doc
 from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import Article, ArtifactType
@@ -17,6 +14,21 @@ from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
+
+
+try:
+    from networkx import DiGraph
+except ImportError:
+    DiGraph = None  # type: ignore
+    print("No libraries installed. Failed to import.")
+
+try:
+    from spacy.language import Language
+    from spacy.tokens import Doc
+except ImportError:
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 
 
 class InconsistentDatasetError(Exception):
@@ -132,7 +144,7 @@ class TextProcessingPipeline(PipelineProtocol):
             if article.text:
                 article.text = re.sub(r'\s+', ' ', article.text).strip()
         list(map(to_cleaned, articles))
-        if not self._analyzer:
+        if self._analyzer is None:
             return
         raw_texts = [article.text for article in articles]
         conllu_results = self._analyzer.analyze(raw_texts)
@@ -248,7 +260,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError('An article file is empty.')
         with open(path, 'r', encoding='utf-8') as f:
             document = f.read()
-        parsed: Doc = self._parser.parse_conll_text_as_spacy(document.strip('\n'))
+        parsed = self._parser.parse_conll_text_as_spacy(document.strip('\n'))
         return parsed
 
 
@@ -284,13 +296,23 @@ class POSFrequencyPipeline:
             freq[token.pos_] = freq.get(token.pos_, 0) + 1
         return freq
 
+    def _add_top_two_sum(self, freq_pos):
+        if not freq_pos:
+            return freq_pos.copy() if freq_pos else {}
+        sorted_freq = sorted(freq_pos.items(), key=lambda x: x[1], reverse=True)
+        top_two_sum = sum(count for _, count in sorted_freq[:2])
+        result = freq_pos.copy()
+        result['Top2_Sum'] = top_two_sum
+        return result
+
     def run(self) -> None:
         """
         Visualize the frequencies of each part of speech.
         """
         for article in self._corpus_manager.get_articles().values():
             freq_pos = self._count_frequencies(article)
-            article.set_pos_info(freq_pos)
+            freq_with_sum = self._add_top_two_sum(freq_pos)
+            article.set_pos_info(freq_with_sum)
             to_meta(article)
             visualize(article=article, path_to_save=ASSETS_PATH / f'{article.article_id}_image.png')
 
@@ -366,7 +388,7 @@ def main() -> None:
     """
     corpus_manager = CorpusManager(ASSETS_PATH)
     analyzer = UDPipeAnalyzer()
-    pipeline = TextProcessingPipeline(corpus_manager, analyzer)
+    pipeline = TextProcessingPipeline(corpus_manager, None)
     pipeline.run()
     pos_freq_pipeline = POSFrequencyPipeline(corpus_manager, analyzer)
     pos_freq_pipeline.run()
