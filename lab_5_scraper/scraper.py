@@ -6,9 +6,9 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
+import random
 import re
 import shutil
-import random
 import time
 from urllib.parse import urljoin
 
@@ -22,25 +22,25 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-     """Seed URL does not match standard pattern."""
- 
+    """Seed URL does not match standard pattern."""
+
 class NumberOfArticlesOutOfRangeError(Exception):
-     """Total number of articles is out of range from 1 to 150."""
- 
+    """Total number of articles is out of range from 1 to 150."""
+
 class IncorrectNumberOfArticlesError(Exception):
-     """Total number of articles to parse is not integer or less than 0."""
- 
+    """Total number of articles to parse is not integer or less than 0."""
+
 class IncorrectHeadersError(Exception):
-     """Headers are not in a form of dictionary."""
- 
+    """Headers are not in a form of dictionary."""
+
 class IncorrectEncodingError(Exception):
-     """Encoding must be specified as a string."""
+    """Encoding must be specified as a string."""
 
 class IncorrectTimeoutError(Exception):
-     """Timeout value must be a positive integer less than 60."""
- 
+    """Timeout value must be a positive integer less than 60."""
+
 class IncorrectVerifyError(Exception):
-     """Verify certificate and headless mode values must either be True or False."""
+    """Verify certificate and headless mode values must either be True or False."""
 
 
 class Config:
@@ -74,7 +74,7 @@ class Config:
             ConfigDTO: Config values
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-             data = json.load(f)
+            data = json.load(f)
         return ConfigDTO(
             seed_urls=data.get('seed_urls', []),
             headers=data.get('headers', {}),
@@ -95,26 +95,26 @@ class Config:
         for url in self._config_dto.seed_urls:
             if not isinstance(url, str) or not pattern.match(url):
                 raise IncorrectSeedURLError(f'Invalid seed URL: {url}')
-        
+
         total = self._config_dto.total_articles
         if not isinstance(total, int) or total <= 0:
             raise IncorrectNumberOfArticlesError('Total articles must be a positive integer')
         if total > 150:
             raise NumberOfArticlesOutOfRangeError('Total articles cannot exceed 150')
- 
+
         if not isinstance(self._config_dto.headers, dict):
             raise IncorrectHeadersError('Headers must be a dictionary')
- 
+
         if not isinstance(self._config_dto.encoding, str):
             raise IncorrectEncodingError('Encoding must be a string')
- 
+
         timeout = self._config_dto.timeout
         if not isinstance(timeout, int) or timeout <= 0 or timeout > 60:
             raise IncorrectTimeoutError('Timeout must be an integer between 1 and 60')
- 
+
         if not isinstance(self._config_dto.should_verify_certificate, bool):
             raise IncorrectVerifyError('should_verify_certificate must be a boolean')
- 
+
         if not isinstance(self._config_dto.headless_mode, bool):
             raise IncorrectVerifyError('headless_mode must be a boolean')
 
@@ -197,18 +197,15 @@ def make_request(url: str, config: Config) -> requests.models.Response:
         requests.models.Response: A response from a request
     """
     time.sleep(random.uniform(0.5, 1.5))
-    try:
-        response = requests.get(
-            url,
-            headers=config.get_headers(),
-            timeout=config.get_timeout(),
-            verify=config.get_verify_certificate()
-        )
-        response.encoding = config.get_encoding()
-        response.raise_for_status()
-        return response
-    except requests.exceptions.RequestException:
-        return response
+    response = requests.get(
+        url,
+        headers=config.get_headers(),
+        timeout=config.get_timeout(),
+        verify=config.get_verify_certificate()
+    )
+    response.encoding = config.get_encoding()
+    response.raise_for_status()
+    return response
 
 
 class Crawler:
@@ -242,10 +239,7 @@ class Crawler:
         href = article_bs.get('href')
         if not href or not isinstance(href, str):
             return ''
-        if href.startswith('/'):
-            full_url = 'https://royallib.com' + href
-        else:
-            full_url = href
+        full_url = urljoin('https://royallib.com', href)
         if re.search(r'/book/.*\.html', full_url):
             return full_url
         return ''
@@ -263,13 +257,13 @@ class Crawler:
             if current_url in visited:
                 continue
             visited.add(current_url)
- 
+
             response = make_request(current_url, self.config)
             if not response:
                 continue
- 
+
             soup = BeautifulSoup(response.text, 'lxml')
- 
+
             for a in soup.find_all('a', href=True):
                 if len(self.urls) >= needed:
                     break
