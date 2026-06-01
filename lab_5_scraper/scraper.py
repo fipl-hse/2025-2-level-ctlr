@@ -7,8 +7,8 @@ import datetime
 import json
 import pathlib
 import random
-import re
 import shutil
+import re
 import time
 from urllib.parse import urljoin, urlparse
 
@@ -341,7 +341,7 @@ class CrawlerRecursive(Crawler):
         """
         Find number of article urls requested.
         """
-        return None
+        return None #Instead of pass
 
 
 # 4, 6, 8, 10
@@ -374,23 +374,14 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         divs = article_soup.find_all("div", class_=["article-body"])
-
-        text_blocks = []
-
+        if not divs:
+            return
+        text = []
         for div in divs:
             tags = div.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
             for tag in tags:
-                tag_text = tag.get_text(strip=True)
-                if tag_text:
-                    text_blocks.append(tag_text)
-
-        if not text_blocks:
-            for tag in article_soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p"]):
-                tag_text = tag.get_text(strip=True)
-                if tag_text:
-                    text_blocks.append(tag_text)
-
-        self.article.text = "\n".join(text_blocks)
+                text.extend(tag.contents)
+        self.article.text = "\n".join(abstract for abstract in text if isinstance(abstract, str))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -466,6 +457,7 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
         shutil.rmtree(base_path)
 
     base_path.mkdir(parents=True)
+
 
 def main() -> None:
     """
