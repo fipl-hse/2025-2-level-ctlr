@@ -220,7 +220,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         with open(path, "w", encoding="utf-8") as file:
-            file.write(article.get_conllu_info())
+            file.write(article.get_conllu_info().rstrip("\n"))
 
     def from_conllu(self, article: Article) -> Doc:
         """
