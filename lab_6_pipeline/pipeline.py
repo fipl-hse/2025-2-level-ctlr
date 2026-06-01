@@ -10,7 +10,7 @@ import spacy_udpipe
 from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import from_raw, from_meta, to_cleaned, to_meta
+from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
