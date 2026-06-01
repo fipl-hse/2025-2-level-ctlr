@@ -260,7 +260,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         with open(path, 'r', encoding='utf-8') as f:
             document = f.read()
         parsed = self._parser.parse_conll_text_as_spacy(document.strip('\n'))
-        return parsed
+        return parsed # type: ignore
 
 
 class POSFrequencyPipeline:
@@ -295,7 +295,10 @@ class POSFrequencyPipeline:
             freq[token.pos_] = freq.get(token.pos_, 0) + 1
         return freq
 
-    def _add_top_two_sum(self, freq_pos):
+    def _add_top_two_sum(self, freq_pos: Dict[str, int]) -> Dict[str, Union[int, str]]:
+        """
+        Add sum of top two frequencies to the dictionary.
+        """
         if not freq_pos:
             return freq_pos.copy() if freq_pos else {}
         sorted_freq = sorted(freq_pos.items(), key=lambda x: x[1], reverse=True)
