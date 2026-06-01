@@ -20,11 +20,13 @@ from core_utils.pipeline import (
 from core_utils.visualizer import visualize
 
 try:
+    import matplotlib.pyplot as plt
     import networkx as nx
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 
 except ImportError:
+    plt = None  # type: ignore
     DiGraph = None  # type: ignore
     nx = None #type: ignore
     print("No libraries installed. Failed to import.")
@@ -38,6 +40,7 @@ except ImportError:
     spacy_udpipe = None # type: ignore
     Language = None  # type: ignore
     Doc = None  # type: ignore
+    Token = None # type: ignore
     ConllParser = None # type: ignore
     print("No libraries installed. Failed to import.")
 
@@ -319,7 +322,7 @@ class POSFrequencyPipeline:
             article_meta.set_pos_info(pos_frequencies)
             to_meta(article_meta)
             visualize(article_meta, ASSETS_PATH / f"{article.article_id}_image.png")
-
+            plt.close()
 
 
 class PatternSearchPipeline(PipelineProtocol):
