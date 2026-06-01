@@ -321,40 +321,17 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        candidates = [
-        article_soup.find('div', class_='text'),
-        article_soup.find('div', id='content'),
-        article_soup.find('div', class_='entry'),
-        article_soup.find('article'),
-        article_soup.find('main'),
-        article_soup.find('div', class_='book-content'),
-        article_soup.find('div', class_='content'),
-        article_soup.find('div', class_='bb-text'),
-        article_soup.find('pre')
-    ]
-    text_div = next((c for c in candidates if c), None)
-    
-    if text_div:
-        for tag in text_div(['script', 'style']):
-            tag.decompose()
+        text_div = article_soup.find('div', class_='text') or article_soup.find('div', id='content')
+        if not text_div:
+            self.article.text = ''
+            return
+        for unwanted in text_div(['script', 'style']):
+            unwanted.decompose()
         paragraphs = text_div.find_all('p')
         if paragraphs:
             self.article.text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
         else:
             self.article.text = text_div.get_text(strip=True)
-        return
-
-    body = article_soup.find('body')
-    if body:
-        for tag in body(['script', 'style', 'nav', 'footer', 'header']):
-            tag.decompose()
-        paragraphs = body.find_all('p')
-        if paragraphs:
-            self.article.text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
-        else:
-            self.article.text = body.get_text(strip=True)
-    else:
-        self.article.text = article_soup.get_text(strip=True)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
