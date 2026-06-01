@@ -400,7 +400,7 @@ class HTMLParser:
         else:
             title_text = title_tag.get_text(strip=True)
             self.article.title = title_text.split(". Text")[0]
-        
+
         self._fill_article_date(article_soup)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
