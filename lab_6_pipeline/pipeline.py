@@ -84,12 +84,16 @@ class CorpusManager:
         ]
         if len(raw_files) != len(meta_files):
             raise InconsistentDatasetError('Numbers of raw and meta files are not equal.')
-        for i, raw_file in enumerate(sorted(raw_files), 1):
-            if int(raw_file.stem.split('_')[0]) != i:
-                raise InconsistentDatasetError('Raw IDs contain slips.')
-        for i, meta_file in enumerate(sorted(meta_files), 1):
-            if int(meta_file.stem.split('_')[0]) != i:
-                raise InconsistentDatasetError('Meta IDs contain slips.')
+        raw_ids = [int(f.stem.split('_')[0]) for f in raw_files]
+        if len(set(raw_ids)) != len(raw_ids):
+            raise InconsistentDatasetError('Raw IDs are not unique.')
+        if min(raw_ids) <= 0:
+            raise InconsistentDatasetError('Raw IDs must be positive.')
+        meta_ids = [int(f.stem.split('_')[0]) for f in meta_files]
+        if len(set(meta_ids)) != len(meta_ids):
+            raise InconsistentDatasetError('Meta IDs are not unique.')
+        if min(meta_ids) <= 0:
+            raise InconsistentDatasetError('Meta IDs must be positive.')
         for filepath in raw_files + meta_files:
             if filepath.stat().st_size == 0:
                 raise InconsistentDatasetError('The file is empty.')
