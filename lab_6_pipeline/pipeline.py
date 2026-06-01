@@ -113,7 +113,7 @@ class CorpusManager:
         Register each dataset entry.
         """
         path = self.path_to_raw_txt_data
-        for f in sorted(path.glob("*_raw.txt")):
+        for f in sorted(path.glob("*_raw.txt"), reverse=True):
             match = re.match(r"^(\d+)_raw\.txt$", f.name)
             if match:
                 article_id = int(match.group(1))
@@ -283,7 +283,7 @@ class POSFrequencyPipeline:
             dict[str, int]: POS frequencies
         """
         doc = self._analyzer.from_conllu(article)
-        frequencies: dict[str, int] = {}
+        frequencies = {}
         for token in doc:
             pos = token.pos_
             if pos:
