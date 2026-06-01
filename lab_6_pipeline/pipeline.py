@@ -29,10 +29,10 @@ try:
     from spacy.tokens import Doc
     from spacy_conll.parser import ConllParser
 except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    spacy_conll = None # type: ignore
-    spacy_udpipe = None # type: ignore
+    Language = None
+    Doc = None
+    spacy_conll = None
+    spacy_udpipe = None
     print("No libraries installed. Failed to import.")
 
 
@@ -335,7 +335,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]: # pylint: disable=unused-argument
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
 
@@ -360,7 +360,7 @@ class PatternSearchPipeline(PipelineProtocol):
             tree_node (TreeNode): Root node of the match
         """
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]: # pylint: disable=unused-argument
+    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
         Search for the required pattern.
 
