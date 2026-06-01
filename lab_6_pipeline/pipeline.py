@@ -15,7 +15,6 @@ from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
 
-
 try:
     from networkx import DiGraph
 except ImportError:
