@@ -105,11 +105,12 @@ class Config:
         for url in config_dto.seed_urls:
             if not isinstance(url, str) or not url_pattern.match(url):
                 raise IncorrectSeedURLError("Seed URL does not match standard pattern.")
-        if not isinstance(config_dto.total_articles, int) or isinstance(config_dto.total_articles, bool):
+        if (not isinstance(config_dto.total_articles, int) or
+            isinstance(config_dto.total_articles, bool)):
             raise IncorrectNumberOfArticlesError("Total articles must be an integer.")
         if config_dto.total_articles <= 0:
             raise IncorrectNumberOfArticlesError("Total articles must be greater than 0.")
-        if not (1 <= config_dto.total_articles <= 150):
+        if not 1 <= config_dto.total_articles <= 150:
             raise NumberOfArticlesOutOfRangeError("Total articles must be between 1 and 150.")
         if not isinstance(config_dto.headers, dict):
             raise IncorrectHeadersError("Headers must be a dictionary.")
@@ -117,7 +118,7 @@ class Config:
             raise IncorrectEncodingError("Encoding must be specified as a string.")
         if not isinstance(config_dto.timeout, int) or isinstance(config_dto.timeout, bool):
             raise IncorrectTimeoutError("Timeout must be an integer.")
-        if not (0 < config_dto.timeout < 60):
+        if not 0 < config_dto.timeout < 60:
             raise IncorrectTimeoutError("Timeout must be a positive integer less than 60.")
         if not isinstance(config_dto.should_verify_certificate, bool):
             raise IncorrectVerifyError("Verify certificate value must be True or False.")
@@ -248,7 +249,7 @@ class Crawler:
             href = href[1:]
 
         return "https://carsson.ru/" + href
-    
+
 
     def find_articles(self) -> None:
         """
@@ -292,10 +293,8 @@ class Crawler:
                         seeds_to_visit.append(article_url)
                     continue
 
-                if any(word in article_url.lower() for word in blacklisted_keywords):
-                    continue
-
-                if article_url in ("https://carsson.ru", "https://carsson.ru/"):
+                if article_url in ("https://carsson.ru", "https://carsson.ru/") or \
+                        any(word in article_url.lower() for word in blacklisted_keywords):
                     continue
 
                 is_inside_article = link.find_parent(['h1', 'h2', 'article'])
@@ -334,12 +333,13 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
-        super().__init__(config)
+        pass
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
+        pass
 
 
 # 4, 6, 8, 10
@@ -390,8 +390,7 @@ class HTMLParser:
 
         if title_tag:
             title_text = title_tag.get_text(strip=True)
-            title_text = title_text.strip('«»"\' \t\n\r')
-            self.article.title = title_text
+            self.article.title = str(title_text)
         else:
             self.article.title = "Untitled"
 
