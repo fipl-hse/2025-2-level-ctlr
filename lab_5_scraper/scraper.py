@@ -246,27 +246,57 @@ class Crawler:
         Find articles.
         """
         needed = self.config.get_num_articles()
+        seeds_to_visit = list(self.config.get_seed_urls())
+        visited_seeds = set()
         
-        for seed_url in self.config.get_seed_urls():
+        blacklisted_keywords = [
+            'karta-sajta', 'contacts', 'category', 'tag', 'author',
+            'privacy', 'advertisement', 'about', 'plugins', 'interesnoe',
+            'proza', 'stihi', 'novosti'
+        ]
+
+        for seed_url in seeds_to_visit:
             if len(self.urls) >= needed:
                 break
-            
+            if seed_url in visited_seeds:
+                continue
+            visited_seeds.add(seed_url)
+
             response = make_request(seed_url, self.config)
             if not response or response.status_code != 200:
                 continue
-            
+
             soup = BeautifulSoup(response.content, 'html.parser')
-            
             all_links = soup.find_all('a')
-            
+
             for link in all_links:
-                if len(self.urls) >= needed:
-                    break
-                
+                href = link.get("href", "")
+                if not href:
+                    continue
+
                 article_url = self._extract_url(link)
-                
-                if article_url and article_url not in self.urls:
-                    self.urls.append(article_url)
+                if not article_url or not article_url.startswith("https://carsson.ru/"):
+                    continue
+
+                if "/page/" in article_url:
+                    if article_url not in visited_seeds and article_url not in seeds_to_visit:
+                        seeds_to_visit.append(article_url)
+                    continue
+
+                if any(word in article_url.lower() for word in blacklisted_keywords):
+                    continue
+
+                if article_url in ("https://carsson.ru", "https://carsson.ru/"):
+                    continue
+
+                is_inside_article = link.find_parent(['h1', 'h2', 'article'])
+
+                if is_inside_article and article_url not in self.urls:
+                    if len(self.urls) < needed:
+                        self.urls.append(article_url)
+                    else:
+                        break
+
 
     def get_search_urls(self) -> list:
         """
@@ -319,6 +349,10 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        self.full_url = full_url
+        self.article_id = article_id
+        self.config = config
+        self.article = Article(full_url, article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -327,6 +361,11 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        paragraphs = article_soup.find_all('p')
+        text_blocks = [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)]
+
+        final_text = ' '.join(text_blocks)
+        self.article.text = final_text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -335,6 +374,39 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title_tag = article_soup.find('h1', class_='entry-title')
+        if not title_tag:
+            title_tag = article_soup.find('h1')
+        
+        if title_tag:
+            title_text = title_tag.get_text(strip=True)
+            title_text = title_text.strip('«»"\' \t\n\r')
+            self.article.title = title_text
+        else:
+            self.article.title = "Untitled"
+
+        self.article.author = ['NOT FOUND']
+        self.article.topics = []
+
+        time_tag = article_soup.find('time', class_='entry-date')
+        date_str = ""
+        
+        if time_tag and time_tag.get_text():
+            raw_text = time_tag.get_text(strip=True)
+            date_match = re.search(r"\b\d{2}\.\d{2}\.\d{4}\b", raw_text)
+            if date_match:
+                date_str = date_match.group(0)
+
+        if not date_str:
+            date_pattern = re.compile(r"\b\d{2}\.\d{2}\.\d{4}\b")
+            date_match = date_pattern.search(article_soup.get_text())
+            if date_match:
+                date_str = date_match.group(0)
+
+        if date_str:
+            self.article.date = self.unify_date_format(date_str)
+        else:
+            self.article.date = datetime.datetime.now()
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -346,6 +418,9 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        clean_date = date_str.strip()
+        day, month, year = map(int, clean_date.split('.'))
+        return datetime.datetime(year, month, day)
 
     def parse(self) -> Article | bool:
         """
@@ -354,6 +429,14 @@ class HTMLParser:
         Returns:
             Article | bool: Article instance, False in case of request error
         """
+        response = make_request(self.full_url, self.config)
+        if not response or response.status_code != 200:
+            return self.article
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        self._fill_article_with_meta_information(soup)
+        self._fill_article_with_text(soup)
+        return self.article
 
 
 def prepare_environment(base_path: pathlib.Path | str) -> None:
@@ -363,6 +446,10 @@ def prepare_environment(base_path: pathlib.Path | str) -> None:
     Args:
         base_path (pathlib.Path | str): Path where articles stores
     """
+    base_path = pathlib.Path(base_path)
+    if base_path.exists():
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True)
 
 
 def main() -> None:
@@ -371,6 +458,14 @@ def main() -> None:
     """
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
     prepare_environment(ASSETS_PATH)
+    crawler = Crawler(config=configuration)
+    crawler.find_articles()
+    for i, fullurl in enumerate(crawler.urls):
+        parser = HTMLParser(full_url=fullurl, article_id=i+1, config=configuration)
+        article = parser.parse()
+        if isinstance(article, Article):
+            to_raw(article)
+            to_meta(article)
 
 
 if __name__ == "__main__":
