@@ -11,6 +11,20 @@ from core_utils.article.article import Article
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
+try:
+    from spacy import Language
+    from spacy.tokens import Doc
+except ImportError:
+    Language = Any
+    Doc = Any
+    print("No libraries installed. Failed to import spacy.")
+
+try:
+    from networkx import DiGraph
+    from networkx.algorithms.isomorphism import DiGraphMatcher
+except ImportError:
+    DiGraph = None
+    print("No libraries installed. Failed to import.")
 
 class EmptyDirectoryError(Exception):
     """Raised when dataset directory is empty."""
@@ -197,7 +211,7 @@ class POSFrequencyPipeline:
         self._corpus = corpus_manager
         self._analyzer = analyzer
 
-    def _count_frequencies(self, article: Article) -> Dict[str, int]:
+    def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
         Count POS frequency in Article.
 
@@ -236,7 +250,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Any) -> List[Any]:
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
 
@@ -249,7 +263,7 @@ class PatternSearchPipeline(PipelineProtocol):
         return []
 
     def _add_children(
-        self, graph: Any, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
+        self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
     ) -> None:
         """
         Add children to TreeNode.
@@ -262,7 +276,7 @@ class PatternSearchPipeline(PipelineProtocol):
         """
         pass
 
-    def _find_pattern(self, doc_graphs: list) -> Dict[int, list[TreeNode]]:
+    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
         Search for the required pattern.
 
