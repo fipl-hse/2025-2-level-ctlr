@@ -62,26 +62,33 @@ class CorpusManager:
         Validate folder with assets.
         """
         if not self._path.exists():
-            raise FileNotFoundError()
+            raise FileNotFoundError("Path does not exist")
         if not self._path.is_dir():
-            raise NotADirectoryError()
+            raise NotADirectoryError("Path does not lead to a directory")
         files = list(self._path.iterdir())
         if not files:
-            raise EmptyDirectoryError()
+            raise EmptyDirectoryError("Directory is empty")
         raw_files = [file for file in files if file.name.endswith("_raw.txt")]
         meta_files = [file for file in files if file.name.endswith("_meta.json")]
-        if not files:
-            raise EmptyDirectoryError()
-        if meta_files:
-            if len(raw_files) != len(meta_files):
-                raise InconsistentDatasetError()
-            raw_ids = [int(file.name.split("_")[0]) for file in raw_files]
-            meta_ids = [int(file.name.split("_")[0]) for file in meta_files]
-            if raw_ids!=meta_ids:
-                raise InconsistentDatasetError()
+        if not raw_files:
+            raise InconsistentDatasetError("Raw file is empty")
+        if len(raw_files) != len(meta_files):
+            raise InconsistentDatasetError("Number of raw and meta files do not match")
         for file in raw_files:
             if file.stat().st_size == 0:
                 raise InconsistentDatasetError("File is empty")
+        raw_ids = sorted([int(file.name.split("_")[0]) for file in raw_files])
+        for file in meta_files:
+            if file.stat().st_size == 0:
+                raise InconsistentDatasetError("File is empty")
+        meta_ids = sorted([int(file.name.split("_")[0]) for file in meta_files])
+        expected_ids = list(range(1, len(raw_ids) + 1))
+        if raw_ids!=meta_ids:
+            raise InconsistentDatasetError("Raw and meta file IDs do not match")
+        if raw_ids!=expected_ids:
+            raise InconsistentDatasetError("Raw file IDs contain slips")
+        if meta_ids!=expected_ids:
+            raise InconsistentDatasetError("Meta file IDs contain slips")
 
     def _scan_dataset(self) -> None:
         """
