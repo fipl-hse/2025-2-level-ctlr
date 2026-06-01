@@ -10,8 +10,9 @@ import json
 import pathlib
 import re
 import shutil
-import requests
+
 from bs4 import BeautifulSoup, Tag
+import requests
 
 from core_utils.article.article import Article
 from core_utils.article.io import to_meta, to_raw
@@ -226,7 +227,7 @@ class Crawler:
             config (Config): Configuration
         """
         self.config = config
-        self.urls = []
+        self.urls: list[str] = []
 
     def _extract_url(self, article_bs: Tag) -> str:
         """
@@ -242,13 +243,15 @@ class Crawler:
         if not href:
             return ""
 
-        if href.startswith("http"):
-            return href
+        href_str = str(href)
 
-        if href.startswith("/"):
-            href = href[1:]
+        if href_str.startswith("http"):
+            return href_str
 
-        return "https://carsson.ru/" + href
+        if href_str.startswith("/"):
+            href_str = href_str[1:]
+
+        return "https://carsson.ru/" + href_str
 
 
     def find_articles(self) -> None:
@@ -277,9 +280,8 @@ class Crawler:
                 continue
 
             soup = BeautifulSoup(response.content, 'html.parser')
-            all_links = soup.find_all('a')
 
-            for link in all_links:
+            for link in soup.find_all('a'):
                 href = link.get("href", "")
                 if not href:
                     continue
@@ -297,13 +299,9 @@ class Crawler:
                         any(word in article_url.lower() for word in blacklisted_keywords):
                     continue
 
-                is_inside_article = link.find_parent(['h1', 'h2', 'article'])
-
-                if is_inside_article and article_url not in self.urls:
+                if link.find_parent(['h1', 'h2', 'article']) and article_url not in self.urls:
                     if len(self.urls) < needed:
                         self.urls.append(article_url)
-                    else:
-                        break
 
 
     def get_search_urls(self) -> list:
@@ -333,13 +331,12 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
-        pass
+        super().__init__(config)
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
-        pass
 
 
 # 4, 6, 8, 10
