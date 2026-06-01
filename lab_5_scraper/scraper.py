@@ -251,7 +251,7 @@ class Crawler:
         needed = self.config.get_num_articles()
         to_visit = list(self.config.get_seed_urls())
         visited = set()
- 
+
         while len(self.urls) < needed and to_visit:
             current_url = to_visit.pop(0)
             if current_url in visited:
@@ -270,7 +270,7 @@ class Crawler:
                 article_url = self._extract_url(a)
                 if article_url and article_url not in self.urls:
                     self.urls.append(article_url)
- 
+
             if len(self.urls) < needed:
                 next_link = soup.find('a', rel='next')
                 if next_link and next_link.get('href'):
@@ -321,17 +321,40 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        text_div = article_soup.find('div', class_='text') or article_soup.find('div', id='content')
-        if not text_div:
-            self.article.text = ''
-            return
-        for unwanted in text_div(['script', 'style']):
-            unwanted.decompose()
+        candidates = [
+        article_soup.find('div', class_='text'),
+        article_soup.find('div', id='content'),
+        article_soup.find('div', class_='entry'),
+        article_soup.find('article'),
+        article_soup.find('main'),
+        article_soup.find('div', class_='book-content'),
+        article_soup.find('div', class_='content'),
+        article_soup.find('div', class_='bb-text'),
+        article_soup.find('pre')
+    ]
+    text_div = next((c for c in candidates if c), None)
+    
+    if text_div:
+        for tag in text_div(['script', 'style']):
+            tag.decompose()
         paragraphs = text_div.find_all('p')
         if paragraphs:
             self.article.text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
         else:
             self.article.text = text_div.get_text(strip=True)
+        return
+
+    body = article_soup.find('body')
+    if body:
+        for tag in body(['script', 'style', 'nav', 'footer', 'header']):
+            tag.decompose()
+        paragraphs = body.find_all('p')
+        if paragraphs:
+            self.article.text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
+        else:
+            self.article.text = body.get_text(strip=True)
+    else:
+        self.article.text = article_soup.get_text(strip=True)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
