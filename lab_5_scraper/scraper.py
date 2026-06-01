@@ -223,6 +223,8 @@ class Crawler:
         if not isinstance(url, str):
             return ''
         if url.startswith('http'):
+            if 'burkin.rusf.ru' not in url:
+                return ''
             return url
         return 'https://burkin.rusf.ru/' + url.lstrip('/')
 
