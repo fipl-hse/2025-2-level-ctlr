@@ -99,7 +99,7 @@ class Config:
         if not isinstance(self.config_content.encoding, str):
             raise IncorrectEncodingError('encoding must be specified as a string')
         if (not isinstance(self.config_content.timeout, int) 
-            or self.config_content.timeout < 0 
+            or self.config_content.timeout < 1 
             or self.config_content.timeout > 60):
             raise IncorrectTimeoutError('timeout value must be a positive integer less than 60')
         if (not isinstance(self.config_content.should_verify_certificate, bool) 
