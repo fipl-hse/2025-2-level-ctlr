@@ -250,7 +250,7 @@ class Crawler:
                 response = make_request(seed_url, self.config)
             except requests.RequestException:
                 continue
-            if response.status_code != 200:
+            if not response.ok:
                 continue
             soup = BeautifulSoup(response.text, "lxml")
             for tag in soup.find_all("a", href=True):
@@ -329,31 +329,8 @@ class HTMLParser:
                 texts.append(body_text)
         self.article.text = "\n\n".join(texts) if texts else "Default text to pass the test."
 
-    def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
-        """
-        Find meta information of article.
-
-        Args:
-            article_soup (bs4.BeautifulSoup): BeautifulSoup instance
-        """
-        # pylint: disable=too-many-branches
-        author_tag = article_soup.find("div", class_="author")
-        if author_tag is None:
-            self.article.author = ["NOT FOUND"]
-        else:
-            self.article.author = [author_tag.get_text(strip=True)]
-        header_tag = article_soup.find("div", class_="thdr")
-        if header_tag is not None:
-            header_links = header_tag.find_all("a")
-            if len(header_links) >= 2:
-                self.article.title = header_links[1].get_text(strip=True)
-                return
-        title_tag = article_soup.find("title")
-        if title_tag is None:
-            self.article.title = "NOT FOUND"
-        else:
-            title_text = title_tag.get_text(strip=True)
-            self.article.title = title_text.split(". Text")[0]
+    def _fill_article_date(self, article_soup: BeautifulSoup) -> None:
+        """ - """
         date_element = (
             article_soup.find('span', class_='date')
             or article_soup.find('div', class_='date')
@@ -375,6 +352,33 @@ class HTMLParser:
                     pass
         if not self.article.date:
             self.article.date = datetime.datetime.now()
+
+    def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
+        """
+        Find meta information of article.
+
+        Args:
+            article_soup (bs4.BeautifulSoup): BeautifulSoup instance
+        """
+        author_tag = article_soup.find("div", class_="author")
+        if author_tag is None:
+            self.article.author = ["NOT FOUND"]
+        else:
+            self.article.author = [author_tag.get_text(strip=True)]
+        header_tag = article_soup.find("div", class_="thdr")
+        if header_tag is not None:
+            header_links = header_tag.find_all("a")
+            if len(header_links) >= 2:
+                self.article.title = header_links[1].get_text(strip=True)
+                return
+        title_tag = article_soup.find("title")
+        if title_tag is None:
+            self.article.title = "NOT FOUND"
+        else:
+            title_text = title_tag.get_text(strip=True)
+            self.article.title = title_text.split(". Text")[0]
+        
+        self._fill_article_date(article_soup)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
