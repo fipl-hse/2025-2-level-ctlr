@@ -29,8 +29,8 @@ try:
     from spacy.tokens import Doc
     from spacy_conll.parser import ConllParser
 except ImportError:
-    Language = None
-    Doc = None
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
     spacy_conll = None
     spacy_udpipe = None
     print("No libraries installed. Failed to import.")
