@@ -13,15 +13,12 @@ try:
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
-    DiGraph = None
     print("No libraries installed. Failed to import.")
 
 try:
     from spacy.language import Language
     from spacy.tokens import Doc, Token
 except ImportError:
-    Language = None
-    Doc = None
     print("No libraries installed. Failed to import.")
 from spacy_conll.parser import ConllParser
 
