@@ -156,9 +156,11 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles = self._corpus.get_articles()
 
-        for article_id, article in articles.items():
+        for article in articles.values():
             raw_text = article.text
-            cleaned_text = raw_text.lower()
+            cleaned_text = raw_text.lower().split('.')
+            for word in cleaned_text:
+                word.split()
             cleaned_text = cleaned_text.translate(str.maketrans("", "", string.punctuation))
             article.cleaned = cleaned_text
             to_cleaned(article)
