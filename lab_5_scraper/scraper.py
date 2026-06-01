@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup, Tag
 from core_utils.article.article import Article
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
-from core_utils.article.io import to_raw
+from core_utils.article.io import to_raw, to_meta
 
 class IncorrectSeedURLError(Exception):
     'seed URL does not match standard pattern "https?://(www.)?"'
@@ -325,6 +325,22 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        title_tag = article_soup.find('td', align='left')
+        if title_tag:
+            strong = title_tag.find('strong')
+            self.article.title = strong.get_text(strip=True) if strong else 'NOT FOUND'
+        else:
+            self.article.title = 'NOT FOUND'
+        
+        author_tag = article_soup.find('a', href=re.compile(r'mailto:burkin'))
+        if author_tag:
+            author_text = author_tag.get_text(strip=True)
+            if author_text and '@' not in author_text:
+                self.article.author = [author_text]
+            else:
+                self.article.author = ['NOT FOUND']
+        else:
+            self.article.author = ['NOT FOUND']
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -349,6 +365,7 @@ class HTMLParser:
             return False
         article_soup = BeautifulSoup(response.content, 'lxml')
         self._fill_article_with_text(article_soup)
+        self._fill_article_with_meta_information(article_soup)
         return self.article
 
 
@@ -379,6 +396,7 @@ def main() -> None:
         article = parser.parse()
         if isinstance(article, Article):
             to_raw(article)
+            to_meta(article)
 
 
 if __name__ == "__main__":
