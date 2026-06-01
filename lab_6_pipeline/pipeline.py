@@ -335,7 +335,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]: # pylint: disable=unused-argument
+    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
 
@@ -345,7 +345,6 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             list[DiGraph]: Graphs for the sentences in the document
         """
-        return []
 
     def _add_children(
         self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
@@ -360,7 +359,7 @@ class PatternSearchPipeline(PipelineProtocol):
             tree_node (TreeNode): Root node of the match
         """
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]: # pylint: disable=unused-argument
+    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
         Search for the required pattern.
 
@@ -370,7 +369,6 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
-        return {}
 
     def run(self) -> None:
         """
