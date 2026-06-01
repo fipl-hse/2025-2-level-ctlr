@@ -2,13 +2,14 @@
 Crawler implementation.
 """
 
-# pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable, unused-argument
+# pylint: disable=too-many-arguments, too-many-instance-attributes,
+# pylint: disable=unused-import, undefined-variable, unused-argument
+
 import datetime
 import json
 import pathlib
 import re
 import shutil
-
 import requests
 from bs4 import BeautifulSoup, Tag
 
@@ -17,40 +18,48 @@ from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
+
 class IncorrectSeedURLError(Exception):
     """
     Seed URL does not match standard pattern.
     """
+
 
 class NumberOfArticlesOutOfRangeError(Exception):
     """
     Total number of articles is out of range from 1 to 150.
     """
 
+
 class IncorrectNumberOfArticlesError(Exception):
     """
     Total number of articles to parse is not integer or less than 0.
     """
+
 
 class IncorrectHeadersError(Exception):
     """
     Headers are not in a form of dictionary.
     """
 
+
 class IncorrectEncodingError(Exception):
     """
     Encoding must be specified as a string.
     """
+
 
 class IncorrectTimeoutError(Exception):
     """
     Timeout value must be a positive integer less than 60.
     """
 
+
 class IncorrectVerifyError(Exception):
     """
     Verify certificate and headless mode values must either be True or False.
     """
+
 
 class Config:
     """
@@ -231,13 +240,13 @@ class Crawler:
         href = article_bs.get("href", "")
         if not href:
             return ""
-        
+
         if href.startswith("http"):
             return href
-        
+
         if href.startswith("/"):
             href = href[1:]
-        
+
         return "https://carsson.ru/" + href
     
 
@@ -248,7 +257,7 @@ class Crawler:
         needed = self.config.get_num_articles()
         seeds_to_visit = list(self.config.get_seed_urls())
         visited_seeds = set()
-        
+
         blacklisted_keywords = [
             'karta-sajta', 'contacts', 'category', 'tag', 'author',
             'privacy', 'advertisement', 'about', 'plugins', 'interesnoe',
@@ -325,6 +334,7 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
 
     def find_articles(self) -> None:
         """
@@ -377,7 +387,7 @@ class HTMLParser:
         title_tag = article_soup.find('h1', class_='entry-title')
         if not title_tag:
             title_tag = article_soup.find('h1')
-        
+
         if title_tag:
             title_text = title_tag.get_text(strip=True)
             title_text = title_text.strip('«»"\' \t\n\r')
@@ -390,7 +400,7 @@ class HTMLParser:
 
         time_tag = article_soup.find('time', class_='entry-date')
         date_str = ""
-        
+
         if time_tag and time_tag.get_text():
             raw_text = time_tag.get_text(strip=True)
             date_match = re.search(r"\b\d{2}\.\d{2}\.\d{4}\b", raw_text)
@@ -432,7 +442,7 @@ class HTMLParser:
         response = make_request(self.full_url, self.config)
         if not response or response.status_code != 200:
             return self.article
-        
+
         soup = BeautifulSoup(response.text, 'html.parser')
         self._fill_article_with_meta_information(soup)
         self._fill_article_with_text(soup)
