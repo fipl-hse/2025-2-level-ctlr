@@ -365,6 +365,7 @@ class HTMLParser:
             date_str = elem.strip().replace('Добавлена:', '').strip()
             break
         if date_str:
+             self.article.date = self.unify_date_format(date_str)
         else:
             self.article.date = datetime.datetime.now()
         topics = []
