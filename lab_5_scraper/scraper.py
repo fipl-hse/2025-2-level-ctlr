@@ -262,6 +262,9 @@ class Crawler:
     """
     Crawler implementation.
     """
+    
+    #: Url pattern
+    url_pattern: re.Pattern | str
 
     def __init__(self, config: Config) -> None:
         """
