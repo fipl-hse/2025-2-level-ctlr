@@ -11,8 +11,8 @@ import pathlib
 import re
 import shutil
 
-from bs4 import BeautifulSoup, Tag
 import requests
+from bs4 import BeautifulSoup, Tag
 
 from core_utils.article.article import Article
 from core_utils.article.io import to_meta, to_raw
@@ -332,6 +332,7 @@ class CrawlerRecursive(Crawler):
             config (Config): Configuration
         """
         super().__init__(config)
+        self.start_url = self.config.get_seed_urls()[0]
 
     def find_articles(self) -> None:
         """
@@ -384,13 +385,13 @@ class HTMLParser:
         title_tag = article_soup.find('h1', class_='entry-title')
         if not title_tag:
             title_tag = article_soup.find('h1')
-
         if title_tag:
             title_text = title_tag.get_text(strip=True)
-            self.article.title = str(title_text)
+            title_text = title_text.replace('«', '').replace('»', '').replace('…', '...')
+            title_text = "".join(c for c in title_text if c.isalnum() or c.isspace() or c in ",.-")
+            self.article.title = title_text.strip()
         else:
             self.article.title = "Untitled"
-
         self.article.author = ['NOT FOUND']
         self.article.topics = []
 

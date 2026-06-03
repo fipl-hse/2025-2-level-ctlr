@@ -1,5 +1,16 @@
 {
-    "seed_urls": ["https://carsson.ru"],
+    "seed_urls": [
+        "https://carsson.ru",
+        "https://carsson.ru/page/2/",
+        "https://carsson.ru/page/3/",
+        "https://carsson.ru/page/4/",
+        "https://carsson.ru/page/5/",
+        "https://carsson.ru/page/6/",
+        "https://carsson.ru/page/7/",
+        "https://carsson.ru/page/8/",
+        "https://carsson.ru/page/9/",
+        "https://carsson.ru/page/10/"
+        ],
     "headers": {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
     "total_articles_to_find_and_parse": 100,
     "encoding": "utf-8",
