@@ -386,9 +386,12 @@ class HTMLParser:
         if not title_tag:
             title_tag = article_soup.find('h1')
         if title_tag:
-            raw_title = title_tag.get_text()
-            clean_title = " ".join(raw_title.split())
-            self.article.title = clean_title
+            title_text = title_tag.get_text(strip=True)
+            if ':' in title_text:
+                title_text = title_text.split(':')[0]
+            title_text = title_text.replace('«', '').replace('»', '')
+            title_text = title_text.replace(' .', '. ')
+            self.article.title = " ".join(title_text.split())
         else:
             self.article.title = "Untitled"
         self.article.author = ['NOT FOUND']
