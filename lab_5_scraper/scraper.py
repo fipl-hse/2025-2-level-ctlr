@@ -376,7 +376,7 @@ class CrawlerRecursive(Crawler):
         try:
             response = make_request(seed_url, self._config)
         except requests.exceptions.ConnectTimeout as e:
-            # print(f"Failed to proceed: {seed_url} | {e}")
+            print(f"Failed to proceed: {seed_url} | {e}")
             return
         if not response.ok:
             return
