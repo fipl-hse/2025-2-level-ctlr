@@ -382,21 +382,21 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title_tag = article_soup.find('h1', class_='entry-title')
-        if not title_tag:
-            title_tag = article_soup.find('h1')
+        title_tag = article_soup.find("title")
         if title_tag:
-            title_text = title_tag.get_text(strip=True)
-            if ':' in title_text:
-                title_text = title_text.split(':')[0].strip()
-            for char in ['«', '»', '"', "'", '“', '”', '`']:
-                title_text = title_text.replace(char, '')
-            title_text = title_text.replace(' .', '.')
-            self.article.title = " ".join(title_text.split()).strip()
+            raw_title = title_tag.text.strip()
+            if '|' in raw_title:
+                self.article.title = raw_title.split('|')[-1].strip()
+            else:
+                self.article.title = raw_title
         else:
-            self.article.title = "Untitled"
-        self.article.author = ['NOT FOUND']
-        self.article.topics = []
+            self.article.title = "NO TITLE"
+
+        author_tag = article_soup.find("meta", attrs={"name": "author"})
+        if author_tag and author_tag.get("content"):
+            self.article.author = [author_tag.get("content").strip()]
+        else:
+            self.article.author = ["NOT FOUND"]
 
         time_tag = article_soup.find('time', class_='entry-date')
         date_str = ""
