@@ -453,13 +453,16 @@ def main() -> None:
     crawler.find_articles()
 
     article_urls = crawler.urls
-    for i, url in enumerate(article_urls, 1):
-        parser = HTMLParser(full_url=url, article_id=i, config=configuration)
+    idx = 1
+    while crawler.urls:
+        url = crawler.urls.pop()
+        parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
         article = parser.parse()
 
         if article:
             to_raw(article)
             to_meta(article)
+            idx += 1
 
 if __name__ == "__main__":
     main()
