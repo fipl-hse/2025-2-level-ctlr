@@ -136,6 +136,24 @@ class Config:
         """
         return self._seed_urls
 
+    def set_seed_urls(self, seed_urls: list) -> None:
+        """
+        Set seed urls.
+
+        Args:
+            seed_urls list[str]: Seed urls
+        """
+        self._seed_urls = seed_urls
+
+    def pop_seed_urls(self) -> str:
+        """
+        Pops seed_urls list and returns popped value
+
+        Returns:
+            str: seed_url
+        """
+        return self._seed_urls.pop()
+
     def get_num_articles(self) -> int:
         """
         Retrieve total number of articles to scrape.
@@ -274,7 +292,9 @@ class Crawler:
             "slovo.html",
             "slo.html",
             "studio.html",
-            "urnov.html"
+            "urnov.html",
+            "legal-info.html",
+            "contacts.html"
         ]
 
     def _extract_url(self, article_bs: Tag) -> str:
@@ -295,7 +315,11 @@ class Crawler:
         Find articles.
         """
         for seed_url in self.get_search_urls():
-            response = make_request(seed_url, self._config)
+            try:
+                response = make_request(seed_url, self._config)
+            except requests.exceptions.ConnectTimeout:
+                # print(f"Failed to proceed: {seed_url}")
+                continue
             if not response.ok:
                 continue
             soup = BeautifulSoup(response.text, features="lxml")
@@ -314,7 +338,12 @@ class Crawler:
                 if any(nav_mark in extracted_url for nav_mark in self._nav_page_markers):
                     continue
                 if extracted_url not in self.urls and extracted_url not in self.get_search_urls():
-                    if make_request(extracted_url, self._config).ok:
+                    try:
+                        check_response = make_request(extracted_url, self._config)
+                    except requests.exceptions.ConnectTimeout:
+                        continue
+                    if check_response.ok:
+                        print(f"Added: {extracted_url} | Urls: {len(self.urls)}")
                         self.urls.append(extracted_url)
 
     def get_search_urls(self) -> list:
@@ -336,12 +365,95 @@ class CrawlerRecursive(Crawler):
 
     Get one URL of the title page and find requested number of articles recursively.
     """
+    def proceed_seed_url(self, seed_url: str, visited: list) -> None:
+        """
+        Procedees search for links in seed_url
+
+        Args:
+            seed_url (str): seed_url link
+            visited (_type_): visited urls
+        """
+        try:
+            response = make_request(seed_url, self._config)
+        except requests.exceptions.ConnectTimeout as e:
+            # print(f"Failed to proceed: {seed_url} | {e}")
+            return
+        if not response.ok:
+            return
+
+        # print(f"Working with: {seed_url}")
+
+        soup = BeautifulSoup(response.text, features="lxml")
+        parsed_seed_url = urlparse(seed_url)
+        for tag in soup.find_all(["a"]):
+            if len(self.urls) > self._config.get_num_articles():
+                return
+            extracted_url = self._extract_url(tag)
+            if not extracted_url:
+                continue
+            extracted_url = urljoin(seed_url, extracted_url)
+            if parsed_seed_url.netloc != urlparse(extracted_url).netloc:
+                continue
+            is_seed = bool(
+                re.search(r"/\d+\.html", extracted_url) or
+                any(nav_mark in extracted_url for nav_mark in self._nav_page_markers)
+            )
+            if (extracted_url in self.urls or
+                extracted_url in self.get_search_urls() or
+                extracted_url in visited):
+                continue
+
+            try:
+                check_response = make_request(extracted_url, self._config)
+            except requests.exceptions.ConnectTimeout:
+                continue
+            if check_response.ok:
+                if is_seed:
+                    self.get_search_urls().append(extracted_url)
+                else:
+                    self.urls.append(extracted_url)
+
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
-        return None #Instead of pass
+        visited = []
+        path = ASSETS_PATH / "CrawlerState.json"
+        if path.exists():
+            with open(path, encoding="utf-8") as f:
+                crawler_state = json.load(f)
+            visited = crawler_state.get("visited", [])
+            self.urls = crawler_state.get("urls", [])
+            self._config.set_seed_urls(crawler_state.get("seed_urls", []))
+
+        # print("---------------Starting-work--------------------\n")
+        # print(f"Total seed: {len(self._config.get_seed_urls())}")
+        # print(f"Total visted: {len(visited)}")
+        # print(f"Total urls: {len(self.urls)}")
+        # print("-------------------------------------------------\n")
+        while self._config.get_seed_urls():
+            if len(self.urls) > self._config.get_num_articles():
+                break
+            seed_url = self._config.pop_seed_urls()
+
+            self.proceed_seed_url(seed_url, visited)
+
+            visited.append(seed_url)
+
+            # print(f"Total seed: {len(self._config.get_seed_urls())}")
+            # print(f"Total visted: {len(visited)}")
+            # print(f"Total urls: {len(self.urls)}")
+            # print("-------------------------------------------------\n")
+
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "visited": visited,
+                    "seed_urls": self._config.get_seed_urls(),
+                    "urls": self.urls
+                    },
+                    f
+                )
 
 
 # 4, 6, 8, 10
@@ -378,7 +490,7 @@ class HTMLParser:
             return
         text = []
         for div in divs:
-            tags = div.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+            tags = div.find_all(["p", "dir"])
             for tag in tags:
                 text.extend(tag.contents)
         self.article.text = "\n".join(abstract for abstract in text if isinstance(abstract, str))
@@ -408,7 +520,16 @@ class HTMLParser:
                 if author_text:
                     self.article.author = [author_text]
 
-        self.article.date = datetime.datetime.now() #pass (no date in html)
+        pub_info_div = article_soup.find("div", class_="article-body-pub-info")
+
+        self.article.date = datetime.datetime.now()
+        if pub_info_div:
+            pub_text = pub_info_div.get_text()
+            year_match = re.search(r'\d{4}', pub_text)
+            if year_match:
+                year = year_match.group()
+                self.article.date = self.unify_date_format(year)
+
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -420,6 +541,8 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        year = int(date_str)
+        return datetime.datetime(year, 1, 1)
 
     def parse(self) -> Article | bool:
         """
@@ -467,13 +590,13 @@ def main() -> None:
     config = Config(CRAWLER_CONFIG_PATH)
     crawler = Crawler(config)
     crawler.find_articles()
-    print("Found urls:", len(crawler.urls), "\n")
+    # print("Found urls:", len(crawler.urls), "\n")
     current_article = 1
     while crawler.urls:
         article_url = crawler.urls.pop()
         parser = HTMLParser(article_url, current_article, config)
         parsed_article = parser.parse()
-        if isinstance(parsed_article, Article) and parsed_article.text:
+        if isinstance(parsed_article, Article) and len(parsed_article.text) > 200:
             to_raw(parsed_article)
             to_meta(parsed_article)
             current_article += 1

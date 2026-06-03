@@ -1,5 +1,20 @@
 {
-    "seed_urls": ["https://magazines.gorky.media/neva/2004/11.html"],
+    "seed_urls": [
+        "https://magazines.gorky.media/library",
+        "https://magazines.gorky.media/neva/2004/11.html",
+        "https://magazines.gorky.media/neva/2024/12.html",
+        "https://magazines.gorky.media/neva/2024/10.html",
+        "https://magazines.gorky.media/neva/2024/9.html",
+        "https://magazines.gorky.media/neva/2024/8.html",
+        "https://magazines.gorky.media/neva/2024/7.html",
+        "https://magazines.gorky.media/neva/2024/6.html",
+        "https://magazines.gorky.media/neva/2024/5.html",
+        "https://magazines.gorky.media/neva/2024/4.html",
+        "https://magazines.gorky.media/neva/2024/3.html",
+        "https://magazines.gorky.media/neva/2024/2.html",
+        "https://magazines.gorky.media/neva/2024/1.html",
+        "https://magazines.gorky.media/neva/2025/1.html"
+    ],
     "headers": {
         "Cookie": "_ym_uid=1779014341521520861; _ym_d=1779014341; _ym_isad=1; _ym_visorc=w; _gid=GA1.2.240178959.1780146222; _ga_3XESJ90HR0=GS2.1.s1780146323$o1$g1$t1780146884$j11$l0$h0; _gat_gtag_UA_82430416_1=1; _ga_TJVRRJ1E29=GS2.1.s1780146222$o2$g1$t1780147486$j59$l0$h0; _ga=GA1.1.1919635574.1779014341",
         "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -8,7 +23,7 @@
     },
     "total_articles_to_find_and_parse": 10,
     "encoding": "utf-8",
-    "timeout": 8,
+    "timeout": 10,
     "should_verify_certificate": true,
     "headless_mode": false
 }
