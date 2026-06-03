@@ -388,10 +388,8 @@ class HTMLParser:
         if title_tag:
             title_text = title_tag.get_text(strip=True)
             if ':' in title_text:
-                title_text = title_text.split(':')[0]
-            title_text = title_text.replace('«', '').replace('»', '')
-            title_text = title_text.replace(' .', '. ')
-            self.article.title = " ".join(title_text.split())
+                title_text = title_text.split(':')[0].strip()
+            self.article.title = title_text
         else:
             self.article.title = "Untitled"
         self.article.author = ['NOT FOUND']
