@@ -78,6 +78,12 @@ class CorpusManager:
         if id_set != required_ids:
             raise InconsistentDatasetError
         
+        print(f"raw {len([path for path in self.path_to_raw_txt_data.glob("*_raw")])}")
+        print(f"raw with txt {len([path for path in self.path_to_raw_txt_data.glob("*_raw.txt")])}")
+        print(f"meta {len([path for path in self.path_to_raw_txt_data.glob("*_meta")])}")
+        print(f"meta with json {len([path for path in self.path_to_raw_txt_data.glob("*_meta.json")])}")
+        print()
+        
         for article_id in id_set: # перебираем все id статей; формируем пути к файлам
             raw = self.path_to_raw_txt_data / f'{article_id}_raw.txt' 
             meta = self.path_to_raw_txt_data / f'{article_id}_meta.json'
