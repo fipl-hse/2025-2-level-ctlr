@@ -81,7 +81,11 @@ class CorpusManager:
         for article_id in id_set: # перебираем все id статей; формируем пути к файлам
             raw = self.path_to_raw_txt_data / f'{article_id}_raw.txt' 
             meta = self.path_to_raw_txt_data / f'{article_id}_meta.json'
-
+            print(raw, end="")
+            print(f"Stats: {raw.stat().st_size}")
+            print(meta, end="")
+            print(f"Stats: {meta.stat().st_size}")
+            print()
             if not meta.exists():
                 raise InconsistentDatasetError
             if raw.stat().st_size == 0 or meta.stat().st_size == 0: # проверка, не пустые ли
