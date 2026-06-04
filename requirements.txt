@@ -1,2 +1,2 @@
-matplotlib
-spacy-udpipe
+matplotlib==3.10.9
+spacy-udpipe==1.0.0
