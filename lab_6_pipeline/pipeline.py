@@ -2,18 +2,14 @@
 Pipeline for CONLL-U formatting.
 """
 
-import json
-
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
+# pylint: disable=too-many-branches, too-many-locals
 import pathlib
 import re
 from typing import Optional
 
-import spacy_udpipe
-from spacy_conll.parser import ConllParser
-
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
+from core_utils.article.io import from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
@@ -22,15 +18,19 @@ try:
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
-    DiGraph = None
-    DiGraphMatcher = None
+    DiGraph = None  # type: ignore[assignment]
+    DiGraphMatcher = None  # type: ignore[assignment]
 
 try:
+    import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy_conll import ConllParser
 except ImportError:
-    Language = None
-    Doc = None
+    Language = None  # type: ignore[assignment]
+    Doc = None  # type: ignore[assignment]
+    spacy_udpipe = None  # type: ignore[assignment]
+    ConllParser = None  # type: ignore[assignment]
 
 
 class EmptyDirectoryError(Exception):
@@ -105,7 +105,9 @@ class CorpusManager:
                     meta_ids.add(meta_id)
 
         if not raw_files:
-            raise EmptyDirectoryError(f"No valid raw files found in: {self.path_to_raw_txt_data}")
+            raise EmptyDirectoryError(
+                f"No valid raw files found in: {self.path_to_raw_txt_data}"
+            )
 
         if meta_files:
             if raw_ids != meta_ids:
@@ -186,8 +188,8 @@ class TextProcessingPipeline(PipelineProtocol):
             raw_text = article_with_text.text
 
             text_lower = raw_text.lower()
-            cleaned_text = re.sub(r"[^\w\s\n]", " ", text_lower)
-            cleaned_text = re.sub(r"\s+", " ", cleaned_text)
+            cleaned_text = re.sub(r'[^\w\s\n]', ' ', text_lower)
+            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
             cleaned_text = cleaned_text.strip()
 
             article_obj.cleaned_text = cleaned_text
@@ -212,7 +214,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
-        self._analyzer = self._bootstrap()
+        self._analyzer = self._bootstrap()  # type: ignore[assignment]
         if ConllParser is not None and self._analyzer is not None:
             self._parser = ConllParser(self._analyzer)
 
@@ -226,20 +228,15 @@ class UDPipeAnalyzer(LibraryWrapper):
         if spacy_udpipe is None:
             raise ImportError("spacy_udpipe is not installed")
 
-        from core_utils.constants import PROJECT_ROOT
-
         model_path = (
-            PROJECT_ROOT
-            / "lab_6_pipeline"
-            / "assets"
-            / "model"
-            / "russian-syntagrus-ud-2.0-170801.udpipe"
+            PROJECT_ROOT / 'lab_6_pipeline' / 'assets' / 'model'
+            / 'russian-syntagrus-ud-2.0-170801.udpipe'
         )
 
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
 
-        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+        nlp = spacy_udpipe.load_from_path(lang='ru', path=str(model_path))
 
         if "conll_formatter" not in nlp.pipe_names:
             nlp.add_pipe(
@@ -298,7 +295,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         conllu_info = article.get_conllu_info()
         if conllu_info:
             conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
-            conllu_path.write_text(conllu_info + "\n", encoding="utf-8")
+            conllu_path.write_text(conllu_info + '\n', encoding='utf-8')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -318,13 +315,13 @@ class UDPipeAnalyzer(LibraryWrapper):
         if not conllu_path.exists():
             raise FileNotFoundError(f"CoNLL-U file not found: {conllu_path}")
 
-        conllu_content = conllu_path.read_text(encoding="utf-8")
+        conllu_content = conllu_path.read_text(encoding='utf-8')
 
         if len(conllu_content.strip()) == 0:
             raise EmptyFileError(f"CoNLL-U file is empty: {conllu_path}")
 
-        doc = self._parser.parse_conll_text_as_spacy(conllu_content.rstrip("\n"))
-        return doc
+        doc = self._parser.parse_conll_text_as_spacy(conllu_content.rstrip('\n'))
+        return doc  # type: ignore[return-any]
 
 
 class POSFrequencyPipeline:
@@ -367,15 +364,20 @@ class POSFrequencyPipeline:
 
     def run(self) -> None:
         """
-        Visualize the frequencies of each part of speeeech.
+        Visualize the frequencies of each part of speech.
         """
         for article in self._corpus.get_articles().values():
-            frequencies = self._count_frequencies(article)
-            if frequencies:
-                article.set_pos_info(frequencies)
-                to_meta(article)
-                image_path = article.get_raw_text_path().parent / f"{article.article_id}_image.png"
-                visualize(article=article, path_to_save=image_path)
+            try:
+                frequencies = self._count_frequencies(article)
+                if frequencies:
+                    article.set_pos_info(frequencies)
+                    to_meta(article)
+                    image_path = (
+                        article.get_raw_text_path().parent / f"{article.article_id}_image.png"
+                    )
+                    visualize(article=article, path_to_save=image_path)
+            except EmptyFileError as e:
+                print(f"Error processing article {article.article_id}: {e}")
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -408,7 +410,30 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             list[DiGraph]: Graphs for the sentences in the document
         """
-        return []
+        graphs = []
+
+        for sent in doc.sents:
+            graph = DiGraph()
+
+            for token in sent:
+                graph.add_node(
+                    token.i,
+                    upos=token.pos_,
+                    text=token.text,
+                    deprel=token.dep_
+                )
+
+            for token in sent:
+                if token.head.i != token.i:
+                    graph.add_edge(
+                        token.head.i,
+                        token.i,
+                        label=token.dep_
+                    )
+
+            graphs.append(graph)
+
+        return graphs
 
     def _add_children(
         self, graph: DiGraph, subgraph_to_graph: dict, node_id: int, tree_node: TreeNode
@@ -422,6 +447,17 @@ class PatternSearchPipeline(PipelineProtocol):
             node_id (int): ID of root node of the match
             tree_node (TreeNode): Root node of the match
         """
+        for child_id in graph.successors(node_id):
+            if child_id in subgraph_to_graph:
+                child_node = TreeNode(
+                    upos=graph.nodes[child_id]["upos"],
+                    text=graph.nodes[child_id]["text"],
+                    children=[]
+                )
+                tree_node.children.append(child_node)
+                self._add_children(
+                    graph, subgraph_to_graph, child_id, child_node
+                )
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
@@ -433,20 +469,76 @@ class PatternSearchPipeline(PipelineProtocol):
         Returns:
             dict[int, list[TreeNode]]: A dictionary with pattern matches
         """
-        return {}
+        if len(self._node_labels) != 3:
+            return {}
+
+        root_label, child_label, grandchild_label = self._node_labels
+
+        target_graph = DiGraph()
+
+        target_graph.add_node(0, upos=root_label)
+        target_graph.add_node(1, upos=child_label)
+        target_graph.add_node(2, upos=grandchild_label)
+
+        target_graph.add_edge(0, 1)
+        target_graph.add_edge(1, 2)
+
+        matches = {}
+
+        for sent_idx, graph in enumerate(doc_graphs):
+            sent_matches = []
+
+            matcher = DiGraphMatcher(
+                graph,
+                target_graph,
+                node_match=lambda n1, n2: n1["upos"] == n2["upos"]
+            )
+
+            for subgraph in matcher.subgraph_isomorphisms_iter():
+                subgraph_to_graph = {v: k for k, v in subgraph.items()}
+
+                root_id = None
+                for node_id, target_id in subgraph.items():
+                    if target_id == 0:
+                        root_id = node_id
+                        break
+
+                if root_id is not None:
+                    root_node = TreeNode(
+                        upos=graph.nodes[root_id]["upos"],
+                        text=graph.nodes[root_id]["text"],
+                        children=[]
+                    )
+                    self._add_children(
+                        graph, subgraph_to_graph, root_id, root_node
+                    )
+                    sent_matches.append(root_node)
+
+            if sent_matches:
+                matches[sent_idx] = sent_matches
+
+        return matches
 
     def run(self) -> None:
         """
         Search for a pattern in documents and writes found information to JSON file.
         """
+        for article in self._corpus.get_articles().values():
+            doc = self._analyzer.from_conllu(article)
+
+            graphs = self._make_graphs(doc)
+
+            pattern_matches = self._find_pattern(graphs)
+
+            if pattern_matches:
+                article.pattern_matches = pattern_matches
+                to_meta(article)
 
 
 def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-    from core_utils.constants import ASSETS_PATH
-
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
 
     if spacy_udpipe is not None:
@@ -456,6 +548,9 @@ def main() -> None:
 
         pos_pipeline = POSFrequencyPipeline(corpus_manager, analyzer)
         pos_pipeline.run()
+
+        pattern_pipeline = PatternSearchPipeline(corpus_manager, analyzer, ("VERB", "NOUN", "ADP"))
+        pattern_pipeline.run()
     else:
         print("spacy_udpipe not installed. Running basic preprocessing only (score 4).")
         pipeline = TextProcessingPipeline(corpus_manager)
