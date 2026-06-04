@@ -18,8 +18,8 @@ try:
     from networkx import DiGraph
     from networkx.algorithms.isomorphism import DiGraphMatcher
 except ImportError:
-    DiGraph = None  # type: ignore[assignment]
-    DiGraphMatcher = None  # type: ignore[assignment]
+    DiGraph = None  # type: ignore
+    DiGraphMatcher = None  # type: ignore
 
 try:
     import spacy_udpipe
@@ -27,10 +27,10 @@ try:
     from spacy.tokens import Doc
     from spacy_conll import ConllParser
 except ImportError:
-    Language = None  # type: ignore[assignment]
-    Doc = None  # type: ignore[assignment]
-    spacy_udpipe = None  # type: ignore[assignment]
-    ConllParser = None  # type: ignore[assignment]
+    Language = None  # type: ignore
+    Doc = None  # type: ignore
+    spacy_udpipe = None  # type: ignore
+    ConllParser = None  # type: ignore
 
 
 class EmptyDirectoryError(Exception):
@@ -105,9 +105,7 @@ class CorpusManager:
                     meta_ids.add(meta_id)
 
         if not raw_files:
-            raise EmptyDirectoryError(
-                f"No valid raw files found in: {self.path_to_raw_txt_data}"
-            )
+            raise EmptyDirectoryError(f"No valid raw files found in: {self.path_to_raw_txt_data}")
 
         if meta_files:
             if raw_ids != meta_ids:
@@ -188,8 +186,8 @@ class TextProcessingPipeline(PipelineProtocol):
             raw_text = article_with_text.text
 
             text_lower = raw_text.lower()
-            cleaned_text = re.sub(r'[^\w\s\n]', ' ', text_lower)
-            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+            cleaned_text = re.sub(r"[^\w\s\n]", " ", text_lower)
+            cleaned_text = re.sub(r"\s+", " ", cleaned_text)
             cleaned_text = cleaned_text.strip()
 
             article_obj.cleaned_text = cleaned_text
@@ -207,7 +205,7 @@ class UDPipeAnalyzer(LibraryWrapper):
     Wrapper for udpipe library.
     """
 
-    _analyzer: Optional[Language] = None
+    _analyzer: Optional[Language] = None  # type: ignore
     _parser: Optional[ConllParser] = None
 
     def __init__(self) -> None:
@@ -218,7 +216,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         if ConllParser is not None and self._analyzer is not None:
             self._parser = ConllParser(self._analyzer)
 
-    def _bootstrap(self) -> Optional[Language]:
+    def _bootstrap(self) -> Optional[Language]:  # type: ignore[override]
         """
         Load and set up the UDPipe model.
 
@@ -226,17 +224,20 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         if spacy_udpipe is None:
-            raise ImportError("spacy_udpipe is not installed")
+            raise ImportError("spacy_udpipe is not installed")  # type: ignore
 
         model_path = (
-            PROJECT_ROOT / 'lab_6_pipeline' / 'assets' / 'model'
-            / 'russian-syntagrus-ud-2.0-170801.udpipe'
+            PROJECT_ROOT
+            / "lab_6_pipeline"
+            / "assets"
+            / "model"
+            / "russian-syntagrus-ud-2.0-170801.udpipe"
         )
 
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
 
-        nlp = spacy_udpipe.load_from_path(lang='ru', path=str(model_path))
+        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
 
         if "conll_formatter" not in nlp.pipe_names:
             nlp.add_pipe(
@@ -295,7 +296,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         conllu_info = article.get_conllu_info()
         if conllu_info:
             conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
-            conllu_path.write_text(conllu_info + '\n', encoding='utf-8')
+            conllu_path.write_text(conllu_info + "\n", encoding="utf-8")
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -317,11 +318,11 @@ class UDPipeAnalyzer(LibraryWrapper):
 
         conllu_content = conllu_path.read_text(encoding='utf-8')
 
-        if len(conllu_content.strip()) == 0:
+        if not conllu_content or len(conllu_content.strip()) == 0:
             raise EmptyFileError(f"CoNLL-U file is empty: {conllu_path}")
 
         doc = self._parser.parse_conll_text_as_spacy(conllu_content.rstrip('\n'))
-        return doc  # type: ignore[return-any]
+        return doc  # type: ignore
 
 
 class POSFrequencyPipeline:
@@ -352,14 +353,9 @@ class POSFrequencyPipeline:
         """
         doc = self._analyzer.from_conllu(article)
         pos_counter: dict[str, int] = {}
-
         for token in doc:
             pos = token.pos_
-            if pos in pos_counter:
-                pos_counter[pos] += 1
-            else:
-                pos_counter[pos] = 1
-
+            pos_counter[pos] = pos_counter.get(pos, 0) + 1
         return pos_counter
 
     def run(self) -> None:
@@ -367,17 +363,12 @@ class POSFrequencyPipeline:
         Visualize the frequencies of each part of speech.
         """
         for article in self._corpus.get_articles().values():
-            try:
-                frequencies = self._count_frequencies(article)
-                if frequencies:
-                    article.set_pos_info(frequencies)
-                    to_meta(article)
-                    image_path = (
-                        article.get_raw_text_path().parent / f"{article.article_id}_image.png"
-                    )
-                    visualize(article=article, path_to_save=image_path)
-            except EmptyFileError as e:
-                print(f"Error processing article {article.article_id}: {e}")
+            frequencies = self._count_frequencies(article)
+            if frequencies:
+                article.set_pos_info(frequencies)
+                to_meta(article)
+                image_path = article.get_raw_text_path().parent / f"{article.article_id}_image.png"
+                visualize(article=article, path_to_save=image_path)
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -416,20 +407,11 @@ class PatternSearchPipeline(PipelineProtocol):
             graph = DiGraph()
 
             for token in sent:
-                graph.add_node(
-                    token.i,
-                    upos=token.pos_,
-                    text=token.text,
-                    deprel=token.dep_
-                )
+                graph.add_node(token.i, upos=token.pos_, text=token.text, deprel=token.dep_)
 
             for token in sent:
                 if token.head.i != token.i:
-                    graph.add_edge(
-                        token.head.i,
-                        token.i,
-                        label=token.dep_
-                    )
+                    graph.add_edge(token.head.i, token.i, label=token.dep_)
 
             graphs.append(graph)
 
@@ -452,12 +434,10 @@ class PatternSearchPipeline(PipelineProtocol):
                 child_node = TreeNode(
                     upos=graph.nodes[child_id]["upos"],
                     text=graph.nodes[child_id]["text"],
-                    children=[]
+                    children=[],
                 )
                 tree_node.children.append(child_node)
-                self._add_children(
-                    graph, subgraph_to_graph, child_id, child_node
-                )
+                self._add_children(graph, subgraph_to_graph, child_id, child_node)
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
@@ -489,29 +469,42 @@ class PatternSearchPipeline(PipelineProtocol):
             sent_matches = []
 
             matcher = DiGraphMatcher(
-                graph,
-                target_graph,
-                node_match=lambda n1, n2: n1["upos"] == n2["upos"]
+                graph, target_graph, node_match=lambda n1, n2: n1["upos"] == n2["upos"]
             )
 
             for subgraph in matcher.subgraph_isomorphisms_iter():
-                subgraph_to_graph = {v: k for k, v in subgraph.items()}
 
                 root_id = None
+                child_id = None
+                grandchild_id = None
+
                 for node_id, target_id in subgraph.items():
                     if target_id == 0:
                         root_id = node_id
-                        break
+                    elif target_id == 1:
+                        child_id = node_id
+                    elif target_id == 2:
+                        grandchild_id = node_id
 
-                if root_id is not None:
+                if root_id is not None and child_id is not None and grandchild_id is not None:
+                    grandchild_node = TreeNode(
+                        upos=graph.nodes[grandchild_id]["upos"],
+                        text=graph.nodes[grandchild_id]["text"],
+                        children=[],
+                    )
+
+                    child_node = TreeNode(
+                        upos=graph.nodes[child_id]["upos"],
+                        text=graph.nodes[child_id]["text"],
+                        children=[grandchild_node],
+                    )
+
                     root_node = TreeNode(
                         upos=graph.nodes[root_id]["upos"],
                         text=graph.nodes[root_id]["text"],
-                        children=[]
+                        children=[child_node],
                     )
-                    self._add_children(
-                        graph, subgraph_to_graph, root_id, root_node
-                    )
+
                     sent_matches.append(root_node)
 
             if sent_matches:
@@ -525,14 +518,31 @@ class PatternSearchPipeline(PipelineProtocol):
         """
         for article in self._corpus.get_articles().values():
             doc = self._analyzer.from_conllu(article)
-
             graphs = self._make_graphs(doc)
-
             pattern_matches = self._find_pattern(graphs)
 
+            serializable_matches = {}
             if pattern_matches:
-                article.pattern_matches = pattern_matches
-                to_meta(article)
+                for sent_idx, matches in pattern_matches.items():
+                    serializable_matches[sent_idx] = []
+                    for match in matches:
+                        node_dict = {"upos": match.upos, "text": match.text, "children": []}
+                        stack = [(match, node_dict)]
+                        while stack:
+                            current, current_dict = stack.pop()
+                            for child in current.children:
+                                child_dict = {
+                                    "upos": child.upos,
+                                    "text": child.text,
+                                    "children": []
+                                }
+                                current_dict["children"].append(child_dict)
+                                stack.append((child, child_dict))
+                        serializable_matches[sent_idx].append(node_dict)
+
+            article.pattern_matches = serializable_matches
+            to_meta(article)
+
 
 
 def main() -> None:
