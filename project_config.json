@@ -81,9 +81,6 @@
                 "PipelineProtocol",
                 "LibraryWrapper",
                 "TreeNode"
-            ],
-            "quality_control.console_logging": [
-                "get_child_logger"
             ]
         }
     },

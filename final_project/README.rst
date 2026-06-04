@@ -37,7 +37,7 @@ Stage 1. Put the files for processing in the folder.
 
 You will be working with ``N_raw.txt`` files, which are collected by
 running ``lab_5_scraper/scraper.py``. Your team number and texts are determined by
-Margarita Andreevna. Put them in the folder ``final_project/assets/articles``.
+Anna Yuryevna. Put them in the folder ``final_project/assets/articles``.
 This is the corpus you will be working with.
 
 Stage 2. Processing data.
@@ -104,9 +104,9 @@ morphological annotation, you are welcome to use the following sources:
 
 Please do not forget to refer to the sources you use in the comments.
 You are supposed to stop working with the `.conllu` and `.xlsx` files
-and send them to Margarita Andreevna together with the frequency dictionary in the .xlsx format by **TBD**.
+and send them to Anna Yuryevna together with the frequency dictionary in the .xlsx format by **TBD**.
 
-Margarita Andreevna will check your annotations and suggest improvements, if any.
+Anna Yuryevna will check your annotations and suggest improvements, if any.
 
 
 Stage 2.3. Upload corrected ``.conllu`` file.
