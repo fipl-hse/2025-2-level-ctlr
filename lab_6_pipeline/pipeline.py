@@ -4,18 +4,22 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-import spacy_udpipe
 
+import spacy_udpipe
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
-
+from spacy_conll.parser import ConllParser
+from spacy_conll import init_parser
 from spacy_conll import ConllFormatter
 
 from core_utils.article.article import Article, ArtifactType
+from core_utils.article.io import from_raw, to_cleaned, to_meta, from_meta
 from core_utils.constants import ASSETS_PATH
-from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
-from core_utils.article.io import from_raw, to_cleaned
+from core_utils.pipeline import LibraryWrapper, PipelineProtocol
+from core_utils.visualizer import visualize
+from core_utils.pipeline import TreeNode
+
 
 class EmptyFileError(Exception):
     """Raised when a file is empty."""
@@ -29,21 +33,6 @@ class EmptyDirectoryError(Exception):
 class InconsistentDatasetError(Exception):
     """Raised when dataset has inconsistencies."""
     pass
-
-try:
-    from networkx import DiGraph
-    from networkx.algorithms.isomorphism import DiGraphMatcher
-except ImportError:
-    DiGraph = None  # type: ignore
-    print("No libraries installed. Failed to import.")
-
-try:
-    from spacy.language import Language
-    from spacy.tokens import Doc
-except ImportError:
-    Language = None  # type: ignore
-    Doc = None  # type: ignore
-    print("No libraries installed. Failed to import.")
 
 
 class CorpusManager:
@@ -159,13 +148,18 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         Perform basic preprocessing and write processed text to files.
         """
-        articles: dict[int, Article] = self._corpus.get_articles()
+        articles = self._corpus.get_articles()
 
-        for article_id, article in articles.items():
-            raw_file_path = article.get_raw_text_path()
-            loaded_article = from_raw(raw_file_path, article)
+        for article in articles.values():
+            to_cleaned(article)
             
-            to_cleaned(loaded_article)
+            if self._analyzer is not None:
+                raw_text = article.get_raw_text()
+                conllu_results = self._analyzer.analyze([raw_text])
+                
+                if conllu_results:
+                    article.set_conllu_info(conllu_results[0])
+                    self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -189,24 +183,16 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        try:
-            spacy_udpipe.download("ru-syntagrus")
-        except Exception as e:
-            print(f"Download error (may already be cached): {e}")
-    
-        nlp = spacy_udpipe.load("ru-syntagrus")
+        model_path = pathlib.Path("lab_6_pipeline/assets/model/ru-syntagrus.udpipe")
 
-        from spacy_conll import ConllFormatter
-        conll_formatter = ConllFormatter(
-            nlp,
-            ext=True,
-            ext_morph=True,
-            ext_pos=True,
-            ext_deps=True,
-            ext_ner=True
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model not found at {model_path}")
+
+        nlp = spacy_udpipe.load_from_path(
+            lang="ru",
+            path=str(model_path),
+            meta={"description": "Russian UDPipe model"}
         )
-        nlp.add_pipe("conll_formatter", last=True)
-
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -220,14 +206,43 @@ class UDPipeAnalyzer(LibraryWrapper):
             list[str]: List of documents
         """
         conllu_outputs = []
-        
+    
         for text in texts:
             doc = self._analyzer(text)
+            lines = []
             
-            conllu_output = doc._.conll
-            conllu_outputs.append(conllu_output)
+            sentences = list(doc.sents)
+            
+            for sent_idx, sent in enumerate(sentences):
+                lines.append(f"# sent_id = {sent_idx + 1}")
+                lines.append(f"# text = {sent.text}")
+                
+                for token_idx, token in enumerate(sent, start=1):
+                    form = token.text
+                    lemma = token.lemma_ if token.lemma_ else "_"
+                    upos = token.pos_ if token.pos_ else "_"
+                    xpos = "_"
+                    feats = str(token.morph) if token.morph else "_"
+                    head = token.head.i - sent.start + 1 if token.head != token else 0
+                    deprel = token.dep_ if token.dep_ else "_"
+                    deps = "_"
+                    misc = "SpaceAfter=No" if not token.whitespace_ else "_"
+                    
+                    lines.append(
+                        f"{token_idx}\t{form}\t{lemma}\t{upos}\t{xpos}\t{feats}\t"
+                        f"{head}\t{deprel}\t{deps}\t{misc}"
+                    )
+                
+                lines.append("")
+            
+            result = "\n".join(lines)
+            if not result.endswith("\n\n"):
+                result = result.rstrip('\n') + "\n\n"
+            
+            conllu_outputs.append(result)
         
         return conllu_outputs
+
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -237,12 +252,14 @@ class UDPipeAnalyzer(LibraryWrapper):
             article (Article): Article containing information to save
         """
         conllu_info = article.get_conllu_info()
-        
+
         if conllu_info:
-            file_path = article.get_file_path('udpipe')
-            
+            file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(conllu_info)
+
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -254,7 +271,20 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        pass
+        file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"CONLLU file not found: {file_path}")
+
+        if file_path.stat().st_size == 0:
+            raise EmptyFileError(f"CONLLU file is empty: {file_path}")
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            conllu_content = f.read()
+
+        raw_text = article.get_raw_text()
+        doc = self._analyzer(raw_text)
+        return doc
 
 
 class POSFrequencyPipeline:
@@ -270,6 +300,8 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -281,11 +313,32 @@ class POSFrequencyPipeline:
         Returns:
             dict[str, int]: POS frequencies
         """
+        doc = self._analyzer.from_conllu(article)
+
+        pos_frequencies = {}
+
+        for token in doc:
+            pos_tag = token.pos_
+            if pos_tag:
+                pos_frequencies[pos_tag] = pos_frequencies.get(pos_tag, 0) + 1
+
+        return pos_frequencies
 
     def run(self) -> None:
         """
         Visualize the frequencies of each part of speech.
         """
+        articles = self._corpus.get_articles()
+
+        for article in articles.values():
+            pos_frequencies = self._count_frequencies(article)
+
+            article.set_pos_info(pos_frequencies)
+
+            to_meta(article)
+
+            image_path = ASSETS_PATH / f"{article.article_id}_image.png"
+            visualize(article=article, path_to_save=image_path)
 
 
 class PatternSearchPipeline(PipelineProtocol):
@@ -350,16 +403,21 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
+    data_path = pathlib.Path("c:/Users/KDFX Modes/кили/2025-2-level-ctlr/tmp/articles")
+    data_path.mkdir(parents=True, exist_ok=True)
+
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
-    
+
     udpipe_analyzer = UDPipeAnalyzer()
-    
+
     text_pipeline = TextProcessingPipeline(corpus_manager)
     text_pipeline.run()
-    
+
     udpipe_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
     udpipe_pipeline.run()
-    
+
+    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+    pos_pipeline.run()
 
 if __name__ == "__main__":
     main()
