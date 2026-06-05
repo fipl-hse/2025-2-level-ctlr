@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REPOSITORY_TYPE: admin
+  REPOSITORY_TYPE: public
   FINAL_PROJECT_TAG: "[PROJECT]"
   MODEL_URL: "https://github.com/fipl-hse/2025-2-level-ctlr/releases/download/v1.0.0/russian-syntagrus-ud-2.0-170801.udpipe"
   MODEL_PATH: "lab_6_pipeline/assets/model"
