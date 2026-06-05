@@ -24,6 +24,9 @@ jobs:
       should_run: ${{ steps.check.outputs.should_run }}
 
     steps:
+      - uses: actions/checkout@v6
+      - name: Setup FIPL environment
+        uses: fipl-hse/setup-env-action@v0.13.2
       - name: Check if workflow should run
         id: check
         run: |
