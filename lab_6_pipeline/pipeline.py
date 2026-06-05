@@ -5,34 +5,51 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 
-import spacy_udpipe
-from networkx import DiGraph
-from spacy import Language
-from spacy.tokens import Doc
-from spacy_conll.parser import ConllParser
-from spacy_conll import init_parser
-from spacy_conll import ConllFormatter
+try:
+    from spacy import Language
+    from spacy.tokens import Doc
+except ImportError:
+    Language = None
+    Doc = None
+    print("Warning: spacy not installed")
+
+try:
+    import spacy_udpipe
+except ImportError:
+    spacy_udpipe = None
+    print("Warning: spacy_udpipe not installed")
+
+try:
+    from networkx import DiGraph
+except ImportError:
+    DiGraph = None
+    print("Warning: networkx not installed")
+
+try:
+    from spacy_conll.parser import ConllParser
+    from spacy_conll import init_parser, ConllFormatter
+except ImportError:
+    ConllParser = None
+    init_parser = None
+    ConllFormatter = None
+    print("Warning: spacy_conll not installed")
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_raw, to_cleaned, to_meta, from_meta
 from core_utils.constants import ASSETS_PATH
-from core_utils.pipeline import LibraryWrapper, PipelineProtocol
+from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
-from core_utils.pipeline import TreeNode
 
 
 class EmptyFileError(Exception):
     """Raised when a file is empty."""
-    pass
 
 class EmptyDirectoryError(Exception):
     """Raised when directory is empty."""
-    pass
 
 
 class InconsistentDatasetError(Exception):
     """Raised when dataset has inconsistencies."""
-    pass
 
 
 class CorpusManager:
@@ -152,11 +169,11 @@ class TextProcessingPipeline(PipelineProtocol):
 
         for article in articles.values():
             to_cleaned(article)
-            
+
             if self._analyzer is not None:
                 raw_text = article.get_raw_text()
                 conllu_results = self._analyzer.analyze([raw_text])
-                
+
                 if conllu_results:
                     article.set_conllu_info(conllu_results[0])
                     self._analyzer.to_conllu(article)
@@ -174,6 +191,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        if spacy_udpipe is None:
+            raise ImportError("spacy_udpipe is not installed")
         self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
@@ -183,6 +202,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        if spacy_udpipe is None:
+            raise ImportError("spacy_udpipe is not installed")
         model_path = pathlib.Path("lab_6_pipeline/assets/model/ru-syntagrus.udpipe")
 
         if not model_path.exists():
@@ -206,17 +227,17 @@ class UDPipeAnalyzer(LibraryWrapper):
             list[str]: List of documents
         """
         conllu_outputs = []
-    
+
         for text in texts:
             doc = self._analyzer(text)
             lines = []
-            
+
             sentences = list(doc.sents)
-            
+
             for sent_idx, sent in enumerate(sentences):
                 lines.append(f"# sent_id = {sent_idx + 1}")
                 lines.append(f"# text = {sent.text}")
-                
+
                 for token_idx, token in enumerate(sent, start=1):
                     form = token.text
                     lemma = token.lemma_ if token.lemma_ else "_"
@@ -227,20 +248,20 @@ class UDPipeAnalyzer(LibraryWrapper):
                     deprel = token.dep_ if token.dep_ else "_"
                     deps = "_"
                     misc = "SpaceAfter=No" if not token.whitespace_ else "_"
-                    
+
                     lines.append(
                         f"{token_idx}\t{form}\t{lemma}\t{upos}\t{xpos}\t{feats}\t"
                         f"{head}\t{deprel}\t{deps}\t{misc}"
                     )
-                
+
                 lines.append("")
-            
+
             result = "\n".join(lines)
             if not result.endswith("\n\n"):
                 result = result.rstrip('\n') + "\n\n"
-            
+
             conllu_outputs.append(result)
-        
+
         return conllu_outputs
 
 
@@ -279,8 +300,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         if file_path.stat().st_size == 0:
             raise EmptyFileError(f"CONLLU file is empty: {file_path}")
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            conllu_content = f.read()
 
         raw_text = article.get_raw_text()
         doc = self._analyzer(raw_text)
@@ -403,21 +422,24 @@ def main() -> None:
     """
     Entrypoint for pipeline module.
     """
-    data_path = pathlib.Path("c:/Users/KDFX Modes/кили/2025-2-level-ctlr/tmp/articles")
+    data_path = pathlib.Path("tmp/articles")
     data_path.mkdir(parents=True, exist_ok=True)
 
-    corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
+    corpus_manager = CorpusManager(path_to_raw_txt_data=data_path)
 
-    udpipe_analyzer = UDPipeAnalyzer()
+    if spacy_udpipe is not None:
+        udpipe_analyzer = UDPipeAnalyzer()
+
+        udpipe_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
+        udpipe_pipeline.run()
+
+        pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+        pos_pipeline.run()
+    else:
+        print("Warning: spacy_udpipe not installed, skipping score 6 and 8 tasks")
 
     text_pipeline = TextProcessingPipeline(corpus_manager)
     text_pipeline.run()
-
-    udpipe_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
-    udpipe_pipeline.run()
-
-    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
-    pos_pipeline.run()
 
 if __name__ == "__main__":
     main()
