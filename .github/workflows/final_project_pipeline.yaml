@@ -30,6 +30,7 @@ jobs:
       - name: Check if workflow should run
         id: check
         run: |
+          set +e
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
           python admin_utils/skip_stage.py --lab-path final_project
