@@ -34,14 +34,17 @@ jobs:
           export PYTHONPATH=$(pwd)
           python admin_utils/skip_stage.py --lab-path final_project
           retVal=$?
-          echo "Return value is ", $retVal
+          echo "Return value is " $retVal
           if [[ "$REPOSITORY_TYPE" == "admin" ]]; then
+            echo "Running because it is admin"
             echo "should_run=true" >> $GITHUB_OUTPUT
           elif [[ -n "${{ github.event.pull_request.title }}" ]] && \
                [[ "${{ github.event.pull_request.title }}" == *"$FINAL_PROJECT_TAG"* ]] && \
                [ $retVal -eq 1 ]; then
+            echo "Running because it is public, has relevant label and not 0 mark"
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
+            echo "Not running because is public but not relevant to the final project"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
