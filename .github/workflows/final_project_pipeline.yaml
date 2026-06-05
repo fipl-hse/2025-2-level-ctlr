@@ -27,12 +27,13 @@ jobs:
       - name: Check if workflow should run
         id: check
         run: |
+          python admin_utils/skip_stage.py --lab-path final_project
+          retVal=$?
           if [[ "$REPOSITORY_TYPE" == "admin" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           elif [[ -n "${{ github.event.pull_request.title }}" ]] && \
                [[ "${{ github.event.pull_request.title }}" == *"$FINAL_PROJECT_TAG"* ]] && \
-               [[ $(python admin_utils/skip_stage.py --lab-path final_project) -ne 1 ]]; then
-          fi
+               [ $retVal -eq 1 ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
