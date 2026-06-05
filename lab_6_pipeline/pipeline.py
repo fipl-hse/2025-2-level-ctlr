@@ -192,7 +192,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         if spacy_udpipe is None:
-            raise ImportError("spacy_udpipe is not installed")
+            self._analyzer = None
+            return
         self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
@@ -203,7 +204,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         if spacy_udpipe is None:
-            raise ImportError("spacy_udpipe is not installed")
+            return None
         model_path = pathlib.Path("lab_6_pipeline/assets/model/ru-syntagrus.udpipe")
 
         if not model_path.exists():
@@ -226,6 +227,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        if self._analyzer is None:
+            return [""] * len(texts)
+
         conllu_outputs = []
 
         for text in texts:
@@ -272,6 +276,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        if self._analyzer is None:
+            return
+
         conllu_info = article.get_conllu_info()
 
         if conllu_info:
@@ -292,6 +299,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        if self._analyzer is None:
+            return None
+
         file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
 
         if not file_path.exists():
