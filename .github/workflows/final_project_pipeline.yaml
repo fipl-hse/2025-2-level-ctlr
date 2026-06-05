@@ -34,6 +34,7 @@ jobs:
           export PYTHONPATH=$(pwd)
           python admin_utils/skip_stage.py --lab-path final_project
           retVal=$?
+          echo "Return value is ", $retVal
           if [[ "$REPOSITORY_TYPE" == "admin" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           elif [[ -n "${{ github.event.pull_request.title }}" ]] && \
