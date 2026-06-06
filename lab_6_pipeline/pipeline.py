@@ -24,9 +24,9 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 try:
+    import spacy_udpipe  # type: ignore
     from spacy.language import Language
     from spacy.tokens import Doc
-    import spacy_udpipe  # type: ignore
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
