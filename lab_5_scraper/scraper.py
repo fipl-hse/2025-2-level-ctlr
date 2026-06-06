@@ -422,6 +422,9 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        clean_date = date_str.strip()
+        day, month, year = map(int, clean_date.split('.'))
+        return datetime.datetime(year, month, day)
 
     def parse(self) -> Article | bool:
         """
