@@ -44,6 +44,9 @@ class InconsistentDatasetError(Exception):
 class EmptyDirectoryError(Exception):
     """Raised when dataset directory exists but contains no *_raw.txt files."""
 
+class EmptyFileError(Exception):
+    """Raised when a file exists but contains no data."""
+
 
 class CorpusManager:
     """
