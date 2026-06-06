@@ -9,11 +9,12 @@ import string
 from typing import Dict, List, Optional
 from xml.parsers.expat import model
 
+from spacy_conll.parser import ConllParser
+
 from core_utils.article.article import Article
-from core_utils.article.io import to_cleaned, from_raw
+from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
-from spacy_conll.parser import ConllParser
 
 try:
     from networkx import DiGraph
