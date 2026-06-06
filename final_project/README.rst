@@ -58,6 +58,7 @@ into a single ``auto_annotated.conllu`` file.
 
     Running ``main.py`` file should result in creation of
     ``auto_annotated.conllu`` in folder ``final_project/dist``.
+    If the ``dist`` folder does not exist, it must be created automatically.
 
 .. note::
 
@@ -68,6 +69,19 @@ into a single ``auto_annotated.conllu`` file.
 
     It is mandatory to use the
     :py:class:`lab_6_pipeline.pipeline.UDPipeAnalyzer`.
+
+.. attention::
+
+    Before processing, make sure to validate the input:
+
+    - The folder with corpus must exist. If it does not, raise ``FileNotFoundError``.
+    - At least one ``.txt`` file must be found in the folder. If none are found,
+      raise ``ValueError``.
+    - The result returned by ``UDPipeAnalyzer.analyze()`` must not be empty.
+
+.. note::
+
+    The resulting ``.conllu`` file must end with a newline.
 
 Stage 2.2. Correct morphological annotation manually
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

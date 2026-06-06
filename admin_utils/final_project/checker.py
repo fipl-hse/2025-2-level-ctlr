@@ -2,6 +2,7 @@
 Public module for checking student CoNLL-U files.
 """
 
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,10 @@ from quality_control.console_logging import get_child_logger
 from admin_utils.constants import PROJECT_ROOT
 
 logger = get_child_logger(__file__)
+
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def check_via_official_validator(conllu_path: Path) -> tuple[str, str, int]:
