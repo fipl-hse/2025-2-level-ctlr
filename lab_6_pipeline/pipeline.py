@@ -78,8 +78,6 @@ class CorpusManager:
         for file_path in raw_files:
             if file_path.stat().st_size == 0:
                 raise InconsistentDatasetError(f"Raw file is empty: {file_path.name}")
-
-    # Извлекаем ID из raw-файлов
         raw_ids = set()
         for file_path in raw_files:
             stem = file_path.stem
@@ -89,8 +87,6 @@ class CorpusManager:
                     raw_ids.add(int(num_part))
                 else:
                     raise InconsistentDatasetError(f"Invalid raw file name: {file_path.name}")
-
-    # Извлекаем ID из meta-файлов
         meta_ids = set()
         for file_path in meta_files:
             stem = file_path.stem
@@ -100,15 +96,11 @@ class CorpusManager:
                     meta_ids.add(int(num_part))
                 else:
                     raise InconsistentDatasetError(f"Invalid meta file name: {file_path.name}")
-
-    # Проверяем, что множества ID совпадают
         if raw_ids != meta_ids:
             raise InconsistentDatasetError(
                 "Mismatch between raw and meta files: "
                 f"raw IDs {raw_ids}, meta IDs {meta_ids}"
             )
-
-    # (Опционально) проверка последовательности ID уже сделана для raw_ids, но можно и для объединённого множества
         expected_ids = set(range(1, len(raw_ids) + 1))
         if raw_ids != expected_ids:
             raise InconsistentDatasetError("IDs are not consecutive starting from 1")
