@@ -251,7 +251,7 @@ class Crawler:
         if href_str.startswith("/"):
             href_str = href_str[1:]
 
-        return "http://www.jvanetsky.ru/" + href_str
+        return "https://carsson.ru/" + href_str
 
 
     def find_articles(self) -> None:
@@ -261,6 +261,12 @@ class Crawler:
         needed = self.config.get_num_articles()
         seeds_to_visit = list(self.config.get_seed_urls())
         visited_seeds = set()
+
+        blacklisted_keywords = [
+            'karta-sajta', 'contacts', 'category', 'tag', 'author',
+            'privacy', 'advertisement', 'about', 'plugins', 'interesnoe',
+            'proza', 'stihi', 'novosti'
+        ]
 
         for seed_url in seeds_to_visit:
             if len(self.urls) >= needed:
@@ -287,6 +293,10 @@ class Crawler:
                 if "/page/" in article_url:
                     if article_url not in visited_seeds and article_url not in seeds_to_visit:
                         seeds_to_visit.append(article_url)
+                    continue
+
+                if article_url in ("https://carsson.ru", "https://carsson.ru/") or \
+                        any(word in article_url.lower() for word in blacklisted_keywords):
                     continue
 
                 if link.find_parent(['h1', 'h2', 'article']) and article_url not in self.urls:
