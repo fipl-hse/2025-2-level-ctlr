@@ -2,6 +2,7 @@
 Public module for checking student CoNLL-U files.
 """
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -49,16 +50,21 @@ def main() -> None:
     if not conllu_path.exists():
         logger.info("Total CONLLU file is not present. Analyze first.")
         sys.exit(1)
+    if conllu_path.stat().st_size == 0:
+        logger.info("CONLLU file is empty. Nothing to validate.")
+        sys.exit(1)
 
-    stdout, stderr, return_code = check_via_official_validator(conllu_path=conllu_path)
-    print(stdout)
-    print(stderr)
-    print(return_code)
-    if return_code != 0:
+    try:
+        stdout, stderr, return_code = check_via_official_validator(conllu_path=conllu_path)
+        logger.info(stdout)
+        logger.info(stderr)
+        logger.info(return_code)
+        logger.info("Check passed.")
+    except subprocess.CalledProcessError as e:
+        logger.info(e.stdout.decode("utf-8", errors="replace"))
+        logger.info(e.stderr.decode("utf-8", errors="replace"))
         logger.info("Check failed.")
         sys.exit(1)
-    else:
-        logger.info("Check passed.")
 
 
 if __name__ == "__main__":
