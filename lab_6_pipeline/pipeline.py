@@ -39,6 +39,12 @@ class EmptyDirectoryError(Exception):
     """
 
 
+class EmptyFileError(Exception):
+    """
+    Raised when a file is empty.
+    """
+
+
 class CorpusManager:
     """
     Work with articles and store them.
