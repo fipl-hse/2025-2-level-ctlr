@@ -191,10 +191,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
-        if spacy_udpipe is None:
-            self._analyzer = None # type: ignore
-            return
-        self._analyzer = self._bootstrap()
+        try:
+            if spacy_udpipe is None:
+                raise ImportError("spacy_udpipe not installed")
+            self._analyzer = self._bootstrap()
+        except ImportError as e:
+            print(f"Warning: UDPipeAnalyzer not initialized: {e}. Basic functionality only.")
 
     def _bootstrap(self) -> Language:
         """
@@ -228,6 +230,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             list[str]: List of documents
         """
         if self._analyzer is None:
+            print("Warning: analyze called but analyzer is not available")
             return [""] * len(texts)
 
         conllu_outputs = []
