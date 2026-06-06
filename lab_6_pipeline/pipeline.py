@@ -9,25 +9,25 @@ try:
     from spacy import Language
     from spacy.tokens import Doc
 except ImportError:
-    Language = None
-    Doc = None
+    Language = None # type: ignore
+    Doc = None # type: ignore
     print("Warning: spacy not installed")
 
 try:
     import spacy_udpipe
 except ImportError:
-    spacy_udpipe = None
+    spacy_udpipe = None # type: ignore
     print("Warning: spacy_udpipe not installed")
 
 try:
     from networkx import DiGraph
 except ImportError:
-    DiGraph = None
+    DiGraph = None # type: ignore
     print("Warning: networkx not installed")
 
 try:
+    from spacy_conll import ConllFormatter, init_parser
     from spacy_conll.parser import ConllParser
-    from spacy_conll import init_parser, ConllFormatter
 except ImportError:
     ConllParser = None
     init_parser = None
@@ -35,7 +35,7 @@ except ImportError:
     print("Warning: spacy_conll not installed")
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import from_raw, to_cleaned, to_meta, from_meta
+from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.visualizer import visualize
@@ -192,7 +192,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         if spacy_udpipe is None:
-            self._analyzer = None
+            self._analyzer = None # type: ignore
             return
         self._analyzer = self._bootstrap()
 
@@ -204,7 +204,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         if spacy_udpipe is None:
-            return None
+            return None # type: ignore
         model_path = pathlib.Path("lab_6_pipeline/assets/model/ru-syntagrus.udpipe")
 
         if not model_path.exists():
@@ -243,20 +243,15 @@ class UDPipeAnalyzer(LibraryWrapper):
                 lines.append(f"# text = {sent.text}")
 
                 for token_idx, token in enumerate(sent, start=1):
-                    form = token.text
-                    lemma = token.lemma_ if token.lemma_ else "_"
-                    upos = token.pos_ if token.pos_ else "_"
-                    xpos = "_"
-                    feats = str(token.morph) if token.morph else "_"
-                    head = token.head.i - sent.start + 1 if token.head != token else 0
-                    deprel = token.dep_ if token.dep_ else "_"
-                    deps = "_"
-                    misc = "SpaceAfter=No" if not token.whitespace_ else "_"
-
                     lines.append(
-                        f"{token_idx}\t{form}\t{lemma}\t{upos}\t{xpos}\t{feats}\t"
-                        f"{head}\t{deprel}\t{deps}\t{misc}"
-                    )
+                    f"{token_idx}\t{token.text}\t"
+                    f"{token.lemma_ if token.lemma_ else '_'}\t"
+                    f"{token.pos_ if token.pos_ else '_'}\t_\t"
+                    f"{str(token.morph) if token.morph else '_'}\t"
+                    f"{token.head.i - sent.start + 1 if token.head != token else 0}\t"
+                    f"{token.dep_ if token.dep_ else '_'}\t_\t"
+                    f"{'SpaceAfter=No' if not token.whitespace_ else '_'}"
+                )
 
                 lines.append("")
 
@@ -300,7 +295,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Doc: Document ready for parsing
         """
         if self._analyzer is None:
-            return None
+            return None # type: ignore
 
         file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
 
@@ -313,7 +308,7 @@ class UDPipeAnalyzer(LibraryWrapper):
 
         raw_text = article.get_raw_text()
         doc = self._analyzer(raw_text)
-        return doc
+        return doc # type: ignore
 
 
 class POSFrequencyPipeline:
