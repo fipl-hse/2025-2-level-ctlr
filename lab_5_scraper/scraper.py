@@ -265,7 +265,7 @@ class Crawler:
                     new_full_url not in self.urls
                     ):
                         self.urls.append(new_full_url)
-                    time.sleep(1)
+                    #time.sleep(1)
 
     def get_search_urls(self) -> list:
         """
@@ -419,7 +419,7 @@ class HTMLParser:
         """
         try:
             response = make_request(self.full_url, self.config)
-            time.sleep(1)
+            #time.sleep(1)
             if response.status_code != 200:
                 return False
             response.encoding = self.config.get_encoding()
@@ -459,7 +459,7 @@ def main() -> None:
     print(f"WILL PROCESS {len(article_urls)} articles")
     i = 1
     for full_url in article_urls:
-        time.sleep()
+        #time.sleep()
         print(f"Processing {i}: {full_url}")
         parser = HTMLParser(full_url=full_url, article_id=i, config=configuration)
         article = parser.parse()

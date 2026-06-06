@@ -38,7 +38,7 @@ class EmptyDirectoryError(Exception):
     Directory is empty.
     """
 
-#just for a commit
+
 class CorpusManager:
     """
     Work with articles and store them.
@@ -131,10 +131,11 @@ class TextProcessingPipeline(PipelineProtocol):
         Perform basic preprocessing and write processed text to files.
         """
         articles = self._corpus.get_articles()
-        for article_id, article in articles.items():
-            raw_path = self._corpus.path_to_raw_txt_data / f"{article_id}_raw.txt"
-            with open(raw_path, "r", encoding="utf-8") as f:
-                raw_text = f.read()
+        for article in articles.values():
+            # raw_path = self._corpus.path_to_raw_txt_data / f"{article_id}_raw.txt"
+            # with open(raw_path, "r", encoding="utf-8") as f:
+            #     raw_text = f.read()
+            raw_text = article.text
             cleaned_text = raw_text.lower()
             cleaned_text = re.sub(r"[^\w\s\'-]", "", cleaned_text)
             article.cleaned_text = cleaned_text
