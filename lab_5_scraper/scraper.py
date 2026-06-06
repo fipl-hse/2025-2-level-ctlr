@@ -254,12 +254,18 @@ class Crawler:
                 continue
             soup = BeautifulSoup(response.text, "lxml")
             for tag in soup.find_all("a", href=True):
-                href = tag.get("href", "")
+                href = tag.get("href", "").strip()
                 skip_patterns = ["search", "award", "javascript:", "#"]
                 if not href or any(x in href.lower() for x in skip_patterns):
                     continue
                 if any(x in href for x in ["/press/", "/news/", "/history/", "/details/"]):
                     full_url = self._extract_url(tag)
+                    if (
+                        "performance" in full_url.lower() 
+                        or "project" in full_url.lower()
+                        or full_url.endswith("/history/")
+                    ):
+                        continue
                     if full_url and full_url not in self.urls:
                         self.urls.append(full_url)
                 if len(self.urls) >= self.config.get_num_articles():
@@ -392,14 +398,16 @@ class HTMLParser:
         if header_tag is not None:
             header_links = header_tag.find_all("a")
             if len(header_links) >= 2:
-                self.article.title = header_links[1].get_text(strip=True)
+                raw_title = header_links[1].get_text(strip=True)
+                self.article.title = " ".join(raw_title.split())
                 return
         title_tag = article_soup.find("title")
         if title_tag is None:
             self.article.title = "NOT FOUND"
         else:
             title_text = title_tag.get_text(strip=True)
-            self.article.title = title_text.split(". Text")[0]
+            raw_title = title_text.split(". Text")[0]
+            self.article.title = " ".join(raw_title.split())
 
         self._fill_article_date(article_soup)
 
