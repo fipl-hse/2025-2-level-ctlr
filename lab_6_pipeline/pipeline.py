@@ -5,40 +5,13 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 
-try:
-    import spacy_udpipe
-except ImportError:
-    spacy_udpipe = None
-    print("Warning: spacy_udpipe not installed")
-
-try:
-    from networkx import DiGraph
-except ImportError:
-    DiGraph = None
-    print("Warning: networkx not installed")
-
-try:
-    from spacy import Language
-    from spacy.tokens import Doc
-except ImportError:
-    Language = None
-    Doc = None
-    print("Warning: spacy not installed")
-
-try:
-    from spacy.training.converters import conllu_to_docs
-except ImportError:
-    conllu_to_docs = None
-    print("Warning: conllu_to_docs not available (spacy version < 3.5)")
-
-try:
-    from spacy_conll import ConllFormatter, init_parser
-    from spacy_conll.parser import ConllParser
-except ImportError:
-    ConllFormatter = None
-    init_parser = None
-    ConllParser = None
-    print("Warning: spacy_conll not installed")
+import spacy_udpipe
+from networkx import DiGraph
+from spacy import Language
+from spacy.tokens import Doc
+from spacy.training.converters import conllu_to_docs
+from spacy_conll import ConllFormatter, init_parser
+from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
