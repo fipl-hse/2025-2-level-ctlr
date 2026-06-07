@@ -208,9 +208,7 @@ class UDPipeAnalyzer(LibraryWrapper):
                     "MISC": "MISC",    
                 },    
             },    
-        )    
-        if not isinstance(model, Language):    
-            raise TypeError    
+        )       
         return model
 
     def analyze(self, texts: list[str]) -> list[str]:
