@@ -4,8 +4,6 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-from typing import cast
-
 import spacy_udpipe
 from spacy_conll import ConllParser
 
