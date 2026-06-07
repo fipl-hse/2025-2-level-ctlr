@@ -325,13 +325,13 @@ class HTMLParser:
         if not text_div:
             text_div = article_soup.find('div', id='content')
         if not text_div:
-            text_div = article_soup.find('body')                   
+            text_div = article_soup.find('body')                
 
         if not text_div:
             self.article.text = ''
             return
 
-        for unwanted in text_div(['script', 'style', 'a.button', 
+        for unwanted in text_div(['script', 'style', 'a.button',
                                   'div.download','nav', 'header', 'footer', 'aside']):
             unwanted.decompose()
 
@@ -340,7 +340,8 @@ class HTMLParser:
             self.article.text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs)
         else:
             raw_text = text_div.get_text(strip=True)
-            self.article.text = '\n\n'.join(line.strip() for line in raw_text.splitlines() if line.strip())
+            self.article.text = '\n\n'.join(line.strip() for line in raw_text.splitlines() 
+            if line.strip())
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
