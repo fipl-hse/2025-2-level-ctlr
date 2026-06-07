@@ -66,7 +66,7 @@ class Config:
         self._config_dto = self._extract_config_content()
         self._validate_config_content()
         self._seed_urls = self._config_dto.seed_urls
-        self._num_articles = self._config_dto.total_articles_to_find_and_parse
+        self._num_articles = self._config_dto.total_articles
         self._headers = self._config_dto.headers
         self._encoding = self._config_dto.encoding
         self._timeout = self._config_dto.timeout
@@ -103,7 +103,7 @@ class Config:
             if not isinstance(url, str) or not pattern.match(url):
                 raise IncorrectSeedURLError(f'Invalid seed URL: {url}')
 
-        total = self._config_dto.total_articles_to_find_and_parse
+        total = self._config_dto.total_articles
         if not isinstance(total, int) or total <= 0:
             raise IncorrectNumberOfArticlesError('Total articles must be a positive integer')
         if total > 150:
