@@ -183,7 +183,7 @@ class UDPipeAnalyzer(LibraryWrapper):
                 "XPOS": "tag_",
                 "FEATS": "morph",
                 "HEAD": "head",
-                "DEP": "dep_",
+                "DEPREL": "dep_",
                 "DEPS": "deps",
                 "MISC": "misc"
             },
