@@ -7,7 +7,7 @@ import pathlib
 import re
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import to_cleaned
+from core_utils.article.io import to_cleaned, from_raw
 from core_utils.constants import PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
@@ -98,10 +98,8 @@ class CorpusManager:
         files = self.path_to_raw_txt_data.glob("*_raw.txt")
         for file in files:
             article_id = int(file.stem.split("_")[0])
-            article = Article(url=None, article_id=article_id) #создаём объект Article для каждого raw файла
-            with open(file, 'r', encoding = 'utf-8') as f:
-                raw_text = f.read()
-            article.text = raw_text
+            article = from_raw(file) #создаём объект Article для каждого raw файла
+            article.article_id = article_id
             self._storage[article_id] = article # добавление в словарь
 
 
