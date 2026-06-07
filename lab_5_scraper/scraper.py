@@ -325,7 +325,7 @@ class HTMLParser:
         if not text_div:
             text_div = article_soup.find('div', id='content')
         if not text_div:
-            text_div = article_soup.find('body')   
+            text_div = article_soup.find('body')
 
         if not text_div:
             self.article.text = ''
