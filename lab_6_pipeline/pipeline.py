@@ -4,37 +4,14 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-from typing import Any, Optional
 
-try:
-    from spacy import Language
-    from spacy.tokens import Doc
-except ImportError:
-    Language = None
-    Doc = None
-    print("Warning: spacy not installed")
-
-try:
-    import spacy_udpipe
-except ImportError:
-    spacy_udpipe = None
-    print("Warning: spacy_udpipe not installed")
-
-try:
-    from networkx import DiGraph
-except ImportError:
-    DiGraph = None
-    print("Warning: networkx not installed")
-
-try:
-    from spacy_conll import ConllFormatter, init_parser, parse_conllu_file_as_spacy
-    from spacy_conll.parser import ConllParser
-except ImportError:
-    ConllFormatter = None
-    init_parser = None
-    parse_conllu_file_as_spacy = None
-    ConllParser = None
-    print("Warning: spacy_conll not installed")
+from spacy import Language
+from spacy.tokens import Doc
+from spacy.training.converters import conllu_to_docs
+import spacy_udpipe
+from networkx import DiGraph
+from spacy_conll import ConllFormatter, init_parser
+from spacy_conll.parser import ConllParser
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
@@ -193,7 +170,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
-        self._analyzer: Optional[Any] = None
         self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
@@ -302,12 +278,15 @@ class UDPipeAnalyzer(LibraryWrapper):
         if file_path.stat().st_size == 0:
             raise EmptyFileError(f"CONLLU file is empty: {file_path}")
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            raw_text = article.get_raw_text()
-            doc = self._analyzer(raw_text)
-
-        return doc
-
+        with open(file_path, 'r', encoding='utf-8') as source_file:
+            conllu_content = source_file.read()
+    
+        docs = list(conllu_to_docs(conllu_content))
+    
+        if not docs:
+            raise ValueError("No documents parsed from CONLLU content")
+        
+        return docs[0]
 
 class POSFrequencyPipeline:
     """
