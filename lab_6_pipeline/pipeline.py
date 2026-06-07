@@ -303,11 +303,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"CONLLU file is empty: {file_path}")
 
         with open(file_path, 'r', encoding='utf-8') as f:
-            conllu_content = f.read()
+            raw_text = article.get_raw_text()
+            doc = self._analyzer(raw_text)
 
-        raw_text = article.get_raw_text()
-        doc = self._analyzer(raw_text)
-        
         return doc
 
 
