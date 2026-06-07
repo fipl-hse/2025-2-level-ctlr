@@ -1,0 +1,6 @@
+# Core dependencies for lab_6_pipeline
+spacy==3.8.14
+spacy-udpipe==1.0.0
+spacy-conll==4.0.1
+networkx==3.6.1
+matplotlib==3.10.9
