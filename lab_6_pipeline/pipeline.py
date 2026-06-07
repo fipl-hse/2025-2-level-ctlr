@@ -4,12 +4,11 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
-from collections import Counter
+from typing import cast
 
 import matplotlib.pyplot as plt
 import spacy_conll
 import spacy_udpipe
-from spacy.training.converters import conllu_to_docs
 from spacy_conll.parser import ConllParser
 
 from core_utils import visualizer
@@ -28,6 +27,7 @@ except ImportError:
 try:
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy.training.converters import conllu_to_docs
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
@@ -201,10 +201,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         )
         analyzer.add_pipe(
             "conll_formatter",
-            config={"include_headers": True},
+            config={
+                "include_headers": True,
+                "field_names": {},
+            },
             last=True,
         )
-
         return analyzer
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -271,7 +273,7 @@ class UDPipeAnalyzer(LibraryWrapper):
                 )
             )
 
-        return Doc.from_docs(docs)
+        return cast(Doc, Doc.from_docs(docs))
 
 
 class POSFrequencyPipeline:
@@ -301,8 +303,13 @@ class POSFrequencyPipeline:
             dict[str, int]: POS frequencies
         """
         doc = self._analyzer.from_conllu(article)
-        frequencies = Counter(token.pos_ for token in doc if token.pos_)
-        return dict(frequencies)
+        frequencies: dict[str, int] = {}
+
+        for token in doc:
+            if token.pos_:
+                frequencies[token.pos_] = frequencies.get(token.pos_, 0) + 1
+
+        return frequencies
 
     def run(self) -> None:
         """
