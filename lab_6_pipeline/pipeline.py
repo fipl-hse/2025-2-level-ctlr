@@ -7,7 +7,7 @@ import pathlib
 import re
 
 from core_utils.article.article import Article, ArtifactType
-from core_utils.article.io import to_cleaned, from_raw
+from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
