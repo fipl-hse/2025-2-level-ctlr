@@ -255,12 +255,16 @@ class Crawler:
         needed = self.config.get_num_articles()
         to_visit = list(self.config.get_seed_urls())
         visited = set()
+        max_pages = 300
+        pages_processed = 0
 
-        while len(self.urls) < needed and to_visit:
+
+        while len(self.urls) < needed and to_visit and pages_processed < max_pages:
             current_url = to_visit.pop(0)
             if current_url in visited:
                 continue
             visited.add(current_url)
+            pages_processed += 1
 
             try:
                 response = make_request(current_url, self.config)
@@ -282,7 +286,7 @@ class Crawler:
                     href = next_link.get('href')
                     if isinstance(href, str):
                         next_url = urljoin(current_url, href)
-                        if next_url not in visited:
+                        if next_url != current_url and next_url not in visited:
                             to_visit.append(next_url)
         self.urls = self.urls[:needed]
 
