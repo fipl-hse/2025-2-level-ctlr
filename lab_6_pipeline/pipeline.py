@@ -28,6 +28,7 @@ except ImportError:
 try:
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy.training.converters import conllu_to_docs
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
@@ -81,67 +82,32 @@ class CorpusManager:
         try:
             files = list(self.path_to_raw_txt_data.iterdir())
         except OSError as exc:
-            raise EmptyDirectoryError(
-                f"Cannot read directory: {self.path_to_raw_txt_data}"
-            ) from exc
+            raise EmptyDirectoryError(f"Cannot read: {self.path_to_raw_txt_data}") from exc
 
         if not files:
             raise EmptyDirectoryError(f"Directory is empty: {self.path_to_raw_txt_data}")
 
-        raw_files = []
-        meta_files = []
-        raw_ids = set()
-        meta_ids = set()
+        raw_dict = {}
+        meta_dict = {}
 
-        for file_path in files:
-            if not file_path.is_file():
-                continue
+        for f in files:
+            if f.is_file():
+                n = f.name
+                if n.endswith("_raw.txt") and n[:-8].isdigit():
+                    raw_dict[int(n[:-8])] = f
+                elif n.endswith("_meta.json") and n[:-10].isdigit():
+                    meta_dict[int(n[:-10])] = f
 
-            name = file_path.name
-            if name.endswith("_raw.txt"):
-                id_str = name[:-8]
-                if id_str.isdigit():
-                    raw_id = int(id_str)
-                    raw_files.append(file_path)
-                    raw_ids.add(raw_id)
-            elif name.endswith("_meta.json"):
-                id_str = name[:-10]
-                if id_str.isdigit():
-                    meta_id = int(id_str)
-                    meta_files.append(file_path)
-                    meta_ids.add(meta_id)
-
-        if not raw_files:
+        if not raw_dict:
             raise EmptyDirectoryError(f"No valid raw files found in: {self.path_to_raw_txt_data}")
 
-        if meta_files:
-            if raw_ids != meta_ids:
-                raise InconsistentDatasetError(
-                    f"Raw and meta files have different IDs. "
-                    f"Raw IDs: {sorted(raw_ids)}, Meta IDs: {sorted(meta_ids)}"
-                )
+        all_ids = set(raw_dict) | set(meta_dict)
+        if all_ids and all_ids != set(range(1, max(all_ids) + 1)):
+            raise InconsistentDatasetError(f"Inconsistent IDs. Found: {sorted(all_ids)}")
 
-        if raw_ids:
-            expected_ids = set(range(1, max(raw_ids) + 1))
-            if raw_ids != expected_ids:
-                raise InconsistentDatasetError(
-                    f"Raw files have inconsistent numbering. Found IDs: {sorted(raw_ids)}. "
-                    f"Expected IDs: {sorted(expected_ids)}"
-                )
-
-        if len(raw_ids) != len(meta_ids):
-            raise InconsistentDatasetError(
-                f"Number of raw files ({len(raw_ids)}) "
-                f"does not match number of meta files ({len(meta_ids)})"
-            )
-
-        for file_path in raw_files:
-            if file_path.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Raw file is empty: {file_path.name}")
-
-        for file_path in meta_files:
-            if file_path.stat().st_size == 0:
-                raise InconsistentDatasetError(f"Meta file is empty: {file_path.name}")
+        for f in list(raw_dict.values()) + list(meta_dict.values()):
+            if f.stat().st_size == 0:
+                raise InconsistentDatasetError(f"File is empty: {f.name}")
 
     def _scan_dataset(self) -> None:
         """
