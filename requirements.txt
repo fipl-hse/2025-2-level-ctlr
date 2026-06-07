@@ -1,2 +1,2 @@
-spacy-conll==0.2.0
+spacy-conll==4.0.1
 spacy-udpipe==1.0.0
