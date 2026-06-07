@@ -1,0 +1,3 @@
+spacy-udpipe==1.0.0
+spacy-conll==4.0.1
+matplotlib==3.10.8
