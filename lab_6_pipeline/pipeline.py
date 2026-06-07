@@ -4,34 +4,36 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
+from typing import Any, Optional
 
 try:
     from spacy import Language
     from spacy.tokens import Doc
 except ImportError:
-    Language = None # type: ignore
-    Doc = None # type: ignore
+    Language = None
+    Doc = None
     print("Warning: spacy not installed")
 
 try:
     import spacy_udpipe
 except ImportError:
-    spacy_udpipe = None # type: ignore
+    spacy_udpipe = None
     print("Warning: spacy_udpipe not installed")
 
 try:
     from networkx import DiGraph
 except ImportError:
-    DiGraph = None # type: ignore
+    DiGraph = None
     print("Warning: networkx not installed")
 
 try:
-    from spacy_conll import ConllFormatter, init_parser
+    from spacy_conll import ConllFormatter, init_parser, parse_conllu_file_as_spacy
     from spacy_conll.parser import ConllParser
 except ImportError:
-    ConllParser = None
-    init_parser = None
     ConllFormatter = None
+    init_parser = None
+    parse_conllu_file_as_spacy = None
+    ConllParser = None
     print("Warning: spacy_conll not installed")
 
 from core_utils.article.article import Article, ArtifactType
@@ -191,12 +193,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
-        try:
-            if spacy_udpipe is None:
-                raise ImportError("spacy_udpipe not installed")
-            self._analyzer = self._bootstrap()
-        except ImportError as e:
-            print(f"Warning: UDPipeAnalyzer not initialized: {e}. Basic functionality only.")
+        self._analyzer: Optional[Any] = None
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -205,8 +203,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        if spacy_udpipe is None:
-            return None # type: ignore
         model_path = pathlib.Path("lab_6_pipeline/assets/model/ru-syntagrus.udpipe")
 
         if not model_path.exists():
@@ -229,32 +225,26 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        if self._analyzer is None:
-            print("Warning: analyze called but analyzer is not available")
-            return [""] * len(texts)
-
         conllu_outputs = []
 
         for text in texts:
             doc = self._analyzer(text)
             lines = []
 
-            sentences = list(doc.sents)
-
-            for sent_idx, sent in enumerate(sentences):
+            for sent_idx, sent in enumerate(doc.sents):
                 lines.append(f"# sent_id = {sent_idx + 1}")
                 lines.append(f"# text = {sent.text}")
 
                 for token_idx, token in enumerate(sent, start=1):
                     lines.append(
-                    f"{token_idx}\t{token.text}\t"
-                    f"{token.lemma_ if token.lemma_ else '_'}\t"
-                    f"{token.pos_ if token.pos_ else '_'}\t_\t"
-                    f"{str(token.morph) if token.morph else '_'}\t"
-                    f"{token.head.i - sent.start + 1 if token.head != token else 0}\t"
-                    f"{token.dep_ if token.dep_ else '_'}\t_\t"
-                    f"{'SpaceAfter=No' if not token.whitespace_ else '_'}"
-                )
+                        f"{token_idx}\t{token.text}\t"
+                        f"{token.lemma_ if token.lemma_ else '_'}\t"
+                        f"{token.pos_ if token.pos_ else '_'}\t_\t"
+                        f"{str(token.morph) if token.morph else '_'}\t"
+                        f"{token.head.i - sent.start + 1 if token.head != token else 0}\t"
+                        f"{token.dep_ if token.dep_ else '_'}\t_\t"
+                        f"{'SpaceAfter=No' if not token.whitespace_ else '_'}"
+                    )
 
                 lines.append("")
 
@@ -265,6 +255,13 @@ class UDPipeAnalyzer(LibraryWrapper):
             conllu_outputs.append(result)
 
         return conllu_outputs
+        # conllu_outputs = []
+
+        # for text in texts:
+        #     doc = self._analyzer(text)
+        #     conllu_outputs.append(doc._.conll_str)
+
+        # return conllu_outputs
 
 
     def to_conllu(self, article: Article) -> None:
@@ -297,9 +294,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        if self._analyzer is None:
-            return None # type: ignore
-
         file_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
 
         if not file_path.exists():
@@ -308,10 +302,13 @@ class UDPipeAnalyzer(LibraryWrapper):
         if file_path.stat().st_size == 0:
             raise EmptyFileError(f"CONLLU file is empty: {file_path}")
 
+        with open(file_path, 'r', encoding='utf-8') as f:
+            conllu_content = f.read()
 
         raw_text = article.get_raw_text()
         doc = self._analyzer(raw_text)
-        return doc # type: ignore
+        
+        return doc
 
 
 class POSFrequencyPipeline:
@@ -435,19 +432,16 @@ def main() -> None:
 
     corpus_manager = CorpusManager(path_to_raw_txt_data=data_path)
 
-    if spacy_udpipe is not None:
-        udpipe_analyzer = UDPipeAnalyzer()
-
-        udpipe_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
-        udpipe_pipeline.run()
-
-        pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
-        pos_pipeline.run()
-    else:
-        print("Warning: spacy_udpipe not installed, skipping score 6 and 8 tasks")
+    udpipe_analyzer = UDPipeAnalyzer()
 
     text_pipeline = TextProcessingPipeline(corpus_manager)
     text_pipeline.run()
+
+    udpipe_pipeline = TextProcessingPipeline(corpus_manager, udpipe_analyzer)
+    udpipe_pipeline.run()
+
+    pos_pipeline = POSFrequencyPipeline(corpus_manager, udpipe_analyzer)
+    pos_pipeline.run()
 
 if __name__ == "__main__":
     main()
