@@ -3,9 +3,11 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
-import importlib
 import pathlib
 from typing import cast
+
+import spacy_udpipe
+from spacy_conll import ConllParser
 
 from core_utils import visualizer
 from core_utils.article.article import Article, ArtifactType
@@ -167,22 +169,13 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         model_dir = pathlib.Path(__file__).parent / "assets" / "model"
         model_files = list(model_dir.glob("*.udpipe"))
-
         if not model_files:
             raise FileNotFoundError(
                 "UDPipe model was not found in lab_6_pipeline/assets/model"
             )
-
-        udpipe_module = importlib.import_module("spacy_udpipe")
-        load_from_path = getattr(udpipe_module, "load_from_path")
-
-        return cast(
-            Language,
-            load_from_path(
-                lang="ru",
-                path=str(model_files[0]),
-            ),
-        )
+        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_files[0]))
+        nlp.add_pipe("conll_formatter", last=True)
+        return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -197,38 +190,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         analyzed_texts = []
         for text in texts:
             doc = self._analyzer(text)
-            conllu_lines = []
-            sentence_id = 1
-            for sentence in doc.sents:
-                conllu_lines.append(f"# sent_id = {sentence_id}")
-                conllu_lines.append(f"# text = {sentence.text}")
-                for token_number, token in enumerate(sentence, start=1):
-                    head_number = 0
-                    if token.head != token:
-                        head_number = token.head.i - sentence.start + 1
-                    morph = str(token.morph) if str(token.morph) else "_"
-                    misc = "_"
-                    if not token.whitespace_:
-                        misc = "SpaceAfter=No"
-                    conllu_lines.append(
-                        "\t".join(
-                            [
-                                str(token_number),
-                                token.text,
-                                token.lemma_,
-                                token.pos_,
-                                token.tag_ or "_",
-                                morph,
-                                str(head_number),
-                                token.dep_,
-                                "_",
-                                misc,
-                            ]
-                        )
-                    )
-                conllu_lines.append("")
-                sentence_id += 1
-            analyzed_texts.append("\n".join(conllu_lines))
+            conll_str = doc._.conll_str
+            analyzed_texts.append(conll_str)
         return analyzed_texts
 
     def to_conllu(self, article: Article) -> None:
@@ -259,11 +222,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         if not conllu_info.strip():
             raise EmptyFileError("ConLLU file is empty.")
         article.set_conllu_info(conllu_info)
-        text_parts: list[str] = []
-        for line in conllu_info.splitlines():
-            if line.startswith("# text = "):
-                text_parts.append(line.replace("# text = ", "", 1))
-        return cast(Doc, self._analyzer(" ".join(text_parts)))
+        doc = ConllParser.parse(conllu_info, self._analyzer)
+        return doc
 
 
 class POSFrequencyPipeline:
@@ -292,23 +252,10 @@ class POSFrequencyPipeline:
         Returns:
             dict[str, int]: POS frequencies
         """
-        conllu_info = article.get_conllu_info()
-
-        if not conllu_info.strip():
-            raise EmptyFileError("ConLLU file is empty.")
+        doc = self._analyzer.from_conllu(article)
         frequencies = {}
-        for line in conllu_info.splitlines():
-            if not line:
-                continue
-            if line.startswith("#"):
-                continue
-            columns = line.split("\t")
-            if len(columns) < 4:
-                continue
-            token_id = columns[0]
-            if "-" in token_id or "." in token_id:
-                continue
-            pos = columns[3]
+        for token in doc:
+            pos = token.pos_
             frequencies[pos] = frequencies.get(pos, 0) + 1
         return frequencies
 
@@ -318,19 +265,13 @@ class POSFrequencyPipeline:
         """
         articles = self._corpus.get_articles()
         for article in articles.values():
-            self._analyzer.from_conllu(article)
-            meta_path = article.get_meta_file_path()
-            article = from_meta(meta_path, article)
             frequencies = self._count_frequencies(article)
             article.set_pos_info(frequencies)
+            meta_path = article.get_meta_file_path()
+            article = from_meta(meta_path, article)
             to_meta(article)
             path_to_save = ASSETS_PATH / f"{article.article_id}_image.png"
             try:
-                setattr(
-                    visualizer,
-                    "plt",
-                    importlib.import_module("matplotlib.pyplot"),
-                )
                 visualizer.visualize(article=article, path_to_save=path_to_save)
             except ModuleNotFoundError:
                 path_to_save.touch()
