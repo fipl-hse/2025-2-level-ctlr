@@ -4,6 +4,7 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
+
 import spacy_udpipe
 from spacy_conll import ConllParser
 
@@ -172,7 +173,22 @@ class UDPipeAnalyzer(LibraryWrapper):
                 "UDPipe model was not found in lab_6_pipeline/assets/model"
             )
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_files[0]))
-        nlp.add_pipe("conll_formatter", last=True)
+        nlp.add_pipe("conll_formatter", last=True, config={
+            "conversion_maps": {},
+            "field_names": {
+                "ID": "id",
+                "FORM": "text",
+                "LEMMA": "lemma_",
+                "UPOS": "pos_",
+                "XPOS": "tag_",
+                "FEATS": "morph",
+                "HEAD": "head",
+                "DEP": "dep_",
+                "DEPS": "deps",
+                "MISC": "misc"
+            },
+            "include_headers": False
+        })
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
