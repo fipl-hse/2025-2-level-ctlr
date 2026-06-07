@@ -204,8 +204,23 @@ class UDPipeAnalyzer(LibraryWrapper):
         analyzed_texts = []
         for text in texts:
             doc = self._analyzer(text)
-            conll_str = doc._.conll_str
-            analyzed_texts.append(conll_str)
+            conllu_lines = []
+            sentence_id = 1
+            for sentence in doc.sents:
+                conllu_lines.append(f"# sent_id = {sentence_id}")
+                conllu_lines.append(f"# text = {sentence.text}")
+                for token_number, token in enumerate(sentence, start=1):
+                    head = token.head.i - sentence.start + 1 if token.head != token else 0
+                    morph = str(token.morph) if str(token.morph) else "_"
+                    misc = "_" if token.whitespace_ else "SpaceAfter=No"
+                    conllu_lines.append("\t".join([
+                        str(token_number), token.text, token.lemma_,
+                        token.pos_, token.tag_ or "_", morph,
+                        str(head), token.dep_, "_", misc
+                    ]))
+                conllu_lines.append("")
+                sentence_id += 1
+            analyzed_texts.append("\n".join(conllu_lines))
         return analyzed_texts
 
     def to_conllu(self, article: Article) -> None:
