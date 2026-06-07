@@ -5,11 +5,11 @@ Pipeline for CONLL-U formatting.
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
 
+import spacy_udpipe
+from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
 from spacy.training.converters import conllu_to_docs
-import spacy_udpipe
-from networkx import DiGraph
 from spacy_conll import ConllFormatter, init_parser
 from spacy_conll.parser import ConllParser
 
@@ -280,12 +280,12 @@ class UDPipeAnalyzer(LibraryWrapper):
 
         with open(file_path, 'r', encoding='utf-8') as source_file:
             conllu_content = source_file.read()
-    
+
         docs = list(conllu_to_docs(conllu_content))
-    
+
         if not docs:
             raise ValueError("No documents parsed from CONLLU content")
-        
+
         return docs[0]
 
 class POSFrequencyPipeline:
