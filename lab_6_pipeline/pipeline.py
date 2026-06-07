@@ -6,9 +6,9 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-from core_utils.article.article import Article
+from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import to_cleaned
-from core_utils.constants import ASSETS_PATH
+from core_utils.constants import ASSETS_PATH, PROJECT_ROOT
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 try:
@@ -19,8 +19,10 @@ except ImportError:
     print("No libraries installed. Failed to import.")
 
 try:
+    import spacy_udpipe
     from spacy.language import Language
     from spacy.tokens import Doc
+    from spacy_conll import ConllParser
 except ImportError:
     Language = None  # type: ignore
     Doc = None  # type: ignore
@@ -139,10 +141,16 @@ class TextProcessingPipeline(PipelineProtocol):
         articles = self._corpus.get_articles()
         for article in articles.values():
             raw_text = article.text
-            cleaned_text = raw_text.lower()
-            cleaned_text = re.sub(r"[^\w\s\'-]", "", cleaned_text)
-            article.cleaned_text = cleaned_text
+            # cleaned_text = raw_text.lower()
+            # cleaned_text = re.sub(r"[^\w\s\'-]", "", cleaned_text)
+            # article.cleaned_text = cleaned_text
             to_cleaned(article)
+            if self._analyzer is not None:
+                conllu_results = self._analyzer.analyze([raw_text])
+                if conllu_results:
+                    conllu_markup = conllu_results[0]
+                    article.set_conllu_info(conllu_markup)
+                    self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
@@ -157,6 +165,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> Language:
         """
@@ -165,6 +174,31 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
+        model_path = PROJECT_ROOT / "lab_6_pipeline" / "assets" / "model" / "russian-syntagrus-ud-2.0-170801.udpipe"
+        if not model_path.exists():
+            raise FileNotFoundError()
+        model = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+        model.add_pipe(
+            "conll_formatter",
+            last=True,
+            config={
+                "conversion_maps": {"XPOS": {"": "_"}},
+                "include_headers": True,
+                "field_names": {
+                    "ID": "ID",
+                    "FORM": "FORM",
+                    "LEMMA": "LEMMA",
+                    "UPOS": "UPOS",
+                    "XPOS": "XPOS",
+                    "FEATS": "FEATS",
+                    "HEAD": "HEAD",
+                    "DEPREL": "DEPREL",
+                    "DEPS": "DEPS",
+                    "MISC": "MISC",
+                },
+            },
+        )
+        return model
 
     def analyze(self, texts: list[str]) -> list[str]:
         """
@@ -176,6 +210,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
+        result_list = []
+        for text in texts:
+            analyzed_text = self._analyzer(text)
+            conllu = analyzed_text._.conll_str
+            result_list.append(conllu)
+        return result_list
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -184,6 +224,14 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        conllu_info = article.get_conllu_info()
+        if conllu_info is None:
+            raise ValueError("Article has no CoNLL-U info to save")
+        file_path = article.get_file_path(kind=ArtifactType.UDPIPE_CONLLU)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(conllu_info)
+            f.write('\n')
 
     def from_conllu(self, article: Article) -> Doc:
         """
@@ -292,6 +340,7 @@ def main() -> None:
     """
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
     pipeline = TextProcessingPipeline(corpus_manager)
+    udpipe_analyzer = UDPipeAnalyzer()
     pipeline.run()
 
 
