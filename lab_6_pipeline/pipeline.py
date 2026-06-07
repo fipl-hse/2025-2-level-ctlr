@@ -7,8 +7,8 @@ import importlib
 import pathlib
 from typing import cast
 
-from core_utils.article.article import Article, ArtifactType
 from core_utils import visualizer
+from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
 from core_utils.constants import ASSETS_PATH
 from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
