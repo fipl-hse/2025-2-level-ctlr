@@ -6,6 +6,10 @@ Pipeline for CONLL-U formatting.
 import importlib
 import pathlib
 from typing import cast
+import matplotlib.pyplot as plt
+import spacy_conll
+import spacy_udpipe
+from spacy_conll.parser import ConllParser
 
 from core_utils import visualizer
 from core_utils.article.article import Article, ArtifactType
@@ -313,6 +317,31 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
+        path_to_read = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
+
+        with open(path_to_read, "r", encoding="utf-8") as file:
+            conllu_info = file.read()
+
+        if not conllu_info.strip():
+            raise EmptyFileError("ConLLU file is empty.")
+
+        article.set_conllu_info(conllu_info)
+
+        parser = ConllParser(self._analyzer)
+
+        try:
+            parsed_doc: Doc = parser.parse_conll_text_as_spacy(conllu_info)
+            return parsed_doc
+        except ValueError:
+            docs = list(
+                conllu_to_docs(
+                    conllu_info,
+                    n_sents=1000,
+                    no_print=True,
+                )
+            )
+
+        return cast(Doc, Doc.from_docs(docs))
 
 
 class POSFrequencyPipeline:
@@ -328,6 +357,8 @@ class POSFrequencyPipeline:
             corpus_manager (CorpusManager): CorpusManager instance
             analyzer (LibraryWrapper): Analyzer instance
         """
+        self._corpus = corpus_manager
+        self._analyzer = analyzer
 
     def _count_frequencies(self, article: Article) -> dict[str, int]:
         """
@@ -339,11 +370,34 @@ class POSFrequencyPipeline:
         Returns:
             dict[str, int]: POS frequencies
         """
+        doc = self._analyzer.from_conllu(article)
+        frequencies: dict[str, int] = {}
+
+        for token in doc:
+            if token.pos_:
+                frequencies[token.pos_] = frequencies.get(token.pos_, 0) + 1
+
+        return frequencies
 
     def run(self) -> None:
         """
         Visualize the frequencies of each part of speech.
         """
+        articles = self._corpus.get_articles()
+
+        for article in articles.values():
+
+            meta_path = article.get_meta_file_path()
+            article = from_meta(meta_path, article)
+
+            frequencies = self._count_frequencies(article)
+            article.set_pos_info(frequencies)
+
+            to_meta(article)
+
+            path_to_save = ASSETS_PATH / f"{article.article_id}_image.png"
+            visualizer.plt = plt
+            visualizer.visualize(article=article, path_to_save=path_to_save)
 
 
 class PatternSearchPipeline(PipelineProtocol):
