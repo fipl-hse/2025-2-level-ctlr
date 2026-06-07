@@ -6,8 +6,13 @@ Pipeline for CONLL-U formatting.
 import pathlib
 import re
 
-import spacy_udpipe
-from spacy_conll.parser import ConllParser
+try:
+    import spacy_udpipe
+    from spacy_conll.parser import ConllParser
+except ImportError:
+    spacy_udpipe = None  # type: ignore
+    ConllParser = None  # type: ignore
+    print("No libraries installed. Failed to import.")
 
 from core_utils.article.article import Article, ArtifactType
 from core_utils.article.io import from_meta, from_raw, to_cleaned, to_meta
