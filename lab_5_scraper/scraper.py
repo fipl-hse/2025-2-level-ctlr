@@ -259,46 +259,42 @@ class Crawler:
         Find articles.
         """
         needed = self.config.get_num_articles()
-    
+
         to_visit = list(self.config.get_seed_urls())
         visited = set()
-    
-        while to_visit and len(self.urls) < needed:
+
+        while to_visit < needed and len(self.urls) < needed:
             current_url = to_visit.pop(0)
         
             if current_url in visited:
                 continue
-        
+
             visited.add(current_url)
-        
-            try:
-                response = make_request(current_url, self.config)
-                if response.status_code != 200:
-                    continue
-                
-                soup = BeautifulSoup(response.content, 'html.parser')
-            
-                for link in soup.find_all('a', href=True):
-                    href = link.get('href', '')
-                    if not href:
-                        continue
-                
-                    full_url = urljoin("http://www.jvanetsky.ru/", href)
-                
-                    if not full_url.startswith("http://www.jvanetsky.ru/"):
-                        continue
-                
-                    if '/text/' in full_url and '/data/text/' not in full_url:
-                        if full_url not in visited and full_url not in to_visit:
-                            to_visit.append(full_url)
-                
-                    elif '/data/text/' in full_url:
-                        if 'contacts' not in full_url:
-                            if full_url not in self.urls and len(self.urls) < needed:
-                                self.urls.append(full_url)
-                            
-            except Exception:
+
+            response = make_request(current_url, self.config)
+            if response.status_code != 200:
                 continue
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            for link in soup.find_all('a', href=True):
+                href = str(link.get('href', ''))
+                if not href:
+                    continue
+
+                full_url = urljoin("http://www.jvanetsky.ru/", href)
+
+                if not full_url.startswith("http://www.jvanetsky.ru/"):
+                    continue
+
+                if '/text/' in full_url and '/data/text/' not in full_url:
+                    if full_url not in visited and full_url not in to_visit:
+                        to_visit.append(full_url)
+
+                elif '/data/text/' in full_url:
+                    if 'contacts' not in full_url:
+                        if full_url not in self.urls and len(self.urls) < needed:
+                            self.urls.append(full_url)
 
     def get_search_urls(self) -> list:
         """
@@ -325,12 +321,13 @@ class CrawlerRecursive(Crawler):
         Args:
             config (Config): Configuration
         """
+        super().__init__(config)
+        self.start_url = self.config.get_seed_urls()[0]
 
     def find_articles(self) -> None:
         """
         Find number of article urls requested.
         """
-        
 
 
 # 4, 6, 8, 10
