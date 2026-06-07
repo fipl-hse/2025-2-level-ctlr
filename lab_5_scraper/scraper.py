@@ -296,10 +296,6 @@ class Crawler:
         return self.config.get_seed_urls()
 
 
-# 10
-# 4, 6, 8, 10
-
-
 class HTMLParser:
     """
     HTMLParser implementation.
@@ -327,17 +323,16 @@ class HTMLParser:
         if not text_div:
             text_div = article_soup.find('pre')
         if not text_div:
-            text_div = article_soup.find('div', id='content')          # !!!
+            text_div = article_soup.find('div', id='content')
         if not text_div:
-            text_div = article_soup.find('body')                       # !!! fallback
+            text_div = article_soup.find('body')                   
 
         if not text_div:
             self.article.text = ''
             return
 
-        # Удаляем служебные блоки
-        for unwanted in text_div(['script', 'style', 'a.button', 'div.download',
-                                  'nav', 'header', 'footer', 'aside']):   # !!!
+        for unwanted in text_div(['script', 'style', 'a.button', 
+                                  'div.download','nav', 'header', 'footer', 'aside']):
             unwanted.decompose()
 
         paragraphs = text_div.find_all('p')
