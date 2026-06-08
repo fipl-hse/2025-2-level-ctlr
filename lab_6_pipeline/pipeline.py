@@ -9,7 +9,7 @@ import spacy_udpipe
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
-from spacy.training.converters import conllu_to_docs
+from spacy.training.converters import conllu_to_docs #читать готовые .conllu файлы и превращать их в объекты, с которыми работает spaCy
 from spacy_conll import ConllFormatter, init_parser
 from spacy_conll.parser import ConllParser
 
@@ -171,6 +171,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         self._analyzer = self._bootstrap()
+        # init_conll_parser(self._analyzer)
 
     def _bootstrap(self) -> Language:
         """
@@ -179,7 +180,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = pathlib.Path("lab_6_pipeline/assets/model/ru-syntagrus.udpipe")
+        model_path = pathlib.Path("lab_6_pipeline/assets/model/russian-syntagrus-ud-2.0-170801.udpipe")
 
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
@@ -231,11 +232,17 @@ class UDPipeAnalyzer(LibraryWrapper):
             conllu_outputs.append(result)
 
         return conllu_outputs
+        # from spacy_conll import init_conll_parser
         # conllu_outputs = []
 
         # for text in texts:
         #     doc = self._analyzer(text)
-        #     conllu_outputs.append(doc._.conll_str)
+
+        #     result = doc._.conll_str
+            
+        #     if not result.endswith("\n\n"):
+        #         result = result.rstrip('\n') + "\n\n"
+        #     conllu_outputs.append(result)
 
         # return conllu_outputs
 
