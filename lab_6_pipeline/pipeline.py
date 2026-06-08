@@ -78,47 +78,34 @@ class CorpusManager:
             raise FileNotFoundError(f"Path does not exist: {self.path_to_raw_txt_data}")
         if not self.path_to_raw_txt_data.is_dir():
             raise NotADirectoryError(f"Path is not a directory: {self.path_to_raw_txt_data}")
-
+        
         try:
             files = list(self.path_to_raw_txt_data.iterdir())
         except OSError as exc:
             raise EmptyDirectoryError(f"Cannot read directory: {self.path_to_raw_txt_data}") from exc
-
+        
         if not files:
             raise EmptyDirectoryError(f"Directory is empty: {self.path_to_raw_txt_data}")
-
-        raw_ids = []
-        meta_ids = []
+        
+        raw_ids = set()
+        meta_ids = set()
 
         for f in files:
-            if not f.is_file():
-                continue
-            name = f.name
-            if name.endswith("_raw.txt") and name[:-8].isdigit():
-                raw_ids.append(int(name[:-8]))
-            elif name.endswith("_meta.json") and name[:-10].isdigit():
-                meta_ids.append(int(name[:-10]))
+            if f.is_file():
+                name = f.name
+                if name.endswith("_raw.txt") and name[:-8].isdigit():
+                    raw_ids.add(int(name[:-8]))
+                elif name.endswith("_meta.json") and name[:-10].isdigit():
+                    meta_ids.add(int(name[:-10]))
 
         if not raw_ids:
             raise EmptyDirectoryError(f"No valid raw files found in: {self.path_to_raw_txt_data}")
-
-        if len(raw_ids) != len(meta_ids):
-            raise InconsistentDatasetError(
-                f"The number of raw and meta files is different."
-            )
         
-        raw_ids_set = set(raw_ids)
-        meta_ids_set = set(meta_ids)
-        if raw_ids_set != meta_ids_set:
-            raise InconsistentDatasetError(
-                f"Raw and meta files have different IDs."
-            )
+        if len(raw_ids) != len(meta_ids) or raw_ids != meta_ids:
+            raise InconsistentDatasetError("Raw and meta files are imbalanced or have different IDs")
         
-        expected_ids = set(range(1, len(raw_ids) + 1))
-        if raw_ids_set != expected_ids:
-            raise InconsistentDatasetError(
-                f"Raw files have inconsistent numbering"
-            )
+        if raw_ids != set(range(1, len(raw_ids) + 1)):
+            raise InconsistentDatasetError(f"Inconsistent numbering. Found IDs: {sorted(raw_ids)}")
         
         for f in files:
             if f.is_file() and f.stat().st_size == 0:
