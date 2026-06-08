@@ -224,7 +224,7 @@ class Crawler:
         if not isinstance(url, str):
             return ''
         url = url.strip()
-        if not re.search(r'\.htm$', url) or 'index' in url:
+        if not re.search(r'\d+\.htm$', url) or 'index' in url:
             return ''
         if url.startswith('http'):
             if 'burkin.rusf.ru' not in url:
