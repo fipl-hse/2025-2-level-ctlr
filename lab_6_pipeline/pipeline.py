@@ -218,7 +218,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         self._analyzer = self._bootstrap()
-        if ConllParser is not None:
+        if ConllParser is not None and self._analyzer is not None:
             self._parser = ConllParser(self._analyzer)
 
     def _bootstrap(self) -> Language:
@@ -229,7 +229,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         if spacy_udpipe is None:
-            raise ImportError("spacy_udpipe is not installed")
+            raise ImportError("spacy_udpipe is not installed")  # type: ignore
 
         model_path = (
             PROJECT_ROOT
@@ -243,9 +243,6 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise FileNotFoundError(f"Model not found at {model_path}")
 
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
-
-        if nlp is None:
-            raise RuntimeError("Failed to load UDPipe model")
 
         if "conll_formatter" not in nlp.pipe_names:
             nlp.add_pipe(
@@ -327,10 +324,10 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise EmptyFileError(f"CoNLL-U file is empty: {conllu_path}")
 
         result = self._parser.parse_conll_text_as_spacy(conllu_content.rstrip('\n'))
-    
+
         if not isinstance(result, Doc):
             raise TypeError(f"Expected Doc object, got {type(result)}")
-    
+
         return result
 
 
@@ -482,6 +479,7 @@ class PatternSearchPipeline(PipelineProtocol):
             )
 
             for subgraph in matcher.subgraph_isomorphisms_iter():
+
                 root_id = None
                 child_id = None
                 grandchild_id = None
@@ -551,62 +549,29 @@ class PatternSearchPipeline(PipelineProtocol):
             article.pattern_matches = serializable_matches
             to_meta(article)
 
-class AdjectiveNounPatternPipeline(PatternSearchPipeline):
-    def __init__(self, corpus_manager: CorpusManager, analyzer: LibraryWrapper) -> None:
-        super().__init__(corpus_manager, analyzer, ("ADJ", "NOUN"))
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
-        """Search for ADJ + NOUN pattern."""
-        target_graph = DiGraph()
-        target_graph.add_node(0, upos="ADJ")
-        target_graph.add_node(1, upos="NOUN")
-        target_graph.add_edge(0, 1)
-
-        matches = {}
-        for sent_idx, graph in enumerate(doc_graphs):
-            sent_matches = []
-            matcher = DiGraphMatcher(
-                graph, target_graph,
-                node_match=lambda n1, n2: n1["upos"] == n2["upos"]
-            )
-            for subgraph in matcher.subgraph_isomorphisms_iter():
-                node_by_role = {}
-                for node_id, target_id in subgraph.items():
-                    node_by_role[target_id] = node_id
-                if len(node_by_role) != 2:
-                    continue
-                adj_data = graph.nodes[node_by_role[0]]
-                noun_data = graph.nodes[node_by_role[1]]
-                noun_node = TreeNode(upos=noun_data["upos"], text=noun_data["text"], children=[])
-                adj_node = TreeNode(upos=adj_data["upos"], text=adj_data["text"], children=[noun_node])
-                sent_matches.append(adj_node)
-            if sent_matches:
-                matches[sent_idx] = sent_matches
-        return matches
 
 def main() -> None:
     """
     Entrypoint for pipeline module.
     """
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
-    analyzer = UDPipeAnalyzer()
 
-    text_pipeline = TextProcessingPipeline(corpus_manager, analyzer)
-    text_pipeline.run()
+    if spacy_udpipe is not None:
+        analyzer = UDPipeAnalyzer()
+        pipeline = TextProcessingPipeline(corpus_manager, analyzer)
+        pipeline.run()
 
-    pos_pipeline = PenPOSFrequencyPipeline(corpus_manager, analyzer)
-    pos_pipeline.run()
+        pos_pipeline = POSFrequencyPipeline(corpus_manager, analyzer)
+        pos_pipeline.run()
 
-    pattern_pipeline = PatternSearchPipeline(
-        corpus_manager,
-        analyzer,
-        ("VERB", "NOUN", "ADP"),
-    )
-    pattern_pipeline.run()
+        pattern_pipeline = PatternSearchPipeline(corpus_manager, analyzer, ("VERB", "NOUN", "ADP"))
+        pattern_pipeline.run()
+    else:
+        print("spacy_udpipe not installed. Running basic preprocessing only (score 4).")
+        pipeline = TextProcessingPipeline(corpus_manager)
+        pipeline.run()
 
-    adj_noun_pipeline = AdjectiveNounPatternPipeline(corpus_manager, analyzer)
-    adj_noun_pipeline.run()
 
 if __name__ == "__main__":
     main()
-    
