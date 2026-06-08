@@ -3,7 +3,6 @@ Pipeline for CONLL-U formatting.
 """
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
-# pylint: disable=too-many-branches, too-many-locals
 import pathlib
 import re
 from typing import Optional
@@ -211,18 +210,19 @@ class UDPipeAnalyzer(LibraryWrapper):
     Wrapper for udpipe library.
     """
 
-    _analyzer: Optional[Language] = None  # type: ignore
+    _analyzer: Language
     _parser: Optional[ConllParser] = None
 
     def __init__(self) -> None:
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
-        self._analyzer = self._bootstrap()  # type: ignore[assignment]
-        if ConllParser is not None and self._analyzer is not None:
+        self._analyzer = self._bootstrap()
+        self._analyzer = analyzer
+        if ConllParser is not None:
             self._parser = ConllParser(self._analyzer)
 
-    def _bootstrap(self) -> Optional[Language]:  # type: ignore[override]
+    def _bootstrap(self) -> Language:
         """
         Load and set up the UDPipe model.
 
@@ -230,7 +230,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             Language: Analyzer instance
         """
         if spacy_udpipe is None:
-            raise ImportError("spacy_udpipe is not installed")  # type: ignore
+            raise ImportError("spacy_udpipe is not installed")
 
         model_path = (
             PROJECT_ROOT
@@ -244,6 +244,9 @@ class UDPipeAnalyzer(LibraryWrapper):
             raise FileNotFoundError(f"Model not found at {model_path}")
 
         nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_path))
+
+        if nlp is None:
+            raise RuntimeError("Failed to load UDPipe model")
 
         if "conll_formatter" not in nlp.pipe_names:
             nlp.add_pipe(
@@ -281,9 +284,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        if self._analyzer is None:
-            return []
-
         results = []
         for text in texts:
             doc = self._analyzer(text)
@@ -327,8 +327,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         if not conllu_content or len(conllu_content.strip()) == 0:
             raise EmptyFileError(f"CoNLL-U file is empty: {conllu_path}")
 
-        doc = self._parser.parse_conll_text_as_spacy(conllu_content.rstrip('\n'))
-        return doc  # type: ignore
+        result = self._parser.parse_conll_text_as_spacy(conllu_content.rstrip('\n'))
+    
+        if not isinstance(result, Doc):
+            raise TypeError(f"Expected Doc object, got {type(result)}")
+    
+        return result
 
 
 class POSFrequencyPipeline:
@@ -446,28 +450,16 @@ class PatternSearchPipeline(PipelineProtocol):
                 self._add_children(graph, subgraph_to_graph, child_id, child_node)
 
     def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
-        """
-        Search for the required pattern.
-
-        Args:
-            doc_graphs (list): A list of graphs for the document
-
-        Returns:
-            dict[int, list[TreeNode]]: A dictionary with pattern matches
-        """
-        if len(self._node_labels) != 3:
+        if len(self._node_labels) < 2:
             return {}
 
-        root_label, child_label, grandchild_label = self._node_labels
-
         target_graph = DiGraph()
-
-        target_graph.add_node(0, upos=root_label)
-        target_graph.add_node(1, upos=child_label)
-        target_graph.add_node(2, upos=grandchild_label)
-
-        target_graph.add_edge(0, 1)
-        target_graph.add_edge(1, 2)
+    
+        for i, label in enumerate(self._node_labels):
+            target_graph.add_node(i, upos=label)
+    
+        for i in range(len(self._node_labels) - 1):
+            target_graph.add_edge(i, i + 1)
 
         matches = {}
 
@@ -475,43 +467,36 @@ class PatternSearchPipeline(PipelineProtocol):
             sent_matches = []
 
             matcher = DiGraphMatcher(
-                graph, target_graph, node_match=lambda n1, n2: n1["upos"] == n2["upos"]
+                graph, target_graph,
+                node_match=lambda n1, n2: n1["upos"] == n2["upos"]
             )
 
             for subgraph in matcher.subgraph_isomorphisms_iter():
-
-                root_id = None
-                child_id = None
-                grandchild_id = None
-
+                node_by_role = {}
                 for node_id, target_id in subgraph.items():
-                    if target_id == 0:
-                        root_id = node_id
-                    elif target_id == 1:
-                        child_id = node_id
-                    elif target_id == 2:
-                        grandchild_id = node_id
-
-                if root_id is not None and child_id is not None and grandchild_id is not None:
-                    grandchild_node = TreeNode(
-                        upos=graph.nodes[grandchild_id]["upos"],
-                        text=graph.nodes[grandchild_id]["text"],
-                        children=[],
-                    )
-
-                    child_node = TreeNode(
-                        upos=graph.nodes[child_id]["upos"],
-                        text=graph.nodes[child_id]["text"],
-                        children=[grandchild_node],
-                    )
-
-                    root_node = TreeNode(
-                        upos=graph.nodes[root_id]["upos"],
-                        text=graph.nodes[root_id]["text"],
-                        children=[child_node],
-                    )
-
-                    sent_matches.append(root_node)
+                    node_by_role[target_id] = node_id
+            
+                if len(node_by_role) != len(self._node_labels):
+                    continue
+            
+                tree_nodes = []
+                for i in range(len(self._node_labels) - 1, -1, -1):
+                    node_data = graph.nodes[node_by_role[i]]
+                    if tree_nodes:
+                        tree_nodes.append(TreeNode(
+                            upos=node_data["upos"],
+                            text=node_data["text"],
+                            children=[tree_nodes[-1]]
+                        ))
+                    else:
+                        tree_nodes.append(TreeNode(
+                            upos=node_data["upos"],
+                            text=node_data["text"],
+                            children=[]
+                        ))
+            
+                if tree_nodes:
+                    sent_matches.append(tree_nodes[-1])
 
             if sent_matches:
                 matches[sent_idx] = sent_matches
@@ -519,9 +504,6 @@ class PatternSearchPipeline(PipelineProtocol):
         return matches
 
     def run(self) -> None:
-        """
-        Search for a pattern in documents and writes found information to JSON file.
-        """
         for article in self._corpus.get_articles().values():
             doc = self._analyzer.from_conllu(article)
             graphs = self._make_graphs(doc)
@@ -546,15 +528,15 @@ class PatternSearchPipeline(PipelineProtocol):
                                 stack.append((child, child_dict))
                         serializable_matches[sent_idx].append(node_dict)
 
-            article.pattern_matches = serializable_matches
+            pattern_key = "_".join(self._node_labels)
+            if not hasattr(article, 'pattern_matches'):
+                article.pattern_matches = {}
+            article.pattern_matches[pattern_key] = serializable_matches
             to_meta(article)
 
 
 
 def main() -> None:
-    """
-    Entrypoint for pipeline module.
-    """
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
 
     if spacy_udpipe is not None:
@@ -567,11 +549,11 @@ def main() -> None:
 
         pattern_pipeline = PatternSearchPipeline(corpus_manager, analyzer, ("VERB", "NOUN", "ADP"))
         pattern_pipeline.run()
+
+        noun_adj_pipeline = PatternSearchPipeline(corpus_manager, analyzer, ("ADJ", "NOUN"))
+        noun_adj_pipeline.run()
+        
     else:
-        print("spacy_udpipe not installed. Running basic preprocessing only (score 4).")
+        print("spacy_udpipe not installed.")
         pipeline = TextProcessingPipeline(corpus_manager)
         pipeline.run()
-
-
-if __name__ == "__main__":
-    main()
