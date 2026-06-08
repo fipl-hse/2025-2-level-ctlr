@@ -6,6 +6,7 @@ Pipeline for CONLL-U formatting.
 import pathlib
 
 import spacy_udpipe
+from typing import cast
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
@@ -171,7 +172,6 @@ class UDPipeAnalyzer(LibraryWrapper):
         Initialize an instance of the UDPipeAnalyzer class.
         """
         self._analyzer = self._bootstrap()
-        # init_conll_parser(self._analyzer)
 
     def _bootstrap(self) -> Language:
         """
@@ -180,16 +180,30 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Language: Analyzer instance
         """
-        model_path = pathlib.Path("lab_6_pipeline/assets/model/russian-syntagrus-ud-2.0-170801.udpipe")
+        model_dir = pathlib.Path(__file__).parent / "assets" / "model"
+        model_files = list(model_dir.glob("*.udpipe"))
+        if not model_files:
+            raise FileNotFoundError(
+                "UDPipe model was not found in lab_6_pipeline/assets/model"
+            )
+        nlp = spacy_udpipe.load_from_path(lang="ru", path=str(model_files[0]))
+        nlp.add_pipe("conll_formatter", last=True, config={
+            "conversion_maps": {},
+            "field_names": {
+                "ID": "id",
+                "FORM": "text",
+                "LEMMA": "lemma_",
+                "UPOS": "pos_",
+                "XPOS": "tag_",
+                "FEATS": "morph",
+                "HEAD": "head",
+                "DEPREL": "dep_",
+                "DEPS": "deps",
+                "MISC": "misc"
+            },
+            "include_headers": False
+        })
 
-        if not model_path.exists():
-            raise FileNotFoundError(f"Model not found at {model_path}")
-
-        nlp = spacy_udpipe.load_from_path(
-            lang="ru",
-            path=str(model_path),
-            meta={"description": "Russian UDPipe model"}
-        )
         return nlp
 
     def analyze(self, texts: list[str]) -> list[str]:
@@ -202,49 +216,48 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[str]: List of documents
         """
-        conllu_outputs = []
-
-        for text in texts:
-            doc = self._analyzer(text)
-            lines = []
-
-            for sent_idx, sent in enumerate(doc.sents):
-                lines.append(f"# sent_id = {sent_idx + 1}")
-                lines.append(f"# text = {sent.text}")
-
-                for token_idx, token in enumerate(sent, start=1):
-                    lines.append(
-                        f"{token_idx}\t{token.text}\t"
-                        f"{token.lemma_ if token.lemma_ else '_'}\t"
-                        f"{token.pos_ if token.pos_ else '_'}\t_\t"
-                        f"{str(token.morph) if token.morph else '_'}\t"
-                        f"{token.head.i - sent.start + 1 if token.head != token else 0}\t"
-                        f"{token.dep_ if token.dep_ else '_'}\t_\t"
-                        f"{'SpaceAfter=No' if not token.whitespace_ else '_'}"
-                    )
-
-                lines.append("")
-
-            result = "\n".join(lines)
-            if not result.endswith("\n\n"):
-                result = result.rstrip('\n') + "\n\n"
-
-            conllu_outputs.append(result)
-
-        return conllu_outputs
-        # from spacy_conll import init_conll_parser
         # conllu_outputs = []
 
         # for text in texts:
         #     doc = self._analyzer(text)
+        #     lines = []
 
-        #     result = doc._.conll_str
-            
+        #     for sent_idx, sent in enumerate(doc.sents):
+        #         lines.append(f"# sent_id = {sent_idx + 1}")
+        #         lines.append(f"# text = {sent.text}")
+
+        #         for token_idx, token in enumerate(sent, start=1):
+        #             lines.append(
+        #                 f"{token_idx}\t{token.text}\t"
+        #                 f"{token.lemma_ if token.lemma_ else '_'}\t"
+        #                 f"{token.pos_ if token.pos_ else '_'}\t_\t"
+        #                 f"{str(token.morph) if token.morph else '_'}\t"
+        #                 f"{token.head.i - sent.start + 1 if token.head != token else 0}\t"
+        #                 f"{token.dep_ if token.dep_ else '_'}\t_\t"
+        #                 f"{'SpaceAfter=No' if not token.whitespace_ else '_'}"
+        #             )
+
+        #         lines.append("")
+
+        #     result = "\n".join(lines)
         #     if not result.endswith("\n\n"):
         #         result = result.rstrip('\n') + "\n\n"
+
         #     conllu_outputs.append(result)
 
         # return conllu_outputs
+        conllu_outputs = []
+
+        for text in texts:
+            doc = self._analyzer(text)
+
+            result = doc._.conll_str
+            
+            if not result.endswith("\n\n"):
+                result = result.rstrip('\n') + "\n\n"
+            conllu_outputs.append(result)
+
+        return conllu_outputs
 
 
     def to_conllu(self, article: Article) -> None:
@@ -293,7 +306,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         if not docs:
             raise ValueError("No documents parsed from CONLLU content")
 
-        return docs[0]
+        return cast(Doc, docs[0])
 
 class POSFrequencyPipeline:
     """
