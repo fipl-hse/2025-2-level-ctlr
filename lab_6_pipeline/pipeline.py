@@ -261,7 +261,12 @@ class UDPipeAnalyzer(LibraryWrapper):
         # return conllu_outputs
         results = []
         for text in texts:
-            results.append(self._analyzer(text)._.conll_str)
+            doc = self._analyzer(text)
+            result = doc._.conll_str
+            if not result.endswith("\n\n"):
+                result = result.rstrip('\n') + "\n\n"
+
+            results.append(result)
         return results
 
 
