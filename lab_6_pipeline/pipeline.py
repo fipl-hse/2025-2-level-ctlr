@@ -4,13 +4,13 @@ Pipeline for CONLL-U formatting.
 
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks, duplicate-code
 import pathlib
+from typing import cast
 
 import spacy_udpipe
-from typing import cast
 from networkx import DiGraph
 from spacy import Language
 from spacy.tokens import Doc
-from spacy.training.converters import conllu_to_docs #читать готовые .conllu файлы и превращать их в объекты, с которыми работает spaCy
+from spacy.training.converters import conllu_to_docs
 from spacy_conll import ConllFormatter, init_parser
 from spacy_conll.parser import ConllParser
 
@@ -252,7 +252,7 @@ class UDPipeAnalyzer(LibraryWrapper):
             doc = self._analyzer(text)
 
             result = doc._.conll_str
-            
+
             if not result.endswith("\n\n"):
                 result = result.rstrip('\n') + "\n\n"
             conllu_outputs.append(result)
