@@ -241,7 +241,10 @@ class Crawler:
             str: Url from HTML
         """
         href = article_bs.get('href')
-        if not href or not isinstance(href, str):
+        if href is None:
+            return ''
+        href_str = str(href)
+        if not href_str:
             return ''
         full_url = urljoin('https://royallib.com', href)
         if re.search(r'/book/.*\.html', full_url):

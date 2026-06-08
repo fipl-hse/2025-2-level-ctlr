@@ -215,7 +215,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
-        conllu_path = article.get_file_path('udpipe')
+        conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         conllu_path.parent.mkdir(parents=True, exist_ok=True)
         with open(conllu_path, 'w', encoding='utf-8') as f:
             f.write(article.get_conllu_info())
@@ -230,7 +230,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             Doc: Document ready for parsing
         """
-        conllu_path = article.get_file_path('udpipe')
+        conllu_path = article.get_file_path(ArtifactType.UDPIPE_CONLLU)
         if not conllu_path.exists() or conllu_path.stat().st_size == 0:
             raise EmptyFileError(f"CoNLL-U file is empty or missing: {conllu_path}")
         parser = ConllParser(self._analyzer)
@@ -305,7 +305,7 @@ class PatternSearchPipeline(PipelineProtocol):
         self._analyzer = analyzer
         self._node_labels = pos
 
-    def _make_graphs(self, doc: Doc) -> list[DiGraph]:
+    def _make_graphs(self, _doc: Doc) -> list[DiGraph]:
         """
         Make graphs for a document.
 
@@ -330,7 +330,7 @@ class PatternSearchPipeline(PipelineProtocol):
             tree_node (TreeNode): Root node of the match
         """
 
-    def _find_pattern(self, doc_graphs: list) -> dict[int, list[TreeNode]]:
+    def _find_pattern(self, _doc_graphs: list) -> dict[int, list[TreeNode]]:
         """
         Search for the required pattern.
 
