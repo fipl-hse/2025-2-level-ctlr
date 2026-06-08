@@ -8,8 +8,8 @@ import re
 
 from core_utils.article.article import Article, get_article_id_from_filepath
 from core_utils.article.io import from_raw, to_cleaned
-from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 from core_utils.constants import ASSETS_PATH
+from core_utils.pipeline import LibraryWrapper, PipelineProtocol, TreeNode
 
 class EmptyDirectoryError(Exception):
     """
@@ -20,6 +20,11 @@ class EmptyDirectoryError(Exception):
 class InconsistentDatasetError(Exception):
     """
     Raised when the dataset structure is broken.
+    """
+
+class EmptyFileError(Exception):
+    """
+    Raised when a file is empty.
     """
 
 try:
