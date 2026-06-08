@@ -201,7 +201,8 @@ class UDPipeAnalyzer(LibraryWrapper):
                 "DEPS": "deps",
                 "MISC": "misc"
             },
-            "include_headers": False
+            "include_headers": True,
+            "include_metadata": True
         })
 
         return nlp
