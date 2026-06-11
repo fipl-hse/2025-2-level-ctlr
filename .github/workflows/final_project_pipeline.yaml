@@ -15,6 +15,7 @@ env:
   FINAL_PROJECT_TAG: "[PROJECT]"
   MODEL_URL: "https://github.com/fipl-hse/2025-2-level-ctlr/releases/download/v1.0.0/russian-syntagrus-ud-2.0-170801.udpipe"
   MODEL_PATH: "lab_6_pipeline/assets/model"
+  CONLLU_PATH: "final_project/dist/auto_annotated.conllu"
 
 jobs:
   check-conditions:
@@ -23,15 +24,28 @@ jobs:
       should_run: ${{ steps.check.outputs.should_run }}
 
     steps:
+      - uses: actions/checkout@v6
+      - name: Setup FIPL environment
+        uses: fipl-hse/setup-env-action@v0.13.2
       - name: Check if workflow should run
         id: check
         run: |
+          set +e
+          source venv/bin/activate
+          export PYTHONPATH=$(pwd)
+          python admin_utils/skip_stage.py --lab-path final_project
+          retVal=$?
+          echo "Return value is " $retVal
           if [[ "$REPOSITORY_TYPE" == "admin" ]]; then
+            echo "Running because it is admin"
             echo "should_run=true" >> $GITHUB_OUTPUT
           elif [[ -n "${{ github.event.pull_request.title }}" ]] && \
-               [[ "${{ github.event.pull_request.title }}" == *"$FINAL_PROJECT_TAG"* ]]; then
+               [[ "${{ github.event.pull_request.title }}" == *"$FINAL_PROJECT_TAG"* ]] && \
+               [ $retVal -eq 1 ]; then
+            echo "Running because it is public, has relevant label and not 0 mark"
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
+            echo "Not running because is public but not relevant to the final project"
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
@@ -52,13 +66,8 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          if [[ $(python admin_utils/skip_stage.py --lab-path final_project) ]]; then
-            exit 0
-          fi
           python final_project/main.py
-          echo "Annotated CoNLLU is created."
-          python admin_utils/final_project/checker.py final_project/dist/auto_annotated.conllu
-          echo "Annotated CoNLLU is checked."
+          python admin_utils/final_project/checker.py "$CONLLU_PATH"
       - name: Archive annotated data
         continue-on-error: true
         uses: actions/upload-artifact@v6
@@ -85,7 +94,4 @@ jobs:
         run: |
           source venv/bin/activate
           export PYTHONPATH=$(pwd)
-          if [[ $(python admin_utils/skip_stage.py --lab-path final_project) ]]; then
-            exit 0
-          fi
           python -m pytest final_project/tests/ -v -m "final_project"

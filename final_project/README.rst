@@ -37,7 +37,7 @@ Stage 1. Put the files for processing in the folder.
 
 You will be working with ``N_raw.txt`` files, which are collected by
 running ``lab_5_scraper/scraper.py``. Your team number and texts are determined by
-Margarita Andreevna. Put them in the folder ``final_project/assets/articles``.
+Anna Yuryevna. Put them in the folder ``final_project/assets/articles``.
 This is the corpus you will be working with.
 
 Stage 2. Processing data.
@@ -58,6 +58,7 @@ into a single ``auto_annotated.conllu`` file.
 
     Running ``main.py`` file should result in creation of
     ``auto_annotated.conllu`` in folder ``final_project/dist``.
+    If the ``dist`` folder does not exist, it must be created automatically.
 
 .. note::
 
@@ -68,6 +69,19 @@ into a single ``auto_annotated.conllu`` file.
 
     It is mandatory to use the
     :py:class:`lab_6_pipeline.pipeline.UDPipeAnalyzer`.
+
+.. attention::
+
+    Before processing, make sure to validate the input:
+
+    - The folder with corpus must exist. If it does not, raise ``FileNotFoundError``.
+    - At least one ``.txt`` file must be found in the folder. If none are found,
+      raise ``ValueError``.
+    - The result returned by ``UDPipeAnalyzer.analyze()`` must not be empty.
+
+.. note::
+
+    The resulting ``.conllu`` file must end with a newline.
 
 Stage 2.2. Correct morphological annotation manually
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -104,9 +118,9 @@ morphological annotation, you are welcome to use the following sources:
 
 Please do not forget to refer to the sources you use in the comments.
 You are supposed to stop working with the `.conllu` and `.xlsx` files
-and send them to Margarita Andreevna together with the frequency dictionary in the .xlsx format by **TBD**.
+and send them to Anna Yuryevna together with the frequency dictionary in the .xlsx format by **TBD**.
 
-Margarita Andreevna will check your annotations and suggest improvements, if any.
+Anna Yuryevna will check your annotations and suggest improvements, if any.
 
 
 Stage 2.3. Upload corrected ``.conllu`` file.
