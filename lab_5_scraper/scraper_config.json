@@ -1,9 +1,26 @@
 {
-    "seed_urls": [],
-    "headers": {},
-    "total_articles_to_find_and_parse": 0,
-    "encoding": "",
-    "timeout": 0,
+    "seed_urls": ["https://gameofthrones.fan-base.ru/",
+                  "https://gameofthrones.fan-base.ru/category/geografija-igra-prestolov/",
+                  "https://gameofthrones.fan-base.ru/category/personazhi/",
+                  "https://gameofthrones.fan-base.ru/category/personazhi/page/2/",
+                  "https://gameofthrones.fan-base.ru/category/sushhestva/",
+                  "https://gameofthrones.fan-base.ru/category/religii/",
+                  "https://gameofthrones.fan-base.ru/category/teorii/",
+                  "https://gameofthrones.fan-base.ru/category/istorija/",
+                  "https://gameofthrones.fan-base.ru/tag/vsadniki-na-drakonah/",
+                  "https://gameofthrones.fan-base.ru/tag/dom-targarienov/",
+                  "https://gameofthrones.fan-base.ru/tag/drakony/"
+                ],
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Cookie": "_ym_uid=1775842089944684160; _ym_d=1775842089; _ga=GA1.1.1887609097.1775842089; _ym_isad=1; _ga_7L47DC04JE=GS2.1.s1778442040$o20$g1$t1778442040$j60$l0$h0; _ym_visorc=w"
+    },
+    "total_articles_to_find_and_parse": 20,
+    "encoding": "utf-8",
+    "timeout": 30,
     "should_verify_certificate": true,
     "headless_mode": true
 }
