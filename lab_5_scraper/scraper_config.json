@@ -1,9 +1,18 @@
 {
-    "seed_urls": [],
-    "headers": {},
-    "total_articles_to_find_and_parse": 0,
-    "encoding": "",
-    "timeout": 0,
+    "seed_urls": [
+        "https://mxat.ru/o-teatre/novosti/",
+        "https://mxat.ru/o-teatre/novosti/?PAGEN_1=2",
+        "https://mxat.ru/o-teatre/novosti/?PAGEN_1=3"
+    ],
+    "headers": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,ja;q=0.6,ko;q=0.5,my;q=0.4",
+    "Cookie": "_ym_uid=1775841043811051022; _ym_d=1775841043; PHPSESSID=2OQrRnLZVoT4jo5vE0GQLcFGyfwOL6lW; _ym_isad=1; _ym_visorc=w"
+    },
+    "total_articles_to_find_and_parse": 100,
+    "encoding": "utf-8",
+    "timeout": 10,
     "should_verify_certificate": true,
-    "headless_mode": true
+    "headless_mode": false
 }
